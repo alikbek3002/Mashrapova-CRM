@@ -1,0 +1,12 @@
+{
+  "AcsEventCond": {
+    "searchID": "${searchID}",
+    "searchResultPosition": ${searchResultPosition},
+    "maxResults": ${maxResults},
+    "major": ${major},
+    "minor": 0,
+    "startTime": "${startTime}",
+    "endTime": "${endTime}",
+    "timeReverseOrder": false
+  }
+}

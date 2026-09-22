@@ -1,0 +1,4087 @@
+/* ============================================================
+   Uniqum Sport — Design tokens
+   ============================================================ */
+:root {
+  /* Neutrals */
+  --bg: #F6F7FB;
+  --bg-soft: #EEF1F7;
+  --surface: #FFFFFF;
+  --ink: #0B1220;
+  --ink-2: #2A334A;
+  --muted: #6A7287;
+  --muted-2: #99A1B5;
+  --line: #E4E7EF;
+  --line-2: #EDEFF4;
+
+  /* Brand — blue/yellow/red */
+  --blue: oklch(0.56 0.17 252);
+  --blue-600: oklch(0.48 0.18 252);
+  --blue-50: oklch(0.97 0.03 252);
+  --blue-100: oklch(0.93 0.06 252);
+  --blue-ink: oklch(0.28 0.11 252);
+
+  --yellow: oklch(0.87 0.17 92);
+  --yellow-600: oklch(0.78 0.17 85);
+  --yellow-50: oklch(0.98 0.05 92);
+  --yellow-100: oklch(0.94 0.12 92);
+  --yellow-ink: oklch(0.42 0.12 75);
+
+  --red: oklch(0.63 0.22 25);
+  --red-600: oklch(0.55 0.22 25);
+  --red-50: oklch(0.97 0.03 25);
+  --red-100: oklch(0.93 0.06 25);
+
+  --green: oklch(0.68 0.16 150);
+  --green-50: oklch(0.97 0.04 150);
+
+  /* Направления (4): базовые цвета для группировки секций */
+  --dir-lfk:  oklch(0.72 0.16 160);   /* ЛФК — медицинский тиркуёво-зелёный */
+  --dir-gym:  oklch(0.56 0.17 252);   /* Гимнастика — синий */
+  --dir-mart: oklch(0.63 0.22 25);    /* Единоборства — красный */
+  --dir-dev:  oklch(0.83 0.15 85);    /* Развивающая — тёпло-жёлтый */
+
+  /* Секции (11) — оттенки внутри направлений */
+  --sec-lfk-spine:   oklch(0.72 0.16 160);   /* ЛФК · спина и стопы */
+  --sec-lfk-posture: oklch(0.74 0.14 180);   /* ЛФК · осанка */
+  --sec-lfk-pelvic:  oklch(0.77 0.14 145);   /* ЛФК · таз, вальгус */
+  --sec-gym-sport:   oklch(0.56 0.17 252);   /* Спортивная гимнастика */
+  --sec-gym-acro:    oklch(0.68 0.16 220);   /* Акробатика */
+  --sec-gym-aero:    oklch(0.62 0.20 305);   /* Аэробная гимнастика */
+  --sec-gym-aest:    oklch(0.68 0.20 345);   /* Эстетическая гимнастика */
+  --sec-mart-judo:   oklch(0.63 0.22 25);    /* Дзюдо */
+  --sec-mart-tkd:    oklch(0.72 0.20 50);    /* Тхэквондо */
+  --sec-mart-box:    oklch(0.54 0.21 22);    /* Бокс */
+  --sec-dev:         oklch(0.83 0.15 85);    /* Развивающая гимнастика */
+
+  /* Radius */
+  --r-xs: 8px;
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 18px;
+  --r-xl: 24px;
+  --r-pill: 999px;
+
+  /* Shadows */
+  --sh-1: 0 1px 0 rgba(11,18,32,.04), 0 1px 2px rgba(11,18,32,.04);
+  --sh-2: 0 2px 6px rgba(11,18,32,.05), 0 8px 24px rgba(11,18,32,.06);
+  --sh-3: 0 12px 40px rgba(11,18,32,.10);
+
+  /* Fonts */
+  --font-sans: "Manrope", ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+  --font-display: "Unbounded", "Manrope", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Menlo, monospace;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); font-family: var(--font-sans); -webkit-font-smoothing: antialiased; }
+body { min-height: 100vh; }
+
+button { font-family: inherit; cursor: pointer; }
+input, select, textarea { font-family: inherit; }
+
+/* ============================================================
+   App chrome — role + language switcher
+   ============================================================ */
+.app-chrome {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  background: var(--blue-ink);
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+.app-chrome__inner {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 12px 24px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink);
+}
+.brand__mark {
+  height: 34px;
+  display: flex;
+  align-items: center;
+}
+.brand__mark img { height: 100%; width: auto; display: block; }
+.brand__name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  font-size: 16px;
+}
+.brand__sub {
+  font-size: 11px;
+  color: var(--muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-top: 1px;
+}
+
+.role-switch {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  padding: 4px;
+  box-shadow: var(--sh-1);
+}
+.role-switch__btn {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 8px 16px;
+  border-radius: var(--r-pill);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: background .18s ease, color .18s ease;
+}
+.role-switch__btn svg { width: 16px; height: 16px; }
+.role-switch__btn:hover { color: var(--ink); }
+.role-switch__btn.is-active {
+  background: var(--ink);
+  color: #fff;
+}
+
+.lang-switch {
+  margin-left: auto;
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--bg-soft);
+  border-radius: var(--r-pill);
+}
+.lang-switch__btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  border-radius: var(--r-pill);
+  letter-spacing: 0.04em;
+}
+.lang-switch__btn.is-active { background: #fff; color: var(--ink); box-shadow: var(--sh-1); }
+
+.chrome-hint {
+  font-size: 12px;
+  color: var(--muted);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.chrome-hint kbd {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-bottom-width: 2px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  color: var(--ink-2);
+}
+
+/* ============================================================
+   Stage
+   ============================================================ */
+.stage {
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+.stage--phones {
+  padding: 40px 24px 80px;
+  display: grid;
+  place-items: center;
+}
+
+/* ============================================================
+   Material Symbols (Google Icons) — глифовый шрифт
+   ============================================================ */
+.material-symbols-rounded {
+  font-family: "Material Symbols Rounded", sans-serif;
+  font-weight: normal;
+  font-style: normal;
+  display: inline-block;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "liga";
+  user-select: none;
+}
+
+/* ============================================================
+   Admin dashboard — full-left collapsible sidebar
+   ============================================================ */
+.admin {
+  display: grid;
+  grid-template-columns: 244px 1fr;
+  min-height: calc(100vh - 64px);
+  background: var(--bg);
+}
+.admin.is-collapsed {
+  grid-template-columns: 72px 1fr;
+}
+
+.sidebar {
+  position: sticky;
+  top: 64px;
+  align-self: start;
+  height: calc(100vh - 64px);
+  background: #fff;
+  border-right: 1px solid var(--line);
+  padding: 12px 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+.admin.is-collapsed .sidebar { padding: 12px 8px 16px; }
+
+.sidebar__toggle {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--muted);
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin-bottom: 8px;
+  align-self: flex-start;
+  transition: background .12s, color .12s, border-color .12s;
+}
+.sidebar__toggle:hover { background: var(--bg-soft); color: var(--ink); border-color: var(--ink-3, var(--muted)); }
+.admin.is-collapsed .sidebar__toggle { align-self: center; }
+
+.sidebar__nav { display: flex; flex-direction: column; gap: 14px; }
+.sidebar__group { display: flex; flex-direction: column; gap: 2px; }
+.sidebar__section {
+  padding: 8px 10px 4px;
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted-2);
+  font-weight: 700;
+}
+
+.nav-item {
+  position: relative;
+  appearance: none;
+  border: 0;
+  background: transparent;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 10px;
+  border-radius: var(--r-sm);
+  color: var(--ink-2);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+  text-align: left;
+  transition: background .12s, color .12s;
+}
+.nav-item:hover { background: var(--bg-soft); color: var(--ink); }
+.nav-item.is-active {
+  background: var(--blue);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(30, 58, 138, 0.15);
+}
+.nav-item.is-active:hover { background: var(--blue); color: #fff; }
+.nav-item__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.nav-item:hover .nav-item__icon { color: var(--ink); }
+.nav-item.is-active .nav-item__icon { color: #fff; }
+.nav-item__label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nav-item__badge {
+  margin-left: auto;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 7px;
+  border-radius: 999px;
+  min-width: 20px;
+  text-align: center;
+}
+.nav-item.is-active .nav-item__badge {
+  background: rgba(255,255,255,0.22) !important;
+  color: #fff !important;
+}
+.nav-item__dot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+}
+
+/* Collapsed mode — icon-only buttons */
+.admin.is-collapsed .nav-item {
+  justify-content: center;
+  padding: 10px 0;
+  width: 48px;
+  height: 44px;
+  margin: 0 auto;
+}
+
+.main { min-width: 0; display: flex; flex-direction: column; gap: 20px; padding: 24px; max-width: 1440px; width: 100%; box-sizing: border-box; }
+
+.page-head { display: flex; align-items: end; justify-content: space-between; gap: 20px; padding: 4px 0 0; flex-wrap: wrap; }
+.page-head h1 {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 32px;
+  margin: 0;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+}
+.page-head .page-head__sub { color: var(--muted); margin-top: 6px; font-size: 14px; }
+.page-head__actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+
+.btn {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  padding: 9px 14px;
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  gap: 8px;
+  align-items: center;
+  transition: transform .05s, background .15s;
+}
+.btn:hover { background: var(--bg-soft); }
+.btn:active { transform: translateY(1px); }
+.btn--primary { background: var(--blue); color: #fff; border-color: var(--blue); box-shadow: inset 0 -2px 0 rgba(0,0,0,.15); }
+.btn--primary:hover { background: var(--blue-600); }
+.btn--warn { background: var(--red); color: #fff; border-color: var(--red); }
+.btn--accent { background: var(--yellow); color: var(--yellow-ink); border-color: transparent; box-shadow: inset 0 -2px 0 rgba(0,0,0,.1); }
+.btn svg { width: 15px; height: 15px; }
+
+.btn--ghost { background: transparent; border-color: transparent; }
+.btn--ghost:hover { background: var(--bg-soft); }
+
+/* KPI */
+.kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+}
+.kpi {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 18px 18px 16px;
+  box-shadow: var(--sh-1);
+  position: relative;
+  overflow: hidden;
+}
+.kpi__label { font-size: 12px; color: var(--muted); font-weight: 600; letter-spacing: 0.02em; display: flex; align-items: center; gap: 8px; }
+.kpi__label .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--blue); }
+.kpi__value {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 36px;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  margin-top: 10px;
+  color: var(--ink);
+}
+.kpi__value .unit { font-size: 18px; color: var(--muted); font-weight: 500; margin-left: 4px; font-family: var(--font-sans); }
+.kpi__delta {
+  display: inline-flex;
+  gap: 4px;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 8px 3px 6px;
+  border-radius: var(--r-pill);
+  margin-top: 10px;
+}
+.kpi__delta--up { background: var(--green-50); color: oklch(0.45 0.14 150); }
+.kpi__delta--down { background: var(--red-50); color: var(--red-600); }
+.kpi__spark { position: absolute; right: -4px; bottom: 0; opacity: 0.9; }
+
+/* KPI variants */
+.kpi--accent { background: linear-gradient(155deg, var(--yellow) 0%, oklch(0.90 0.18 82) 100%); border-color: transparent; color: var(--yellow-ink); }
+.kpi--accent .kpi__label, .kpi--accent .kpi__value { color: var(--yellow-ink); }
+.kpi--accent .kpi__label .dot { background: var(--yellow-ink); }
+
+.kpi--dark { background: var(--ink); border-color: transparent; color: #fff; }
+.kpi--dark .kpi__label { color: rgba(255,255,255,.7); }
+.kpi--dark .kpi__value { color: #fff; }
+
+/* Grid sections on dashboard */
+.dash-grid {
+  display: grid;
+  grid-template-columns: 1.3fr 1fr;
+  gap: 16px;
+}
+.dash-grid--3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 16px;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-1);
+  overflow: hidden;
+}
+.card__head {
+  padding: 16px 18px 12px;
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid var(--line-2);
+  /* Заголовок + навигация/фильтры справа: на узком экране переносим,
+     иначе правый блок кнопок уезжал за край карточки. */
+  flex-wrap: wrap;
+}
+.card__title {
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.005em;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card__subtitle {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.card__body { padding: 8px 8px; }
+
+/* =========== Call-list (надо позвонить) =========== */
+.call-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+}
+.call-row + .call-row { margin-top: 2px; }
+.call-row:hover { background: var(--bg-soft); }
+.call-row__avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--blue-100);
+  color: var(--blue-ink);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 13px;
+}
+.call-row__name { font-weight: 600; font-size: 14px; }
+.call-row__meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.call-row__chip {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: var(--r-pill);
+  background: var(--red-50);
+  color: var(--red-600);
+  white-space: nowrap;
+}
+.call-row__chip--warn { background: var(--yellow-100); color: var(--yellow-ink); }
+.call-row__actions { display: flex; gap: 4px; }
+.icon-btn {
+  width: 32px; height: 32px;
+  display: grid; place-items: center;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink-2);
+}
+.icon-btn:hover { background: var(--bg-soft); }
+.icon-btn svg { width: 15px; height: 15px; }
+.icon-btn.is-done { background: var(--green-50); color: oklch(0.45 0.14 150); border-color: transparent; }
+
+/* Leads pipeline */
+.lead-row { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: var(--r-sm); }
+.lead-row:hover { background: var(--bg-soft); }
+.lead-row__src { width: 6px; height: 36px; border-radius: 3px; }
+.lead-row__main { flex: 1; }
+.lead-row__name { font-weight: 600; font-size: 14px; }
+.lead-row__meta { font-size: 12px; color: var(--muted); }
+.lead-row__stage {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  background: var(--blue-50);
+  color: var(--blue-ink);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Debtors */
+.debt-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 12px;
+  border-radius: var(--r-sm);
+}
+.debt-row + .debt-row { border-top: 1px dashed var(--line); }
+.debt-row__name { font-weight: 600; font-size: 14px; }
+.debt-row__meta { font-size: 12px; color: var(--muted); }
+.debt-row__sum { font-weight: 700; font-family: var(--font-display); font-size: 15px; color: var(--red-600); }
+
+/* Calendar (week) */
+.cal {
+  padding: 8px 14px 16px;
+  /* Семь колонок ниже ~800px схлопывались в нечитаемые полоски и обрезались
+     краем карточки. Даём сетке минимальную ширину и горизонтальный скролл. */
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.cal__grid {
+  display: grid;
+  /* minmax(0, 1fr): колонки всегда равные, длинные названия занятий не
+     распирают трек — иначе тело календаря расходится с шапкой дат. */
+  grid-template-columns: 56px repeat(7, minmax(0, 1fr));
+  gap: 0;
+  min-width: 860px;
+}
+.cal__hour {
+  font-size: 11px;
+  color: var(--muted);
+  padding: 6px 6px 0 0;
+  text-align: right;
+  border-top: 1px dashed var(--line-2);
+}
+/* Журнальная сетка: дни разделены сплошными вертикальными линиями,
+   часы — лёгким пунктиром. Выходные и «сегодня» тонируются на всю колонку. */
+.cal__cell {
+  border-top: 1px dashed var(--line-2);
+  border-left: 1px solid var(--line);
+  min-height: 44px;
+  padding: 3px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.cal__grid > *:nth-child(8n) { border-right: 1px solid var(--line); }
+.cal__cell.is-weekend { background: oklch(0.965 0.005 260 / 0.6); }
+.cal__cell.is-today { background: oklch(0.97 0.03 252 / 0.45); }
+.cal__grid--head > div { border-bottom: 2px solid var(--line); }
+.cal__grid--head + .cal__grid > *:nth-child(-n+8) { border-top: 0; }
+.cal__head {
+  font-size: 11px;
+  color: var(--muted);
+  padding: 6px 0;
+  text-align: center;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  font-weight: 600;
+  border-left: 1px solid var(--line);
+  border-radius: 6px 6px 0 0;
+}
+.cal__head.is-weekend { background: oklch(0.965 0.005 260 / 0.6); }
+.cal__head.is-today { background: oklch(0.97 0.03 252 / 0.45); }
+.cal__head .d { display: block; font-size: 18px; color: var(--ink); font-weight: 700; margin-top: 2px; letter-spacing: -0.02em; font-family: var(--font-display); }
+.cal__head.is-today { color: var(--blue); }
+.cal__head.is-today .d { color: var(--blue); }
+.cal__event {
+  position: relative;
+  border-radius: 8px;
+  padding: 5px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1.25;
+  overflow: hidden;
+  cursor: pointer;
+  background: var(--blue-50);
+  color: var(--blue-ink);
+  border: 1px solid var(--blue-100);
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+.cal__event:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0,0,0,.06);
+}
+.cal__event__time {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--blue);
+  letter-spacing: 0.02em;
+}
+.cal__event__name {
+  font-weight: 700;
+  font-size: 12px;
+  color: var(--ink);
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cal__event__sub {
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--muted);
+  margin-top: 1px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+/* Cancelled / completed states */
+.cal__event.lesson-status--cancelled {
+  background: var(--red-50);
+  border-color: var(--red-100);
+  opacity: 0.7;
+}
+.cal__event.lesson-status--cancelled .cal__event__time { color: var(--red-600); }
+.cal__event.lesson-status--completed {
+  background: var(--bg-soft);
+  border-color: var(--line);
+  opacity: 0.85;
+}
+.cal__event.lesson-status--completed .cal__event__time { color: var(--muted); }
+
+/* Персональная тренировка в общей сетке — отличается от групповой цветом,
+   чтобы «обычные» и «индивидуальные» читались с одного взгляда. */
+.cal__event--pt {
+  background: var(--yellow-50, oklch(0.98 0.03 90));
+  border-color: var(--yellow-100, oklch(0.93 0.07 90));
+  border-left: 3px solid var(--yellow, #eab308);
+}
+.cal__event--pt .cal__event__time { color: var(--yellow-ink, #854d0e); }
+.cal__event__tag {
+  display: inline-block;
+  margin-left: 5px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--yellow, #eab308);
+  color: var(--yellow-ink, #422006);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  vertical-align: 1px;
+}
+/* Точки-легенды в переключателе типа занятий */
+.cal-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.cal-dot--group { background: var(--blue); }
+.cal-dot--pt { background: var(--yellow, #eab308); }
+
+/* Multi-select highlight in schedule grid */
+.cal__event--selected {
+  outline: 2px solid var(--blue);
+  outline-offset: 1px;
+  box-shadow: 0 0 0 4px oklch(0.95 0.04 250);
+}
+
+/* Floating action bar for bulk schedule operations */
+.bulk-action-bar {
+  position: fixed;
+  left: 50%;
+  bottom: 24px;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  /* На узких экранах четыре кнопки вылезали за края viewport'а. */
+  flex-wrap: wrap;
+  max-width: calc(100vw - 32px);
+  gap: 10px;
+  padding: 10px 14px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  z-index: 50;
+}
+.bulk-action-bar__count {
+  font-size: 13px;
+  color: var(--ink);
+}
+
+/* Тинты по направлениям */
+.tint-lfk  { background: var(--dir-lfk)  !important; }
+.tint-gym  { background: var(--dir-gym)  !important; }
+.tint-mart { background: var(--dir-mart) !important; }
+.tint-dev  { background: var(--dir-dev)  !important; }
+
+/* Тинты по секциям */
+.tint-lfk-spine   { background: var(--sec-lfk-spine)   !important; }
+.tint-lfk-posture { background: var(--sec-lfk-posture) !important; }
+.tint-lfk-pelvic  { background: var(--sec-lfk-pelvic)  !important; }
+.tint-gym-sport   { background: var(--sec-gym-sport)   !important; }
+.tint-gym-acro    { background: var(--sec-gym-acro)    !important; }
+.tint-gym-aero    { background: var(--sec-gym-aero)    !important; }
+.tint-gym-aest    { background: var(--sec-gym-aest)    !important; }
+.tint-mart-judo   { background: var(--sec-mart-judo)   !important; }
+.tint-mart-tkd    { background: var(--sec-mart-tkd)    !important; }
+.tint-mart-box    { background: var(--sec-mart-box)    !important; }
+
+/* Activity / attendance bar */
+.att-chart { padding: 14px 18px 18px; display: grid; gap: 8px; }
+.att-bar { display: grid; grid-template-columns: 90px 1fr 40px; gap: 10px; align-items: center; font-size: 12px; }
+.att-bar__name { color: var(--ink-2); font-weight: 500; }
+.att-bar__track { height: 8px; background: var(--bg-soft); border-radius: 4px; overflow: hidden; }
+.att-bar__fill { height: 100%; background: var(--blue); border-radius: 4px; }
+.att-bar__val { text-align: right; font-weight: 700; font-family: var(--font-display); font-size: 13px; }
+
+/* Mini tabs */
+.tabs {
+  display: inline-flex;
+  gap: 2px;
+  background: var(--bg-soft);
+  padding: 3px;
+  border-radius: var(--r-pill);
+  /* Шесть вкладок («Персональные») не помещались в строку и уезжали
+     за край карточки — переносим вместо обрезки. */
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+.tabs__btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  border-radius: var(--r-pill);
+  white-space: nowrap;
+}
+.tabs__btn.is-active { background: #fff; color: var(--ink); box-shadow: var(--sh-1); }
+
+/* ============================================================
+   Phones stage — frames side by side
+   ============================================================ */
+.phones-rail {
+  display: flex;
+  gap: 48px;
+  align-items: flex-start;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+.phone-slot { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.phone-slot__cap {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--ink-2);
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.phone-slot__cap .role-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--blue); }
+.phone-slot__hint { color: var(--muted); font-size: 12px; max-width: 320px; text-align: center; }
+
+/* ============================================================
+   Mobile screens (inside iOS frame)
+   ============================================================ */
+.m-screen {
+  height: 100%;
+  width: 100%;
+  background: var(--bg);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.m-scroll { flex: 1; overflow: hidden auto; padding: 0 16px 96px; }
+.m-scroll::-webkit-scrollbar { width: 0; }
+
+.m-top {
+  padding: 68px 16px 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.m-greet { flex: 1; }
+.m-greet__hello { font-size: 12px; color: var(--muted); font-weight: 500; }
+.m-greet__name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 20px;
+  letter-spacing: -0.015em;
+  line-height: 1.1;
+  margin-top: 2px;
+}
+.m-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--blue-100);
+  color: var(--blue-ink);
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  border: 2px solid #fff;
+  box-shadow: var(--sh-1);
+}
+
+.m-bell {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #fff;
+  border: 1px solid var(--line);
+  display: grid;
+  place-items: center;
+  position: relative;
+}
+.m-bell__dot { position: absolute; top: 8px; right: 9px; width: 8px; height: 8px; background: var(--red); border-radius: 50%; border: 2px solid #fff; }
+
+/* Kid switcher (Parent) */
+.kid-switch {
+  display: flex;
+  gap: 8px;
+  padding: 0 16px 14px;
+  overflow-x: auto;
+}
+.kid-chip {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: var(--r-pill);
+  padding: 6px 14px 6px 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.kid-chip__av {
+  width: 28px; height: 28px; border-radius: 50%;
+  background: var(--blue-100); color: var(--blue-ink);
+  display: grid; place-items: center; font-weight: 700; font-size: 12px;
+}
+.kid-chip__name { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.kid-chip.is-active { background: var(--ink); border-color: var(--ink); }
+.kid-chip.is-active .kid-chip__name { color: #fff; }
+.kid-chip.is-active .kid-chip__av { background: var(--blue); color: #fff; }
+
+/* Kid hero card (parent) */
+.kid-hero {
+  border-radius: var(--r-xl);
+  background: var(--ink);
+  color: #fff;
+  padding: 18px;
+  position: relative;
+  overflow: hidden;
+  box-shadow: var(--sh-2);
+}
+.kid-hero::before {
+  content: "";
+  position: absolute;
+  inset: -30% -20% auto auto;
+  width: 240px; height: 240px;
+  background: radial-gradient(circle at 30% 30%, oklch(0.65 0.22 250 / .9), transparent 60%);
+  filter: blur(6px);
+}
+.kid-hero__top { display: flex; align-items: start; gap: 12px; position: relative; }
+.kid-hero__face {
+  width: 56px; height: 56px; border-radius: 18px;
+  background: linear-gradient(135deg, var(--yellow), var(--red));
+  color: #fff;
+  display: grid; place-items: center;
+  font-weight: 800; font-size: 20px;
+  box-shadow: inset 0 -4px 0 rgba(0,0,0,.2);
+  flex-shrink: 0;
+}
+.kid-hero__name { font-family: var(--font-display); font-weight: 700; font-size: 19px; letter-spacing: -0.01em; line-height: 1.15; }
+.kid-hero__sub { font-size: 12px; color: rgba(255,255,255,.65); margin-top: 4px; }
+.kid-hero__stats { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 16px; position: relative; }
+.kid-hero__stat {
+  background: rgba(255,255,255,.08);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: var(--r-md);
+  padding: 10px 12px;
+  backdrop-filter: blur(6px);
+}
+.kid-hero__stat-label { font-size: 11px; color: rgba(255,255,255,.6); font-weight: 500; }
+.kid-hero__stat-value { font-family: var(--font-display); font-weight: 700; font-size: 22px; margin-top: 4px; letter-spacing: -0.02em; }
+.kid-hero__stat-value small { font-size: 11px; font-weight: 500; color: rgba(255,255,255,.6); font-family: var(--font-sans); margin-left: 3px; }
+.kid-hero__bar { height: 4px; background: rgba(255,255,255,.15); border-radius: 2px; margin-top: 8px; overflow: hidden; }
+.kid-hero__bar-fill { height: 100%; background: var(--yellow); border-radius: 2px; }
+
+/* Section header on mobile screens */
+.m-sect { padding: 18px 0 10px; display: flex; align-items: baseline; justify-content: space-between; }
+.m-sect__title { font-family: var(--font-display); font-weight: 700; font-size: 16px; letter-spacing: -0.01em; }
+.m-sect__more { font-size: 12px; color: var(--blue); font-weight: 600; }
+
+/* Next lesson card */
+.next-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 14px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  box-shadow: var(--sh-1);
+}
+.next-card__when {
+  width: 54px;
+  text-align: center;
+  background: var(--yellow);
+  border-radius: var(--r-md);
+  padding: 8px 0;
+  color: var(--yellow-ink);
+  flex-shrink: 0;
+}
+.next-card__when .wd { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; }
+.next-card__when .d { font-family: var(--font-display); font-weight: 700; font-size: 22px; line-height: 1; margin-top: 2px; }
+.next-card__main { flex: 1; min-width: 0; }
+.next-card__title { font-weight: 700; font-size: 14px; line-height: 1.2; }
+.next-card__meta { font-size: 12px; color: var(--muted); margin-top: 3px; }
+.next-card__chev { color: var(--muted); }
+
+/* Month calendar (mobile, attendance) */
+.mcal {
+  background: #fff;
+  border-radius: var(--r-lg);
+  border: 1px solid var(--line);
+  padding: 14px;
+}
+.mcal__head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.mcal__title { font-weight: 700; font-size: 14px; font-family: var(--font-display); }
+.mcal__nav { display: flex; gap: 2px; }
+.mcal__grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.mcal__wd { font-size: 10px; text-align: center; color: var(--muted); font-weight: 600; padding: 4px 0; text-transform: uppercase; }
+.mcal__d {
+  aspect-ratio: 1/1;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-2);
+  position: relative;
+  background: var(--bg-soft);
+}
+.mcal__d.is-out { color: var(--muted-2); background: transparent; }
+.mcal__d.is-today { outline: 2px solid var(--blue); outline-offset: -2px; }
+.mcal__d--present { background: oklch(0.93 0.11 150); color: oklch(0.30 0.14 150); }
+.mcal__d--absent { background: var(--red-100); color: var(--red-600); }
+.mcal__d--excused { background: var(--yellow-100); color: var(--yellow-ink); }
+.mcal__d--late { background: oklch(0.92 0.08 60); color: oklch(0.40 0.12 60); }
+.mcal__d--makeup { background: var(--blue-100); color: var(--blue-ink); }
+.mcal__legend { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; font-size: 11px; color: var(--muted); }
+.mcal__legend span { display: inline-flex; gap: 4px; align-items: center; }
+.mcal__legend i { width: 10px; height: 10px; border-radius: 3px; background: var(--bg-soft); display: inline-block; }
+
+/* Achievements */
+.achievement {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 14px;
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+.achievement + .achievement { margin-top: 10px; }
+.medal {
+  width: 48px; height: 48px;
+  flex-shrink: 0;
+}
+.achievement__title { font-weight: 700; font-size: 14px; line-height: 1.2; }
+.achievement__by { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+.coach-note {
+  background: var(--blue-50);
+  border-radius: var(--r-lg);
+  padding: 14px;
+  border-left: 3px solid var(--blue);
+}
+.coach-note__head { font-size: 11px; color: var(--blue-ink); font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; }
+.coach-note__text { margin-top: 6px; font-size: 13px; line-height: 1.45; color: var(--ink-2); }
+.coach-note__sig { margin-top: 8px; font-size: 12px; color: var(--muted); }
+
+/* Payments list */
+.pay-row {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.pay-row + .pay-row { margin-top: 8px; }
+.pay-row__icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  background: var(--green-50); color: oklch(0.45 0.14 150);
+  display: grid; place-items: center;
+}
+.pay-row__icon svg { width: 16px; height: 16px; }
+.pay-row__main { flex: 1; }
+.pay-row__title { font-weight: 600; font-size: 13px; }
+.pay-row__date { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.pay-row__amt { font-weight: 700; font-family: var(--font-display); font-size: 14px; }
+
+/* Contact actions */
+.contact-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.contact-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 14px;
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  cursor: pointer;
+}
+.contact-card:active { transform: scale(.98); }
+.contact-card__icon {
+  width: 36px; height: 36px; border-radius: 10px;
+  display: grid; place-items: center;
+  color: #fff;
+}
+.contact-card__title { font-weight: 700; font-size: 14px; }
+.contact-card__sub { font-size: 11px; color: var(--muted); }
+
+/* Bottom tab bar */
+.tabbar {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  padding: 8px 12px 30px;
+  background: rgba(255,255,255,0.94);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-top: 1px solid var(--line);
+  display: flex;
+  justify-content: space-around;
+}
+.tabbar__btn {
+  appearance: none;
+  background: transparent;
+  border: 0;
+  padding: 6px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 600;
+}
+.tabbar__btn svg { width: 22px; height: 22px; }
+.tabbar__btn.is-active { color: var(--blue); }
+
+/* =========== Coach screen =========== */
+.lesson-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 14px;
+  box-shadow: var(--sh-1);
+}
+.lesson-card + .lesson-card { margin-top: 10px; }
+.lesson-card__head { display: flex; align-items: center; gap: 10px; }
+.lesson-card__tint { width: 6px; height: 36px; border-radius: 3px; flex-shrink: 0; }
+.lesson-card__title { font-weight: 700; font-size: 14px; line-height: 1.2; }
+.lesson-card__meta { font-size: 12px; color: var(--muted); margin-top: 2px; display: flex; gap: 8px; align-items: center; }
+.lesson-card__meta .dot { width: 3px; height: 3px; background: var(--muted-2); border-radius: 50%; display: inline-block; }
+.lesson-card__time { margin-left: auto; text-align: right; }
+.lesson-card__time .t { font-family: var(--font-display); font-weight: 700; font-size: 15px; }
+.lesson-card__time .d { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+.lesson-card__foot {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  justify-content: space-between;
+}
+.att-pips { display: flex; gap: 3px; align-items: center; }
+.att-pip { width: 24px; height: 24px; border-radius: 50%; border: 2px solid #fff; margin-left: -8px; background: var(--blue-100); color: var(--blue-ink); display: grid; place-items: center; font-size: 10px; font-weight: 700; box-shadow: 0 0 0 1px var(--line); }
+.att-pip:first-child { margin-left: 0; }
+.att-pip--more { background: var(--bg-soft); color: var(--muted); }
+.lesson-card__state {
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  background: var(--green-50);
+  color: oklch(0.45 0.14 150);
+}
+.lesson-card__state--pending { background: var(--yellow-100); color: var(--yellow-ink); }
+
+/* Coach attendance roster */
+.roster-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: center;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 10px 12px;
+}
+.roster-row + .roster-row { margin-top: 6px; }
+.roster-row__name { font-weight: 600; font-size: 14px; }
+.roster-row__meta { font-size: 11px; color: var(--muted); margin-top: 1px; }
+.status-pick { display: flex; gap: 2px; background: var(--bg-soft); padding: 3px; border-radius: var(--r-pill); }
+.status-pick__btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  color: var(--muted);
+}
+.status-pick__btn.is-active.sp-present { background: oklch(0.68 0.16 150); color: #fff; }
+.status-pick__btn.is-active.sp-absent { background: var(--red); color: #fff; }
+.status-pick__btn.is-active.sp-excused { background: var(--yellow); color: var(--yellow-ink); }
+.status-pick__btn.is-active.sp-late { background: oklch(0.78 0.15 60); color: #fff; }
+.status-pick__btn svg { width: 13px; height: 13px; }
+
+/* Coach summary bar */
+.summary-pill {
+  display: flex;
+  background: var(--ink);
+  color: #fff;
+  border-radius: var(--r-lg);
+  padding: 12px 16px;
+  align-items: center;
+  gap: 12px;
+  box-shadow: var(--sh-2);
+}
+.summary-pill__val { font-family: var(--font-display); font-weight: 700; font-size: 22px; letter-spacing: -0.02em; }
+.summary-pill__lbl { font-size: 11px; color: rgba(255,255,255,.65); }
+.summary-pill__sep { width: 1px; height: 26px; background: rgba(255,255,255,.12); }
+
+/* Coach schedule grid (табель) */
+.tabel {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 12px;
+  overflow: hidden;
+}
+.tabel__head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+.tabel__grid {
+  overflow-x: auto;
+  margin: 0 -12px;
+  padding: 0 12px 4px;
+}
+.tabel__table { border-collapse: separate; border-spacing: 2px 4px; min-width: 100%; }
+.tabel__table th, .tabel__table td { padding: 0; }
+.tabel__table th.kid { text-align: left; font-weight: 600; font-size: 12px; padding-right: 8px; white-space: nowrap; }
+.tabel__table th.date { font-size: 10px; color: var(--muted); font-weight: 600; width: 22px; text-align: center; }
+.tabel__table td.kid { text-align: left; font-size: 12px; padding-right: 8px; font-weight: 600; white-space: nowrap; color: var(--ink-2); }
+.tabel__dot { width: 20px; height: 20px; border-radius: 6px; margin: 0 auto; display: grid; place-items: center; color: transparent; background: var(--bg-soft); }
+.tabel__dot svg { width: 12px; height: 12px; }
+.tabel__dot.d-present { background: oklch(0.93 0.11 150); color: oklch(0.35 0.15 150); }
+.tabel__dot.d-absent { background: var(--red-100); color: var(--red-600); }
+.tabel__dot.d-excused { background: var(--yellow-100); color: var(--yellow-ink); }
+.tabel__dot.d-late { background: oklch(0.92 0.08 60); color: oklch(0.45 0.14 60); }
+.tabel__dot.d-makeup { background: var(--blue-100); color: var(--blue-ink); }
+
+/* Group card */
+.group-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 14px;
+  box-shadow: var(--sh-1);
+  position: relative;
+  overflow: hidden;
+}
+/* Имя в табеле кликабельно — открывает карточку ребёнка. */
+.journal__name--clickable { cursor: pointer; }
+.journal__name--clickable:hover .journal__name-text { color: var(--blue); text-decoration: underline; }
+
+/* Кликабельная карточка группы у тренера: тап открывает состав. */
+.group-card--tap {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+.group-card--tap:active { transform: scale(0.99); }
+.group-card__chev { color: var(--muted); display: grid; place-items: center; }
+
+/* Состав группы + заметки о прогрессе (тренерский экран) */
+.coach-roster { max-height: 82vh; overflow-y: auto; }
+.coach-roster__list { display: grid; gap: 8px; margin-bottom: 12px; }
+.coach-roster__row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: left;
+  font: inherit;
+  color: inherit;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 10px 12px;
+  cursor: pointer;
+}
+.coach-roster__row:active { transform: scale(0.99); }
+.coach-roster__row > .icon, .coach-roster__row > svg { color: var(--muted); flex-shrink: 0; }
+.coach-roster__info { flex: 1; min-width: 0; }
+.coach-roster__name { font-weight: 700; font-size: 14px; color: var(--ink); }
+.coach-roster__meta { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.coach-roster__meta.is-ended { color: var(--red); }
+.coach-roster__ta {
+  width: 100%;
+  resize: vertical;
+  min-height: 72px;
+  margin-bottom: 8px;
+}
+.coach-roster__save { width: 100%; margin-bottom: 12px; }
+.coach-roster__err { font-size: 12.5px; color: var(--red); margin-bottom: 8px; }
+.coach-roster__notes { display: grid; gap: 8px; margin-bottom: 12px; }
+.coach-roster__empty { font-size: 13px; color: var(--muted); text-align: center; padding: 8px 0; }
+.coach-roster__note {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 10px 12px;
+  font-size: 13.5px;
+  color: var(--ink);
+  white-space: pre-wrap;
+}
+.coach-roster__note-date { font-size: 11.5px; color: var(--muted); margin-bottom: 4px; }
+.group-card + .group-card { margin-top: 10px; }
+.group-card__tint { position: absolute; left: 0; top: 0; bottom: 0; width: 4px; }
+.group-card__title { font-weight: 700; font-size: 15px; font-family: var(--font-display); }
+.group-card__sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.group-card__stats { display: flex; gap: 16px; margin-top: 12px; }
+.group-card__stat { }
+.group-card__stat .v { font-family: var(--font-display); font-weight: 700; font-size: 18px; color: var(--ink); }
+.group-card__stat .l { font-size: 11px; color: var(--muted); }
+
+/* ============================================================
+   Tweaks panel
+   ============================================================ */
+.tweaks {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 100;
+  width: 260px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  box-shadow: var(--sh-3);
+  padding: 14px;
+}
+.tweaks__head { font-family: var(--font-display); font-weight: 700; font-size: 14px; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+.tweaks__close { appearance: none; border: 0; background: transparent; color: var(--muted); cursor: pointer; }
+.tweaks__group { margin-bottom: 10px; }
+.tweaks__label { font-size: 11px; color: var(--muted); font-weight: 600; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+.tweaks__options { display: flex; gap: 4px; flex-wrap: wrap; }
+.tweaks__opt {
+  appearance: none;
+  background: var(--bg-soft);
+  border: 1px solid transparent;
+  padding: 6px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  border-radius: var(--r-sm);
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.tweaks__opt.is-active { background: var(--ink); color: #fff; }
+
+/* Card style modifiers */
+.cards-flat .card, .cards-flat .next-card, .cards-flat .achievement, .cards-flat .lesson-card, .cards-flat .kpi, .cards-flat .sidebar, .cards-flat .mcal, .cards-flat .pay-row, .cards-flat .roster-row, .cards-flat .group-card, .cards-flat .tabel {
+  box-shadow: none !important;
+  border-radius: 6px !important;
+}
+.cards-bordered .card, .cards-bordered .next-card, .cards-bordered .achievement, .cards-bordered .lesson-card, .cards-bordered .kpi, .cards-bordered .sidebar, .cards-bordered .mcal, .cards-bordered .pay-row, .cards-bordered .roster-row, .cards-bordered .group-card, .cards-bordered .tabel {
+  box-shadow: none !important;
+  border-width: 1.5px !important;
+  border-color: var(--ink-2) !important;
+}
+
+/* ============================================================
+   Misc
+   ============================================================ */
+.tag {
+  font-size: 10px;
+  font-weight: 700;
+  padding: 3px 7px;
+  border-radius: var(--r-pill);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.tag--live { background: var(--red); color: #fff; }
+.tag--soon { background: var(--yellow); color: var(--yellow-ink); }
+.tag--ok { background: var(--green-50); color: oklch(0.40 0.14 150); }
+.tag--muted { background: var(--bg-soft); color: var(--muted); }
+
+.section-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  display: inline-block; margin-right: 6px;
+  vertical-align: middle;
+}
+/* Точки по направлениям */
+.section-dot.d-lfk  { background: var(--dir-lfk);  }
+.section-dot.d-gym  { background: var(--dir-gym);  }
+.section-dot.d-mart { background: var(--dir-mart); }
+.section-dot.d-dev  { background: var(--dir-dev);  }
+
+/* Точки по секциям */
+.section-dot.s-lfk-spine   { background: var(--sec-lfk-spine);   }
+.section-dot.s-lfk-posture { background: var(--sec-lfk-posture); }
+.section-dot.s-lfk-pelvic  { background: var(--sec-lfk-pelvic);  }
+.section-dot.s-gym-sport   { background: var(--sec-gym-sport);   }
+.section-dot.s-gym-acro    { background: var(--sec-gym-acro);    }
+.section-dot.s-gym-aero    { background: var(--sec-gym-aero);    }
+.section-dot.s-gym-aest    { background: var(--sec-gym-aest);    }
+.section-dot.s-mart-judo   { background: var(--sec-mart-judo);   }
+.section-dot.s-mart-tkd    { background: var(--sec-mart-tkd);    }
+.section-dot.s-mart-box    { background: var(--sec-mart-box);    }
+.section-dot.s-dev         { background: var(--sec-dev);         }
+
+.divider { height: 1px; background: var(--line-2); margin: 6px 10px; }
+
+/* Link-ish */
+.link { color: var(--blue); text-decoration: none; font-weight: 600; }
+.link:hover { text-decoration: underline; }
+
+/* ============================================================
+   Admin table (разделы с данными)
+   ============================================================ */
+.admin-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: 13px; }
+.admin-table th {
+  text-align: left;
+  font-weight: 700;
+  color: var(--muted);
+  padding: 10px 14px;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-soft);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+.admin-table td {
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line-2);
+  color: var(--ink);
+  vertical-align: middle;
+}
+.admin-table tbody tr { cursor: pointer; transition: background .12s; }
+.admin-table tbody tr:hover td { background: var(--bg-soft); }
+.admin-table tr.is-active td { background: var(--blue-50); }
+.admin-table td.num, .admin-table th.num { text-align: right; font-variant-numeric: tabular-nums; font-family: var(--font-display); font-weight: 700; }
+.admin-table .cell-main { font-weight: 600; }
+.admin-table .cell-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+/* Обёртка для широких таблиц. `.card` и `.modal` режут содержимое
+   (`overflow: hidden` ради скруглений), поэтому таблица шире контейнера
+   раньше просто обрезалась по краю — колонки и кнопки в них были
+   недоступны. Здесь таблица получает собственный горизонтальный скролл:
+   узкая — растягивается на всю ширину, широкая — скроллится. */
+.table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+/* width оставляем auto: table-layout сам возьмёт max(min-content, доступная
+   ширина) — узкая таблица растянется до 100%, широкая уедет в скролл.
+   `width: max-content` здесь нельзя: строка с длинным комментарием растянула
+   бы таблицу на километр. */
+.table-scroll > .admin-table { min-width: 100%; }
+/* Внутри скролл-обёртки sticky-шапка не нужна (вертикального скролла нет),
+   а sticky-ячейка при горизонтальном скролле рисуется поверх соседних. */
+.table-scroll > .admin-table th { position: static; }
+/* Длинный текст (комментарии, причины) переносим внутри ячейки.
+   break-word, а не anywhere: anywhere участвует в расчёте min-content и
+   схлопнул бы колонки в один символ вместо честного скролла. */
+.admin-table td, .admin-table th { overflow-wrap: break-word; }
+
+/* Status chips for rows */
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+.status-chip--active   { background: var(--green-50); color: oklch(0.40 0.14 150); }
+.status-chip--expiring { background: var(--yellow-100); color: var(--yellow-ink); }
+.status-chip--expired  { background: var(--red-50); color: var(--red-600); }
+.status-chip--frozen   { background: var(--blue-50); color: var(--blue-ink); }
+.status-chip--pending  { background: var(--bg-soft); color: var(--muted); }
+.status-chip--refund   { background: var(--red-50); color: var(--red-600); }
+.status-chip--paid     { background: var(--green-50); color: oklch(0.40 0.14 150); }
+
+/* Section card (разделы — крупные карточки) */
+.sec-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+.sec-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 18px;
+  box-shadow: var(--sh-1);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  cursor: pointer;
+  transition: transform .1s, box-shadow .15s;
+  position: relative;
+  overflow: hidden;
+}
+.sec-card:hover { transform: translateY(-1px); box-shadow: var(--sh-2); }
+.sec-card__head { display: flex; align-items: center; gap: 12px; }
+.sec-card__bubble {
+  width: 44px; height: 44px; border-radius: 14px;
+  display: grid; place-items: center;
+  color: #fff;
+  box-shadow: inset 0 -3px 0 rgba(0,0,0,.14);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+.sec-card__name { font-family: var(--font-display); font-weight: 700; font-size: 15px; letter-spacing: -0.01em; }
+.sec-card__sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.sec-card__stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.sec-card__stat .v { font-family: var(--font-display); font-weight: 700; font-size: 20px; color: var(--ink); letter-spacing: -0.02em; line-height: 1; }
+.sec-card__stat .l { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; margin-top: 4px; }
+
+/* Coach cards grid */
+.coach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 14px; }
+.coach-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 16px;
+  box-shadow: var(--sh-1);
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  cursor: pointer;
+  transition: transform .1s, box-shadow .15s;
+}
+.coach-card:hover { transform: translateY(-1px); box-shadow: var(--sh-2); }
+.coach-card__av {
+  width: 46px; height: 46px; border-radius: 14px;
+  display: grid; place-items: center;
+  color: #fff; font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 15px;
+  box-shadow: inset 0 -3px 0 rgba(0,0,0,.15);
+  flex-shrink: 0;
+}
+.coach-card__name { font-weight: 700; font-size: 14px; line-height: 1.2; }
+.coach-card__sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.coach-card__stats { display: flex; gap: 14px; margin-top: 10px; }
+.coach-card__stats .v { font-family: var(--font-display); font-weight: 700; font-size: 16px; letter-spacing: -0.02em; }
+.coach-card__stats .l { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600; }
+
+/* Settings groups */
+.settings-group { background: #fff; border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--sh-1); overflow: hidden; }
+.settings-group + .settings-group { margin-top: 12px; }
+.settings-row {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 16px;
+  cursor: pointer;
+}
+.settings-row + .settings-row { border-top: 1px solid var(--line-2); }
+.settings-row:hover { background: var(--bg-soft); }
+.settings-row__icon { width: 34px; height: 34px; border-radius: 10px; background: var(--blue-50); color: var(--blue); display: grid; place-items: center; flex-shrink: 0; }
+.settings-row__main { flex: 1; }
+.settings-row__title { font-weight: 600; font-size: 14px; }
+.settings-row__sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+.settings-row__chev { color: var(--muted-2); }
+
+/* Empty state */
+.empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.empty__title { font-family: var(--font-display); font-size: 15px; color: var(--ink-2); margin-bottom: 4px; font-weight: 700; }
+
+/* Search input in toolbar */
+.search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  padding: 7px 12px;
+  min-width: 240px;
+}
+.search-box input {
+  border: 0;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  color: var(--ink);
+  flex: 1;
+  font-family: inherit;
+}
+.search-box input::placeholder { color: var(--muted-2); }
+.search-box svg { color: var(--muted); flex-shrink: 0; }
+
+/* Toolbar row above tables */
+.toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line-2);
+  flex-wrap: wrap;
+}
+.toolbar__spacer { flex: 1; }
+
+/* ============================================================
+   Responsive fallback
+   ============================================================ */
+/* Малые ноутбуки 11–13″ (≈1024–1366px): 13,6″ MacBook (~1470px) сюда не
+   попадает и остаётся на полной вёрстке. Здесь ужимаем сайдбар, отступы
+   и типографику — контенту достаётся больше места, тулбары не ломаются. */
+@media (max-width: 1366px) {
+  .admin { grid-template-columns: 204px 1fr; }
+  .main { padding: 18px; gap: 16px; }
+  .app-chrome__inner { padding: 10px 16px; gap: 12px; }
+  .page-head h1 { font-size: 26px; }
+  .page-head .page-head__sub { font-size: 13px; margin-top: 4px; }
+  .btn { padding: 8px 12px; font-size: 12.5px; }
+  .admin-table { font-size: 12.5px; }
+  .admin-table th { padding: 8px 10px; }
+  .admin-table td { padding: 9px 10px; }
+  .toolbar { padding: 10px 12px; gap: 8px; }
+  .toolbar select, .toolbar input[type="date"] { font-size: 12.5px; }
+  .tabs__btn { padding: 6px 10px; }
+  .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 1100px) {
+  .dash-grid, .dash-grid--3 { grid-template-columns: 1fr; }
+}
+/* 10–11″ и уже (≤1024px): сайдбар сворачиваем в иконки — контент важнее. */
+@media (max-width: 1024px) {
+  .admin {
+    grid-template-columns: 64px 1fr;
+  }
+  .admin .sidebar__toggle { display: none; }
+  .admin .nav-item__label,
+  .admin .sidebar__section { display: none; }
+  .admin .nav-item {
+    justify-content: center;
+    padding: 10px 0;
+    width: 48px;
+    height: 44px;
+    margin: 0 auto;
+  }
+  .admin .nav-item__badge { display: none; }
+  .main { padding: 14px; gap: 14px; }
+  .page-head h1 { font-size: 22px; }
+}
+
+/* ============================================================
+   Login page (auth gate)
+   ============================================================ */
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background:
+    radial-gradient(ellipse 800px 600px at 20% 10%, rgba(59,130,246,0.12), transparent 60%),
+    radial-gradient(ellipse 700px 500px at 80% 90%, rgba(255,200,40,0.10), transparent 60%),
+    var(--bg);
+  position: relative;
+}
+.login-page__lang {
+  position: absolute;
+  top: 24px;
+  right: 24px;
+  display: flex;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  padding: 4px;
+  gap: 2px;
+  box-shadow: var(--sh-1);
+}
+
+.login-card {
+  width: 100%;
+  max-width: 440px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-xl);
+  padding: 32px;
+  box-shadow: var(--sh-3);
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  overflow: hidden;
+}
+.login-card--splash {
+  align-items: center;
+  text-align: center;
+  padding: 48px 32px;
+}
+.login-card__brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin: -32px -32px 8px;
+  padding: 26px 32px;
+  background: var(--blue-ink);
+  color: #fff;
+}
+.login-card__brand .brand__mark img {
+  filter: brightness(0) invert(1);
+}
+.login-card__title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.1;
+}
+.login-card__brand .login-card__title {
+  color: #fff;
+}
+.login-card__sub {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.login-card__brand .login-card__sub {
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.login-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.login-field span {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.login-field input {
+  height: 44px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  font-size: 15px;
+  color: var(--ink);
+  background: var(--bg-soft);
+  transition: border-color .15s, background .15s;
+}
+.login-field input:focus {
+  outline: none;
+  border-color: var(--blue);
+  background: var(--surface);
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.12);
+}
+.login-field input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.login-pwd-wrap {
+  position: relative;
+}
+.login-pwd-wrap input {
+  width: 100%;
+  padding-right: 44px; /* room for the eye button */
+}
+.login-pwd-eye {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  border-radius: var(--r-sm);
+  transition: color .12s, background .12s;
+}
+.login-pwd-eye:hover {
+  color: var(--ink);
+  background: var(--bg-soft);
+}
+
+.login-error {
+  background: var(--red-50);
+  color: var(--red-600);
+  border: 1px solid var(--red-100);
+  border-radius: var(--r-sm);
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.login-submit {
+  height: 48px;
+  border: none;
+  border-radius: var(--r-md);
+  background: var(--blue);
+  color: white;
+  font-size: 15px;
+  font-weight: 600;
+  transition: background .15s, transform .05s;
+}
+.login-submit:hover:not(:disabled) { background: var(--blue-600); }
+.login-submit:active:not(:disabled) { transform: scale(0.99); }
+.login-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.login-demo {
+  margin-top: 4px;
+  padding-top: 18px;
+  border-top: 1px dashed var(--line);
+}
+.login-demo__title {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 10px;
+}
+.login-demo__row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.login-demo__row button {
+  height: 36px;
+  background: var(--bg-soft);
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-2);
+  transition: all .15s;
+}
+.login-demo__row button:hover:not(:disabled) {
+  background: var(--blue-50);
+  border-color: var(--blue-100);
+  color: var(--blue-ink);
+}
+.login-demo__row button:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ============================================================
+   User chip (top bar — replaces role-switcher)
+   ============================================================ */
+.user-chip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 4px 4px 10px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  box-shadow: var(--sh-1);
+}
+.user-chip__avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--blue);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.user-chip__meta {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.2;
+  min-width: 0;
+}
+.user-chip__name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.user-chip__role {
+  font-size: 11px;
+  color: var(--muted);
+  text-transform: capitalize;
+}
+.user-chip__logout {
+  height: 32px;
+  padding: 0 12px;
+  border: none;
+  background: var(--bg-soft);
+  border-radius: var(--r-pill);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--ink-2);
+  margin-left: 4px;
+  transition: background .15s, color .15s;
+}
+.user-chip__logout:hover {
+  background: var(--red-50);
+  color: var(--red-600);
+}
+
+/* ============================================================
+   Animations
+   ============================================================ */
+@keyframes uq-fade-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes uq-scale-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes uq-pop {
+  0% { transform: scale(0.7); opacity: 0; }
+  70% { transform: scale(1.06); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes uq-overlay {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.fade-in { animation: uq-fade-in 0.35s ease-out both; }
+.scale-in { animation: uq-scale-in 0.25s ease-out both; }
+.kpi { animation: uq-fade-in 0.45s ease-out both; }
+.kpi-grid > .kpi:nth-child(1) { animation-delay: 0.02s; }
+.kpi-grid > .kpi:nth-child(2) { animation-delay: 0.08s; }
+.kpi-grid > .kpi:nth-child(3) { animation-delay: 0.14s; }
+.kpi-grid > .kpi:nth-child(4) { animation-delay: 0.20s; }
+
+.dash-grid > * { animation: uq-fade-in 0.5s ease-out both; }
+.dash-grid > *:nth-child(1) { animation-delay: 0.10s; }
+.dash-grid > *:nth-child(2) { animation-delay: 0.18s; }
+
+.coach-grid > .coach-card,
+.sec-grid > .sec-card,
+.admin-table tbody tr {
+  animation: uq-fade-in 0.32s ease-out both;
+}
+.coach-grid > .coach-card:nth-child(1), .sec-grid > .sec-card:nth-child(1) { animation-delay: 0.02s; }
+.coach-grid > .coach-card:nth-child(2), .sec-grid > .sec-card:nth-child(2) { animation-delay: 0.06s; }
+.coach-grid > .coach-card:nth-child(3), .sec-grid > .sec-card:nth-child(3) { animation-delay: 0.10s; }
+.coach-grid > .coach-card:nth-child(4), .sec-grid > .sec-card:nth-child(4) { animation-delay: 0.14s; }
+.coach-grid > .coach-card:nth-child(5), .sec-grid > .sec-card:nth-child(5) { animation-delay: 0.18s; }
+.coach-grid > .coach-card:nth-child(6), .sec-grid > .sec-card:nth-child(6) { animation-delay: 0.22s; }
+
+.admin-table tbody tr:nth-child(1) { animation-delay: 0.02s; }
+.admin-table tbody tr:nth-child(2) { animation-delay: 0.05s; }
+.admin-table tbody tr:nth-child(3) { animation-delay: 0.08s; }
+.admin-table tbody tr:nth-child(4) { animation-delay: 0.11s; }
+.admin-table tbody tr:nth-child(5) { animation-delay: 0.14s; }
+.admin-table tbody tr:nth-child(6) { animation-delay: 0.17s; }
+
+.page-head { animation: uq-fade-in 0.3s ease-out both; }
+.card { animation: uq-fade-in 0.4s ease-out both; }
+
+/* ============================================================
+   Modal
+   ============================================================ */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(11, 18, 32, 0.45);
+  backdrop-filter: blur(4px);
+  z-index: 100;
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px;
+  animation: uq-overlay 0.18s ease-out;
+}
+.modal {
+  background: var(--surface);
+  border-radius: var(--r-xl);
+  box-shadow: var(--sh-3);
+  width: 100%;
+  max-height: calc(100vh - 40px);
+  /* dvh учитывает адресную строку мобильных браузеров — иначе низ модалки
+     (вместе с кнопками в .modal__foot) уезжает за пределы экрана. */
+  max-height: calc(100dvh - 40px);
+  display: flex; flex-direction: column;
+  animation: uq-scale-in 0.22s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+}
+.modal__head {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 22px;
+  border-bottom: 1px solid var(--line-2);
+  gap: 12px;
+}
+.modal__title {
+  font-family: var(--font-display);
+  font-size: 17px; font-weight: 700;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.modal__head .icon-btn { flex-shrink: 0; }
+.modal__body { padding: 18px 22px; overflow-y: auto; overflow-x: hidden; }
+/* Любой прямой потомок body модалки не должен распирать её по горизонтали. */
+.modal__body > * { max-width: 100%; }
+.modal__foot {
+  display: flex; justify-content: flex-end; gap: 8px;
+  /* Кнопок бывает много (табель занятия: отметить/перенести/отменить/тренер) —
+     без переноса они уезжали за правый край и обрезались `overflow: hidden`. */
+  flex-wrap: wrap;
+  padding-top: 18px;
+  margin-top: 8px;
+  border-top: 1px solid var(--line-2);
+  margin-left: -22px; margin-right: -22px; padding-left: 22px; padding-right: 22px;
+}
+.modal__foot > * { flex-shrink: 0; }
+/* Прилипает ко дну прокручиваемого тела модалки: при длинном содержимом
+   (журнал группы, история платежей) кнопки видны сразу, а не «под» скроллом.
+   bottom: -18px компенсирует нижний padding .modal__body.
+   Только :last-child — иначе отрицательный margin наехал бы на блок,
+   который идёт после футера (например, сообщение об ошибке). */
+.modal__foot:last-child {
+  position: sticky;
+  bottom: -18px;
+  z-index: 3;
+  padding-bottom: 18px;
+  margin-bottom: -18px;
+  background: var(--surface);
+}
+
+/* ============================================================
+   Form fields
+   ============================================================ */
+.field {
+  display: flex; flex-direction: column; gap: 6px;
+  margin-bottom: 12px;
+}
+.field__label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+.field input, .field select, .field textarea {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: var(--bg-soft);
+  font-size: 14px;
+  color: var(--ink);
+  font-family: inherit;
+  transition: border-color .15s, background .15s;
+  /* Не выходить за колонку grid и за модалку. */
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+/* select с длинным текстом не должен распирать колонку. */
+.field select { text-overflow: ellipsis; }
+.field textarea { height: auto; padding: 10px 12px; resize: vertical; }
+.field input:focus, .field select:focus, .field textarea:focus {
+  outline: none;
+  border-color: var(--blue);
+  background: var(--surface);
+  box-shadow: 0 0 0 3px rgba(59,130,246,0.10);
+}
+.field input:disabled, .field select:disabled { opacity: 0.6; cursor: not-allowed; }
+.field__hint { font-size: 11px; color: var(--muted); }
+.field__error {
+  font-size: 12px;
+  color: var(--red-600);
+  background: var(--red-50);
+  border: 1px solid var(--red-100);
+  border-radius: var(--r-sm);
+  padding: 6px 10px;
+}
+
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px 12px; }
+/* min-width:0 чтобы колонки сжимались, а не распирали grid за пределы модалки. */
+.grid-2 > * { min-width: 0; }
+@media (max-width: 540px) { .grid-2 { grid-template-columns: 1fr; } }
+
+.divider-soft {
+  height: 1px;
+  background: var(--line-2);
+  margin: 12px -22px;
+}
+
+.seg {
+  display: flex;
+  background: var(--bg-soft);
+  padding: 4px;
+  border-radius: var(--r-md);
+  gap: 2px;
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+.seg__btn {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 8px 12px;
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  transition: all .15s;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.seg__btn.is-active {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--sh-1);
+}
+/* Компактный вариант: кнопки по содержимому, а не в растяжку —
+   для фильтров в шапке (расписание: обычные / индивидуальные). */
+.seg--compact .seg__btn {
+  flex: 0 0 auto;
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.check {
+  display: flex; gap: 10px; align-items: flex-start;
+  padding: 12px;
+  background: var(--bg-soft);
+  border-radius: var(--r-sm);
+  cursor: pointer;
+  margin-bottom: 12px;
+}
+.check input { margin-top: 3px; flex-shrink: 0; }
+.check span { font-size: 13px; }
+.check span b { display: block; color: var(--ink); margin-bottom: 2px; }
+.check span small { font-size: 11px; color: var(--muted); display: block; line-height: 1.4; }
+
+/* ============================================================
+   Toast
+   ============================================================ */
+.toast {
+  position: fixed;
+  bottom: 24px; right: 24px;
+  z-index: 200;
+  padding: 12px 16px;
+  border-radius: var(--r-md);
+  font-size: 13px;
+  font-weight: 500;
+  display: flex; align-items: center; gap: 8px;
+  box-shadow: var(--sh-2);
+  animation: uq-fade-in 0.25s ease-out;
+}
+.toast--ok { background: var(--green-50); color: var(--green); border: 1px solid oklch(0.85 0.16 150); }
+.toast--err { background: var(--red-50); color: var(--red-600); border: 1px solid var(--red-100); }
+
+/* ============================================================
+   Status pills (additional)
+   ============================================================ */
+.pill {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+.pill--active { background: var(--green-50); color: var(--green); }
+.pill--frozen { background: var(--blue-50); color: var(--blue-ink); }
+.pill--expired, .pill--debtor { background: var(--red-50); color: var(--red-600); }
+.pill--archived { background: var(--bg-soft); color: var(--muted); }
+
+/* Lesson status colors for schedule */
+.lesson-status--scheduled { background: var(--blue-50); color: var(--blue-ink); border: 1px solid var(--blue-100); }
+.lesson-status--completed { background: var(--green-50); color: var(--green); border: 1px solid oklch(0.88 0.13 150); }
+.lesson-status--cancelled { background: var(--red-50); color: var(--red-600); border: 1px solid var(--red-100); text-decoration: line-through; }
+.lesson-status--force_majeure { background: var(--yellow-50); color: var(--yellow-ink); border: 1px solid var(--yellow-100); }
+
+/* ============================================================
+   ChildDrawer
+   ============================================================ */
+.child-hero {
+  display: flex;
+  gap: 14px;
+  padding: 14px;
+  background: linear-gradient(135deg, var(--blue-50), var(--bg-soft));
+  border-radius: var(--r-lg);
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+/* Длинные имена/email/телефоны переносятся, а не распирают модалку. */
+.child-hero__name, .child-hero__meta, .child-hero__family { overflow-wrap: anywhere; }
+.child-hero__av {
+  width: 56px; height: 56px;
+  border-radius: 50%;
+  background: var(--blue);
+  color: white;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 18px;
+  flex-shrink: 0;
+}
+.child-hero__name {
+  font-family: var(--font-display);
+  font-size: 18px; font-weight: 700;
+  color: var(--ink);
+}
+.child-hero__meta {
+  font-size: 12px; color: var(--muted);
+  margin-top: 4px;
+  display: flex; gap: 6px; align-items: center; flex-wrap: wrap;
+}
+.child-hero__family {
+  margin-top: 6px;
+  font-size: 12px; color: var(--ink-2);
+  display: flex; gap: 14px; flex-wrap: wrap;
+}
+
+.drawer-tabs {
+  display: flex; gap: 2px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.drawer-tab {
+  border: none;
+  background: transparent;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+  transition: color .15s, border-color .15s;
+}
+.drawer-tab:hover { color: var(--ink-2); }
+.drawer-tab.is-active {
+  color: var(--blue);
+  border-bottom-color: var(--blue);
+  font-weight: 600;
+}
+
+.drawer-body {
+  min-height: 200px;
+}
+
+.balance-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 14px;
+}
+.balance-card__head {
+  display: flex; justify-content: space-between; align-items: flex-start;
+  margin-bottom: 10px;
+}
+.balance-card__lbl {
+  font-size: 11px; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.04em; font-weight: 600;
+}
+.balance-card__val {
+  font-family: var(--font-display);
+  font-size: 32px; font-weight: 700;
+  margin-top: 2px;
+}
+.balance-card__val small {
+  font-size: 14px; font-weight: 500; color: var(--muted);
+  margin-left: 6px;
+}
+
+/* Cursor pointer on row clicks */
+.admin-table tbody tr { cursor: pointer; }
+.admin-table tbody tr:hover { background: var(--bg-soft); }
+
+/* ============================================================
+   Section block (Sections page — section + groups inside)
+   ============================================================ */
+/* Direction (4 направления) — карточка-обёртка с цветной полосой */
+.direction-block {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  box-shadow: var(--sh-1);
+}
+.direction-block__header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px 14px 0;
+  border-bottom: 1px solid var(--line);
+  background: var(--bg-soft);
+}
+.direction-block__bar {
+  width: 6px;
+  align-self: stretch;
+  border-radius: 0 4px 4px 0;
+  margin-right: 12px;
+}
+.direction-block__title {
+  font-family: var(--font-display);
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.1;
+}
+.direction-block__meta {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+}
+.direction-block__sections {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  background: var(--bg);
+}
+
+.section-block {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  animation: uq-fade-in 0.4s ease-out both;
+}
+.section-block__head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 18px;
+  border-bottom: 1px solid var(--line-2);
+}
+.section-block__bubble {
+  width: 48px; height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-weight: 700;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+.section-block__name {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--ink);
+}
+.section-block__meta {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.section-block__groups {
+  padding: 14px 18px 18px;
+  background: var(--bg-soft);
+}
+.section-block__empty {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+  padding: 16px;
+  border: 1px dashed var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+}
+
+.group-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 10px;
+}
+.group-mini {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+  transition: border-color .15s, transform .15s;
+}
+.group-mini:hover {
+  border-color: var(--blue);
+  transform: translateY(-1px);
+}
+.group-mini__name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--ink);
+}
+.group-mini__meta {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.group-mini__stats {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line-2);
+  font-size: 11px;
+  color: var(--muted);
+}
+.group-mini__stats b {
+  color: var(--ink);
+  font-weight: 700;
+  font-family: var(--font-display);
+  font-size: 13px;
+}
+
+/* ============================================================
+   Toast host (multiple toasts stacked)
+   ============================================================ */
+.toast-host {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+.toast-host .toast {
+  position: static;
+  pointer-events: auto;
+  cursor: pointer;
+  min-width: 240px;
+  max-width: 380px;
+}
+.toast--info {
+  background: var(--blue-50);
+  color: var(--blue-ink);
+  border: 1px solid var(--blue-100);
+}
+
+/* =====================================================================
+   App Shell — responsive layout for Coach/Parent PWA.
+   Desktop (≥960px): sidebar + content. Mobile (<960px): content + bottom tabbar.
+   ===================================================================== */
+.app-shell {
+  display: grid;
+  grid-template-columns: 244px 1fr;
+  min-height: calc(100vh - 64px); /* minus app-chrome */
+  background: var(--bg);
+}
+.app-shell.is-collapsed {
+  grid-template-columns: 72px 1fr;
+}
+.app-shell__sidebar {
+  background: #fff;
+  border-right: 1px solid var(--line);
+  padding: 12px 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  position: sticky;
+  top: 64px;
+  height: calc(100vh - 64px);
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+.app-shell.is-collapsed .app-shell__sidebar { padding: 12px 8px 16px; gap: 8px; }
+.app-shell__toggle {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--muted);
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  align-self: flex-start;
+  transition: background .12s, color .12s, border-color .12s;
+}
+.app-shell__toggle:hover { background: var(--bg-soft); color: var(--ink); }
+.app-shell.is-collapsed .app-shell__toggle { align-self: center; }
+.app-shell__brand {
+  padding: 4px 8px 8px;
+  border-bottom: 1px solid var(--line);
+}
+.app-shell__brand-title {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
+  color: var(--ink);
+}
+.app-shell__brand-sub {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.app-shell__user {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px;
+  background: var(--bg-soft);
+  border-radius: var(--r-md);
+}
+.app-shell__user-av {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--blue);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+.app-shell__user-name {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell__user-sub {
+  font-size: 11px;
+  color: var(--muted);
+}
+.app-shell__nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.app-shell__nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  background: transparent;
+  border: none;
+  border-radius: var(--r-sm);
+  color: var(--ink-2);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  text-align: left;
+  transition: background 0.12s, color 0.12s;
+}
+.app-shell__nav-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  color: var(--muted);
+}
+.app-shell__nav-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.app-shell__nav-item:hover {
+  background: var(--bg-soft);
+  color: var(--ink);
+}
+.app-shell__nav-item:hover .app-shell__nav-icon { color: var(--ink); }
+.app-shell__nav-item.is-active {
+  background: var(--blue);
+  color: #fff;
+  font-weight: 600;
+  box-shadow: 0 1px 2px rgba(30, 58, 138, 0.15);
+}
+.app-shell__nav-item.is-active .app-shell__nav-icon { color: #fff; }
+.app-shell__nav-item.is-active:hover { background: var(--blue); color: #fff; }
+.app-shell__nav-item.is-active:hover .app-shell__nav-icon { color: #fff; }
+.app-shell.is-collapsed .app-shell__nav-item {
+  justify-content: center;
+  padding: 10px 0;
+  width: 48px;
+  height: 44px;
+  margin: 0 auto;
+}
+.app-shell__main {
+  padding: 20px 24px 24px;
+  position: relative;
+  min-width: 0;
+}
+.app-shell__top-right {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  z-index: 1;
+}
+/* Bottom tabbar for mobile only */
+.app-shell__tabbar {
+  display: none;
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: #fff;
+  border-top: 1px solid var(--line);
+  padding: 6px 4px calc(env(safe-area-inset-bottom, 0px) + 6px);
+  z-index: 50;
+}
+.app-shell__tabbar-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 6px 2px;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.app-shell__tabbar-btn.is-active {
+  color: var(--blue);
+}
+
+/* Mobile: hide sidebar, show tabbar */
+@media (max-width: 959px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+    min-height: 100vh;
+  }
+  .app-shell__sidebar {
+    display: none;
+  }
+  .app-shell__main {
+    padding: 16px 16px 88px; /* room for tabbar */
+  }
+  .app-shell__top-right {
+    top: 16px;
+    right: 16px;
+  }
+  .app-shell__tabbar {
+    display: flex;
+  }
+}
+
+/* Inside .app-shell__main, .m-* containers should stretch naturally — drop fixed widths */
+.app-shell__main .m-screen {
+  width: 100%;
+  max-width: none;
+  height: auto;
+  background: transparent;
+  padding: 0;
+}
+.app-shell__main .m-top {
+  display: none; /* sidebar already shows brand+user on desktop */
+}
+.app-shell__main .m-scroll {
+  padding: 0;
+  overflow: visible;
+}
+.app-shell__main .tabbar {
+  display: none; /* legacy in-screen tabbar replaced by app-shell__tabbar */
+}
+
+/* Mobile: keep .m-top visible (sidebar is hidden) */
+@media (max-width: 959px) {
+  .app-shell__main .m-top {
+    display: flex;
+  }
+}
+
+/* =====================================================================
+   Coach JOURNAL — табель в стиле школьного журнала.
+   Строгая сетка, монохромная типографика, чёткие границы.
+   Mobile cell: 36px. Desktop cell: 42px. Sticky левые колонки.
+   ===================================================================== */
+
+/* Локальные токены */
+:root {
+  --j-line: oklch(0.86 0.01 250);
+  --j-line-strong: oklch(0.55 0.02 250);
+  --j-bg: #ffffff;
+  --j-head-bg: oklch(0.97 0.005 250);
+  --j-row-alt: oklch(0.985 0.005 250);
+  --j-row-hover: oklch(0.97 0.03 230);
+  --j-today-bg: oklch(0.96 0.06 230);
+  --j-today-line: oklch(0.55 0.18 250);
+  --j-future-tint: oklch(0.98 0.005 250);
+  --j-ink: oklch(0.22 0.02 250);
+  --j-ink-2: oklch(0.4 0.02 250);
+  --j-muted: oklch(0.6 0.02 250);
+}
+
+.journal-head {
+  padding: 12px 0 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.journal-head__title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: var(--j-ink);
+}
+.journal-head__nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.journal-head__month {
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 700;
+  color: var(--j-ink);
+  text-transform: capitalize;
+  min-width: 150px;
+  text-align: center;
+  flex: 1;
+}
+.journal-nav-btn {
+  width: 38px; height: 38px;
+  border: 1.5px solid var(--j-line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--j-ink);
+  display: grid; place-items: center;
+  cursor: pointer;
+  transition: background .12s, border-color .12s;
+  flex-shrink: 0;
+}
+.journal-nav-btn:hover { background: var(--j-head-bg); border-color: var(--j-line-strong); }
+.journal-nav-btn:active { transform: scale(0.96); }
+.journal-today-btn {
+  height: 38px;
+  padding: 0 14px;
+  border: 1.5px solid var(--j-today-line);
+  background: var(--j-today-bg);
+  color: var(--j-today-line);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  font-family: var(--font-sans);
+}
+.journal-today-btn:hover { background: oklch(0.92 0.08 230); }
+
+.journal-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 18px;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  background: var(--j-head-bg);
+  border: 1px solid var(--j-line);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--j-ink-2);
+  font-weight: 600;
+}
+.journal-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+/* Marks — заливки клеток. Прямоугольные, без скруглений, чёткие. */
+.journal-mark {
+  width: 28px; height: 28px;
+  border-radius: 4px;
+  display: inline-grid; place-items: center;
+  font-weight: 700;
+  border: 1.5px solid transparent;
+  background: transparent;
+  transition: background .1s ease;
+  position: relative;
+  padding: 0;
+}
+.journal-mark--present {
+  background: oklch(0.92 0.13 150);
+  color: oklch(0.28 0.16 150);
+  border-color: oklch(0.65 0.18 150);
+}
+.journal-mark--absent {
+  background: oklch(0.93 0.1 25);
+  color: oklch(0.4 0.2 25);
+  border-color: oklch(0.65 0.2 25);
+}
+.journal-mark--empty {
+  background: transparent;
+  color: var(--j-muted);
+  border-color: transparent;
+}
+/* Ребёнок вне окна абонемента на эту дату — «прочерк» в белом квадрате
+ * с лёгкой рамкой. Не серый-полупрозрачный (раньше путали с предстоящим),
+ * а явный «−», который читается как «здесь покрытия нет». */
+.journal-mark--no-card {
+  background: #fff;
+  color: var(--j-muted);
+  border-color: var(--j-line);
+  font-size: 16px;
+  line-height: 1;
+}
+/* Дни вне срока ребёнка в группе: до первого занятия по абонементу
+ * (--before) и после его окончания (--expired). Оба состояния —
+ * сплошной серый квадрат: отмечать там нечего, но видно, что строка
+ * ребёнка в эти дни существует. */
+.journal-mark--before,
+.journal-mark--expired {
+  background: oklch(0.91 0.005 250);
+  border-color: oklch(0.86 0.008 250);
+  color: transparent;
+}
+/* Историческая отметка вне абонемента: видно, но приглушённо — менять
+ * такую ячейку нельзя. */
+.journal__cell.is-locked .journal-mark { opacity: 0.45; }
+/* День попал в active-заморозку ребёнка: голубой фон + ❄, ячейка
+ * некликабельна, в табель не идёт (карта продлится на эти дни). */
+.journal-mark--frozen {
+  background: oklch(0.94 0.06 230);
+  color: oklch(0.45 0.12 230);
+  border-color: oklch(0.78 0.10 230);
+}
+.journal-mark--scheduled {
+  background:
+    repeating-linear-gradient(
+      45deg,
+      transparent 0,
+      transparent 3px,
+      oklch(0.85 0.02 250) 3px,
+      oklch(0.85 0.02 250) 4px
+    );
+  border: 1.5px solid var(--j-line);
+}
+button.journal-mark:not(:disabled) { cursor: pointer; }
+button.journal-mark:not(:disabled):hover { filter: brightness(0.95); }
+button.journal-mark:not(:disabled):active { transform: scale(0.92); }
+
+.journal-note-badge {
+  position: absolute;
+  top: -5px;
+  right: -5px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: oklch(0.55 0.18 250);
+  color: #fff;
+  display: grid; place-items: center;
+  border: 1.5px solid #fff;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.25);
+}
+.journal-note-badge--demo {
+  position: static;
+  display: inline-grid;
+}
+
+/* Контейнер — чистая белая «страница» с границей */
+.journal {
+  background: var(--j-bg);
+  border: 1.5px solid var(--j-line-strong);
+  border-radius: 4px;
+  overflow: hidden;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.journal__scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  /* Горизонтальный свайп по сетке не должен уводить браузер «назад»
+     (жест back в iOS Safari / Chrome Android). */
+  overscroll-behavior-x: contain;
+}
+.journal__grid {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  min-width: 100%;
+}
+.journal__grid th, .journal__grid td {
+  padding: 0;
+  border-bottom: 1px solid var(--j-line);
+  border-right: 1px solid var(--j-line);
+  background: var(--j-bg);
+  vertical-align: middle;
+}
+.journal__grid thead th { border-bottom: 2px solid var(--j-line-strong); }
+.journal__grid tr:last-child td { border-bottom: none; }
+
+.journal__grid th {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--j-ink-2);
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  background: var(--j-head-bg);
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+
+/* Колонка № */
+.journal__num-h, .journal__num, .journal__foot-num {
+  width: 34px;
+  min-width: 34px;
+  max-width: 34px;
+  text-align: center;
+  font-family: var(--font-mono);
+}
+.journal__num-h {
+  background: var(--j-head-bg) !important;
+  position: sticky !important;
+  left: 0;
+  z-index: 3 !important;
+  padding: 10px 0 !important;
+  border-right: 1px solid var(--j-line) !important;
+}
+.journal__num {
+  color: var(--j-muted);
+  font-size: 12px;
+  font-weight: 700;
+  position: sticky;
+  left: 0;
+  background: var(--j-bg);
+  z-index: 1;
+  padding: 0 !important;
+}
+
+/* Колонка ФИО */
+.journal__name-h {
+  text-align: left;
+  padding: 10px 12px !important;
+  position: sticky !important;
+  left: 34px;
+  z-index: 3 !important;
+  background: var(--j-head-bg) !important;
+  min-width: 180px;
+  border-right: 2px solid var(--j-line-strong) !important;
+}
+.journal__name {
+  position: sticky;
+  left: 34px;
+  background: var(--j-bg);
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 12px !important;
+  z-index: 1;
+  min-width: 180px;
+  border-right: 2px solid var(--j-line-strong) !important;
+}
+.journal__av {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: oklch(0.94 0.02 250);
+  color: var(--j-ink);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 12px;
+  flex-shrink: 0;
+  font-family: var(--font-display);
+  border: 1px solid var(--j-line);
+}
+/* Колонка ФИО теперь двухэтажная: имя, под ним менеджер и абонемент. */
+.journal__name-box {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.journal__kid-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.journal__kid-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10.5px;
+  line-height: 1.25;
+  font-weight: 600;
+  color: var(--j-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.journal__kid-meta-row svg { flex-shrink: 0; opacity: 0.8; }
+/* Абонемент кончился / занятия исчерпаны — это должно бросаться в глаза:
+ * ребёнок ещё в группе, но отмечать его больше нельзя. */
+.journal__kid-meta-row.is-ended { color: oklch(0.55 0.2 25); }
+
+.journal__name-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--j-ink);
+  /* На мобиле sticky-колонка имеет ограниченную ширину, но ФИО не
+     обрезаем — переносим на 2 строки, чтобы и фамилия, и имя были
+     видны полностью. */
+  white-space: normal;
+  word-break: break-word;
+  line-height: 1.3;
+}
+
+/* Колонки дат */
+.journal__date-h {
+  min-width: 42px;
+  width: 42px;
+  text-align: center;
+  padding: 8px 2px !important;
+}
+.journal__wd {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--j-muted);
+  letter-spacing: 0.5px;
+}
+.journal__day {
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--j-ink);
+  font-family: var(--font-display);
+  margin-top: 2px;
+  line-height: 1;
+}
+.journal__date-h.is-weekend { background: oklch(0.96 0.04 25 / 0.7) !important; }
+.journal__date-h.is-weekend .journal__day,
+.journal__date-h.is-weekend .journal__wd { color: oklch(0.5 0.16 25); }
+.journal__date-h.is-today {
+  background: var(--j-today-bg) !important;
+  border-left: 2px solid var(--j-today-line) !important;
+  border-right: 2px solid var(--j-today-line) !important;
+}
+.journal__date-h.is-today .journal__day,
+.journal__date-h.is-today .journal__wd { color: var(--j-today-line); }
+.journal__date-h.is-future { background: var(--j-future-tint) !important; }
+.journal__date-h.is-future .journal__day { color: var(--j-ink-2); }
+
+/* Ячейки */
+.journal__cell {
+  width: 42px;
+  min-width: 42px;
+  text-align: center;
+  padding: 5px 3px !important;
+}
+.journal__cell.is-today {
+  background: var(--j-today-bg) !important;
+  border-left: 2px solid var(--j-today-line);
+  border-right: 2px solid var(--j-today-line);
+}
+.journal__cell.is-future {
+  background: var(--j-future-tint) !important;
+}
+
+/* Hover на строку */
+.journal__grid tbody tr:nth-child(even) > td { background: var(--j-row-alt); }
+.journal__grid tbody tr:nth-child(even) > .journal__name,
+.journal__grid tbody tr:nth-child(even) > .journal__num { background: var(--j-row-alt); }
+.journal__grid tbody tr:hover > td { background: var(--j-row-hover); }
+.journal__grid tbody tr:hover > .journal__name,
+.journal__grid tbody tr:hover > .journal__num { background: var(--j-row-hover); }
+.journal__grid tbody tr:hover > .is-today,
+.journal__grid tbody tr > .is-today { background: var(--j-today-bg) !important; }
+
+/* Колонка % */
+.journal__stat-h, .journal__stat {
+  text-align: center;
+  min-width: 64px;
+  width: 64px;
+  padding: 8px 8px !important;
+  border-right: none !important;
+  background: var(--j-head-bg);
+}
+.journal__stat-h { background: var(--j-head-bg) !important; }
+.journal__stat {
+  background: var(--j-row-alt) !important;
+  border-left: 2px solid var(--j-line-strong) !important;
+}
+.journal__pct {
+  font-size: 15px;
+  font-weight: 800;
+  font-family: var(--font-display);
+  line-height: 1;
+}
+.journal__pct-sub {
+  font-size: 10px;
+  color: var(--j-muted);
+  margin-top: 3px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+}
+.journal__pct-future {
+  color: var(--j-today-line);
+}
+
+/* Строка-итог: сколько детей пришло на каждое занятие + за месяц */
+.journal__foot td {
+  border-top: 2px solid var(--j-line-strong);
+  border-bottom: none;
+  background: var(--j-head-bg) !important;
+  text-align: center;
+  padding: 8px 4px !important;
+}
+.journal__foot-num {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  border-right: 1px solid var(--j-line) !important;
+}
+.journal__foot-label {
+  position: sticky;
+  left: 34px;
+  z-index: 3;
+  text-align: left !important;
+  padding: 8px 12px !important;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--j-ink-2);
+  border-right: 2px solid var(--j-line-strong) !important;
+  white-space: nowrap;
+}
+.journal__foot-cell {
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--green);
+}
+.journal__foot-cell.is-today { background: var(--j-today-bg) !important; }
+.journal__foot-cell.is-future { color: var(--j-muted); background: var(--j-future-tint) !important; }
+.journal__foot-total {
+  background: var(--j-row-alt) !important;
+  border-left: 2px solid var(--j-line-strong) !important;
+}
+.journal__foot-total-num {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--green);
+  line-height: 1;
+}
+.journal__foot-total-sub {
+  font-size: 9px;
+  color: var(--j-muted);
+  margin-top: 3px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+}
+
+/* Tablet+ */
+@media (min-width: 768px) {
+  .journal-head__title { font-size: 26px; }
+  .journal-head__month { font-size: 19px; min-width: 200px; }
+  .journal__date-h, .journal__cell { min-width: 50px; width: 50px; padding: 10px 4px !important; }
+  .journal__cell { padding: 6px 4px !important; }
+  .journal__day { font-size: 18px; }
+  .journal-mark { width: 34px; height: 34px; }
+  .journal__name, .journal__name-h {
+    padding: 10px 16px !important;
+    min-width: 220px;
+  }
+  .journal__name-h { left: 42px; }
+  .journal__num, .journal__num-h, .journal__foot-num { width: 42px; min-width: 42px; max-width: 42px; }
+  .journal__name { left: 42px; }
+  .journal__foot-label { left: 42px; }
+  .journal__av { width: 34px; height: 34px; font-size: 13px; }
+  .journal__name-text { font-size: 14px; max-width: 160px; }
+  .journal__pct { font-size: 17px; }
+  .journal__stat-h, .journal__stat { min-width: 72px; width: 72px; }
+}
+
+/* Телефон/планшет: табель работает как «замороженные панели».
+ * Пока у .journal__scroll нет своей высоты, страница скроллится целиком,
+ * а sticky-шапка бесполезна — при листании детей даты уезжают и тренер
+ * отмечает вслепую. Даём сетке собственный вьюпорт: шапка с датами
+ * (sticky top) и строка итогов (sticky bottom) держатся на экране, ФИО —
+ * при листании дат. */
+@media (max-width: 959px) {
+  /* max(): в альбомной ориентации calc даёт слишком мало, но min-height
+     здесь нельзя — у короткой группы появился бы пустой белый хвост. */
+  .journal__scroll { max-height: max(220px, calc(100dvh - 230px)); }
+  .journal__foot td {
+    position: sticky;
+    bottom: 0;
+    z-index: 2;
+  }
+  /* Подпись итогов закреплена и по горизонтали — она должна лежать НАД
+     ячейками дат (та же специфичность, иначе выигрывает порядок в DOM). */
+  .journal__foot td.journal__foot-num,
+  .journal__foot td.journal__foot-label { z-index: 4; }
+  /* Тень у закреплённой колонки — видно, что список уезжает под ФИО. */
+  .journal__name, .journal__name-h, .journal__foot-label {
+    box-shadow: 6px 0 8px -6px rgba(15, 23, 42, 0.28);
+  }
+}
+/* В модалке (табель группы у менеджера) свою высоту уже держит .modal__body —
+ * иначе получаем два вложенных скролла и сетка «прыгает». */
+@media (max-width: 959px) {
+  .modal__body .journal__scroll { max-height: max(200px, calc(100dvh - 280px)); }
+}
+
+/* Mobile (телефон) */
+@media (max-width: 480px) {
+  .journal-head__title { font-size: 20px; }
+  .journal-head__month { font-size: 15px; min-width: 130px; }
+  .journal-nav-btn { width: 36px; height: 36px; }
+  .journal-today-btn { height: 36px; padding: 0 10px; font-size: 12px; }
+  .journal__date-h, .journal__cell { min-width: 40px; width: 40px; padding: 6px 1px !important; }
+  .journal__cell { padding: 4px 2px !important; }
+  .journal__name, .journal__name-h {
+    min-width: 138px;
+    padding: 7px 9px !important;
+    gap: 7px;
+  }
+  /* Колонку № на телефоне убираем совсем: 30px экрана дороже нумерации,
+     ФИО закрепляется у самого края. Подпись итогов в tfoot — отдельная
+     ячейка (не colspan), иначе она бы поехала на первую дату. */
+  .journal__num, .journal__num-h, .journal__foot-num { display: none; }
+  .journal__name-h { padding: 9px 9px !important; left: 0; }
+  .journal__name { left: 0; }
+  .journal__foot-label { left: 0; padding: 8px 9px !important; }
+  .journal__av { width: 26px; height: 26px; font-size: 11px; }
+  .journal__name-text { font-size: 12.5px; max-width: 92px; }
+  /* На телефоне в колонке ФИО места мало: менеджера прячем, оставляем
+     срок абонемента и остаток — это то, что нужно тренеру на занятии. */
+  .journal__kid-meta-row { font-size: 9.5px; max-width: 92px; }
+  .journal__kid-meta-row--manager { display: none; }
+  .journal-mark { width: 26px; height: 26px; border-radius: 3px; }
+  /* Палец, а не курсор: в самих ячейках отметка крупнее, чем в легенде. */
+  .journal__cell .journal-mark { width: 32px; height: 32px; border-radius: 4px; }
+  .journal__day { font-size: 15px; }
+  .journal__wd { font-size: 9px; }
+  .journal__stat-h, .journal__stat { min-width: 50px; width: 50px; padding: 6px 4px !important; }
+  .journal__pct { font-size: 13px; }
+  .journal__pct-sub { font-size: 9px; }
+}
+
+/* Future hint в picker */
+.journal-picker__future-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: oklch(0.95 0.05 230);
+  color: oklch(0.4 0.16 250);
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+/* Picker modal — большой, тач-френдли */
+.journal-picker__backdrop {
+  position: fixed; inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: grid; place-items: end center;
+  z-index: 200;
+  padding: 0;
+  backdrop-filter: blur(3px);
+  animation: fadeIn .12s ease;
+}
+@keyframes fadeIn { from { opacity: 0 } to { opacity: 1 } }
+.journal-picker {
+  background: #fff;
+  border-radius: 22px 22px 0 0;
+  padding: 22px 20px 24px;
+  width: 100%;
+  max-width: 520px;
+  box-shadow: 0 -8px 40px rgba(0,0,0,0.2);
+  animation: slideUp .18s cubic-bezier(.2,.8,.2,1);
+}
+@keyframes slideUp { from { transform: translateY(20px); opacity: 0 } to { transform: translateY(0); opacity: 1 } }
+.journal-picker__head { margin-bottom: 16px; }
+.journal-picker__name {
+  font-family: var(--font-display);
+  font-size: 19px;
+  font-weight: 800;
+  color: var(--ink);
+  line-height: 1.2;
+}
+.journal-picker__date {
+  font-size: 13px;
+  color: var(--muted);
+  margin-top: 4px;
+  text-transform: capitalize;
+  font-weight: 500;
+}
+.journal-picker__grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.journal-picker__btn {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 16px;
+  background: #fff;
+  color: var(--ink);
+  border: 2px solid var(--line);
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 15px;
+  cursor: pointer;
+  transition: transform .08s, background .12s, border-color .12s;
+  min-height: 56px;
+}
+.journal-picker__btn:not(:disabled):active { transform: scale(0.97); }
+.journal-picker__btn.jp-present.is-active {
+  background: oklch(0.94 0.08 150);
+  border-color: oklch(0.65 0.16 150);
+  color: oklch(0.3 0.18 150);
+}
+.journal-picker__btn.jp-absent.is-active {
+  background: oklch(0.94 0.07 25);
+  border-color: oklch(0.65 0.18 25);
+  color: oklch(0.4 0.2 25);
+}
+.journal-picker__icon {
+  width: 36px; height: 36px; border-radius: 50%;
+  display: grid; place-items: center;
+  background: var(--bg-soft);
+  color: var(--ink);
+}
+.journal-picker__btn.jp-present .journal-picker__icon {
+  background: oklch(0.88 0.14 150); color: #fff;
+}
+.journal-picker__btn.jp-absent .journal-picker__icon {
+  background: oklch(0.68 0.18 25); color: #fff;
+}
+.journal-picker__note-btn {
+  width: 100%;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  padding: 14px;
+  background: var(--blue-50);
+  color: var(--blue-ink);
+  border: 1.5px dashed var(--blue);
+  border-radius: 14px;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+  min-height: 50px;
+}
+.journal-picker__note-btn:not(:disabled):active {
+  transform: scale(0.98);
+  background: var(--blue-100);
+}
+.journal-picker__cancel {
+  margin-top: 10px;
+  width: 100%;
+  padding: 12px !important;
+  min-height: 46px;
+  font-weight: 600;
+}
+@media (min-width: 600px) {
+  .journal-picker__backdrop { place-items: center; padding: 16px; }
+  .journal-picker { border-radius: 18px; max-width: 460px; }
+}
+
+/* =====================================================================
+   Coach OLD tabel (legacy) — оставлено для совместимости, не используется.
+   ===================================================================== */
+.tabel-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 16px;
+  padding: 12px 16px;
+  background: var(--bg-soft);
+  border-radius: var(--r-md);
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.tabel-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.tabel-legend__dot {
+  width: 18px; height: 18px;
+  border-radius: 5px;
+  display: grid; place-items: center;
+  color: #fff;
+}
+
+.tabel-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+}
+.tabel-scroll {
+  overflow-x: auto;
+}
+.tabel-grid {
+  border-collapse: separate;
+  border-spacing: 0;
+  width: 100%;
+  min-width: 100%;
+}
+.tabel-grid th, .tabel-grid td {
+  padding: 6px;
+  border-bottom: 1px solid var(--line);
+}
+.tabel-grid th {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: var(--bg-soft);
+  padding: 10px 6px;
+  position: sticky;
+  top: 0;
+  z-index: 2;
+}
+.tabel-grid__name-h {
+  text-align: left;
+  padding-left: 16px !important;
+  position: sticky !important;
+  left: 0;
+  z-index: 3 !important;
+  background: var(--bg-soft) !important;
+  min-width: 180px;
+}
+.tabel-grid__date-h {
+  min-width: 44px;
+  text-align: center;
+  padding: 8px 4px !important;
+}
+.tabel-grid__wd {
+  font-size: 10px;
+  color: var(--muted);
+  font-weight: 500;
+}
+.tabel-grid__day {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  font-family: var(--font-display);
+}
+.tabel-grid__stat-h {
+  text-align: center;
+  min-width: 60px;
+  padding-right: 16px !important;
+}
+.tabel-grid tbody tr:hover {
+  background: var(--bg-soft);
+}
+.tabel-grid tbody tr:hover .tabel-grid__name {
+  background: var(--bg-soft);
+}
+.tabel-grid__name {
+  position: sticky;
+  left: 0;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px !important;
+  z-index: 1;
+  min-width: 180px;
+  border-right: 1px solid var(--line);
+}
+.tabel-grid__av {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--blue-50);
+  color: var(--blue-ink);
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  font-size: 13px;
+  flex-shrink: 0;
+}
+.tabel-grid__kid {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 130px;
+}
+.tabel-grid__kid-sub {
+  font-size: 11px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 130px;
+}
+.tabel-grid__cell {
+  padding: 4px !important;
+  text-align: center;
+  vertical-align: middle;
+}
+.tabel-cell {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--r-sm);
+  border: 1.5px solid var(--line);
+  display: grid;
+  place-items: center;
+  margin: 0 auto;
+  padding: 0;
+  transition: transform .08s, box-shadow .12s;
+}
+.tabel-cell:not(:disabled):hover {
+  transform: scale(1.08);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.12);
+}
+.tabel-cell:not(:disabled):active {
+  transform: scale(0.94);
+}
+.tabel-grid__stat {
+  text-align: center;
+  padding-right: 16px !important;
+}
+.tabel-grid__pct {
+  font-size: 14px;
+  font-weight: 700;
+  font-family: var(--font-display);
+}
+.tabel-grid__pct-sub {
+  font-size: 10px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+/* Desktop — крупнее ячейки и шрифты */
+@media (min-width: 960px) {
+  .tabel-grid__date-h { min-width: 56px; padding: 12px 8px !important; }
+  .tabel-grid__wd { font-size: 11px; }
+  .tabel-grid__day { font-size: 16px; }
+  .tabel-cell {
+    width: 44px;
+    height: 44px;
+  }
+  .tabel-grid__name {
+    padding: 14px 20px !important;
+    min-width: 220px;
+  }
+  .tabel-grid__name-h {
+    padding-left: 20px !important;
+    min-width: 220px;
+  }
+  .tabel-grid__av {
+    width: 40px; height: 40px;
+    font-size: 15px;
+  }
+  .tabel-grid__kid {
+    font-size: 15px;
+    max-width: 160px;
+  }
+  .tabel-grid__kid-sub {
+    font-size: 12px;
+    max-width: 160px;
+  }
+  .tabel-grid__pct { font-size: 16px; }
+  .tabel-grid__stat { padding-right: 20px !important; }
+}
+
+/* Mobile — компактнее */
+@media (max-width: 959px) {
+  .tabel-cell { width: 32px; height: 32px; }
+  .tabel-grid__date-h { min-width: 38px; }
+  .tabel-grid__name { min-width: 140px; padding: 8px 12px !important; }
+  .tabel-grid__name-h { min-width: 140px; padding-left: 12px !important; }
+  .tabel-grid__av { width: 28px; height: 28px; font-size: 12px; }
+  .tabel-grid__kid { font-size: 13px; max-width: 90px; }
+  .tabel-grid__kid-sub { display: none; }
+}
+
+/* ============================================================
+   Coach PWA polish (2026-05): компактный профиль, отдельный
+   таб «Зарплата», новый список в табеле без горизонтальной
+   прокрутки. Цель — всё на одном экране, никаких лишних белых
+   пространств.
+   ============================================================ */
+
+/* Профиль тренера */
+.coach-me { padding-top: 4px; }
+.coach-me__card {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.coach-me__avatar {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: var(--blue-100); color: var(--blue-ink);
+  display: grid; place-items: center;
+  font-weight: 800; font-family: var(--font-display);
+  font-size: 18px;
+  position: relative; overflow: hidden;
+  flex-shrink: 0;
+}
+.coach-me__avatar img {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; object-position: center;
+}
+.coach-me__meta { min-width: 0; flex: 1; }
+.coach-me__name {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: -0.01em;
+  line-height: 1.2;
+}
+.coach-me__role {
+  font-size: 12px; color: var(--muted); margin-top: 2px;
+}
+.coach-me__phone {
+  font-size: 12px; color: var(--ink); margin-top: 6px;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+/* Блок «ребёнок + его inline-заметка» в журнале занятия */
+.roster-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.roster-block + .roster-block { margin-top: 6px; }
+.roster-block .roster-row + .roster-row { margin-top: 0; }
+.roster-block:has(.roster-note) .roster-row {
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  border-bottom-color: transparent;
+}
+.roster-note {
+  appearance: none;
+  text-align: left;
+  background: var(--green-50);
+  border: 1px solid oklch(0.85 0.1 145);
+  border-top: 1px dashed oklch(0.85 0.1 145);
+  border-radius: 0 0 var(--r-md) var(--r-md);
+  padding: 8px 12px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+  width: 100%;
+}
+.roster-note:disabled { cursor: default; opacity: 0.7; }
+.roster-note:not(:disabled):active { transform: scale(0.995); }
+.roster-note__head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  color: var(--green);
+}
+.roster-note__edit {
+  margin-left: auto;
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--blue);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.roster-note__text {
+  font-size: 13px;
+  color: var(--ink);
+  line-height: 1.4;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+.roster-note__photos-meta {
+  font-size: 11px;
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+/* Карточка одной заметки тренера в его истории */
+.coach-mynote {
+  appearance: none;
+  text-align: left;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  cursor: pointer;
+}
+.coach-mynote:active { transform: scale(0.99); }
+.coach-mynote__head {
+  display: flex; justify-content: space-between; align-items: baseline;
+}
+.coach-mynote__child {
+  font-weight: 700; font-size: 13px; color: var(--ink);
+}
+.coach-mynote__date {
+  font-size: 11px; color: var(--muted);
+}
+.coach-mynote__text {
+  font-size: 13px; color: var(--ink); line-height: 1.4;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.coach-mynote__photos {
+  font-size: 11px; color: var(--muted);
+  display: inline-flex; align-items: center; gap: 4px; margin-top: 2px;
+}
+
+.coach-me__logout {
+  margin-top: 16px;
+  width: 100%;
+  padding: 12px 16px;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--red);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.coach-me__logout:active { transform: scale(0.98); }
+
+/* PWA-вариант app-chrome: только синяя плашка с логотипом для тренера
+   и родителя. На мобиле скрываем user-chip и lang-switch (выйти из
+   аккаунта — из вкладки Профиль). На десктопе — обычный full chrome. */
+@media (max-width: 959px) {
+  .app-chrome--pwa .user-chip,
+  .app-chrome--pwa .lang-switch { display: none !important; }
+  .app-chrome--pwa .app-chrome__inner {
+    /* Логотип по центру с достаточным «воздухом» сверху и снизу.
+       max() даёт safe-area-inset (для iOS standalone-PWA) или
+       минимум 14px (для Safari в браузере). */
+    padding-top: max(env(safe-area-inset-top, 14px), 14px);
+    padding-bottom: 14px;
+    padding-left: 16px;
+    padding-right: 16px;
+    justify-content: center;
+    gap: 0;
+  }
+}
+
+/* body.is-pwa-role ставится в App.tsx для тренера/родителя.
+   Прячем дублирующее приветствие (m-top), оставляем нормальный
+   flow-скролл документа: app-chrome — sticky сверху (по умолчанию
+   у .app-chrome это `position: sticky; top: 0`), таб-бар — position:
+   fixed; bottom: 0. Никаких body height: 100dvh + overflow: hidden,
+   они ломали вёрстку чрезмерно. */
+@media (max-width: 959px) {
+  body.is-pwa-role .m-top { display: none; }
+  body.is-pwa-role .m-scroll { padding-top: 12px; }
+  body.is-pwa-role .app-shell__tabbar {
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.06);
+  }
+  /* Резервируем место под таб-бар, чтобы последний контент не залипал
+     под него. 64px кнопок + safe-area + 12px дыхания. */
+  body.is-pwa-role .app-shell__main {
+    padding-bottom: calc(64px + env(safe-area-inset-bottom, 0px) + 12px);
+  }
+}
+
+/* Переключатель групп в табеле тренера (если групп больше одной). */
+.coach-tabel-groups {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 10px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+.coach-tabel-groups::-webkit-scrollbar { display: none; }
+.coach-tabel-groups__btn {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: var(--r-pill);
+  white-space: nowrap;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+.coach-tabel-groups__btn.is-active {
+  background: var(--blue);
+  border-color: var(--blue);
+  color: #fff;
+}
+
+/* Расписание родителя — день-в-день, переупакованный список */
+.psched { display: flex; flex-direction: column; gap: 14px; }
+.psched__day {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  padding: 12px 14px;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.psched__day.is-today { border-color: var(--blue); }
+.psched__day.is-weekend .psched__day-num { color: var(--red); }
+.psched__day-head {
+  display: flex; align-items: center; gap: 12px;
+}
+.psched__day-num {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 28px;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  min-width: 36px;
+  text-align: center;
+  color: var(--ink);
+}
+.psched__day-meta { flex: 1; min-width: 0; }
+.psched__day-wd {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--ink);
+  text-transform: capitalize;
+  line-height: 1.1;
+}
+.psched__day-dm {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+.psched__badge {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
+  background: var(--blue);
+  color: #fff;
+}
+.psched__lessons { display: flex; flex-direction: column; gap: 6px; }
+.psched__lesson {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  background: var(--bg-soft);
+  border-radius: var(--r-md);
+}
+.psched__tint {
+  width: 4px;
+  height: 32px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+.psched__lesson-main { flex: 1; min-width: 0; }
+.psched__lesson-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.2;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.psched__lesson-meta {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+  display: inline-flex; align-items: center; gap: 3px;
+}
+.psched__lesson-time {
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--blue-ink);
+  flex-shrink: 0;
+}
+
+/* Зарплата — отдельный экран */
+.coach-salary { padding-top: 4px; display: flex; flex-direction: column; gap: 10px; }
+.coach-salary__hero {
+  background: linear-gradient(135deg, var(--blue) 0%, var(--blue-ink) 100%);
+  color: #fff;
+  border-radius: var(--r-lg);
+  padding: 16px 18px;
+}
+.coach-salary__period {
+  font-size: 11px; opacity: 0.85;
+  text-transform: uppercase; letter-spacing: 0.6px;
+  font-weight: 600;
+}
+.coach-salary__amount {
+  font-family: var(--font-display);
+  font-size: 36px; font-weight: 800;
+  letter-spacing: -0.02em;
+  margin-top: 4px; line-height: 1;
+}
+.coach-salary__amount span { font-size: 18px; opacity: 0.85; font-weight: 600; }
+.coach-salary__sub { font-size: 12px; opacity: 0.9; margin-top: 6px; }
+.coach-salary__progress {
+  margin-top: 12px;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255,255,255,0.18);
+  overflow: hidden;
+}
+.coach-salary__progress-fill {
+  height: 100%;
+  background: var(--yellow);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+}
+.coach-salary__progress-meta {
+  display: flex; justify-content: space-between;
+  margin-top: 6px; font-size: 11px; opacity: 0.85;
+}
+.coach-salary__row {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 12px 14px;
+  display: flex; justify-content: space-between; align-items: center;
+}
+.coach-salary__row-key { font-size: 13px; color: var(--muted); }
+.coach-salary__row-val { font-size: 15px; font-weight: 700; }
+.coach-salary__row--total {
+  border-color: var(--blue);
+  background: var(--blue-50);
+}
+.coach-salary__row--total .coach-salary__row-val { color: var(--blue-ink); font-size: 17px; }
+.coach-salary__committed {
+  background: oklch(0.95 0.05 145 / 0.5);
+  border: 1px solid oklch(0.85 0.1 145);
+  border-radius: var(--r-md);
+  padding: 10px 14px;
+  display: flex; justify-content: space-between; align-items: center;
+  font-size: 13px; color: var(--green);
+}
+.coach-salary__note {
+  font-size: 11px; color: var(--muted); padding: 4px 4px 0; line-height: 1.4;
+}
+
+/* Сводка табеля (3 числа в ряд) */
+.coach-tabel-sum {
+  display: flex; align-items: center;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 10px 4px;
+  margin-bottom: 10px;
+}
+.coach-tabel-sum > div:not(.coach-tabel-sum__sep) {
+  flex: 1; text-align: center;
+}
+.coach-tabel-sum__val {
+  font-family: var(--font-display);
+  font-weight: 800; font-size: 18px;
+  line-height: 1;
+}
+.coach-tabel-sum__lbl {
+  font-size: 10px; color: var(--muted);
+  text-transform: uppercase; letter-spacing: 0.5px;
+  margin-top: 3px; font-weight: 600;
+}
+.coach-tabel-sum__sep {
+  width: 1px; height: 24px; background: var(--line); flex-shrink: 0;
+}
+
+/* Список табеля — карточка на ученика, без горизонтальной прокрутки */
+.coach-tabel-list {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.coach-tabel-row {
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  padding: 10px 12px;
+}
+.coach-tabel-row__head {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+}
+.coach-tabel-row__av {
+  width: 30px; height: 30px; border-radius: 50%;
+  background: oklch(0.94 0.02 250);
+  display: grid; place-items: center;
+  font-weight: 700; font-family: var(--font-display);
+  font-size: 12px; color: var(--ink);
+  border: 1px solid var(--line);
+  flex-shrink: 0;
+}
+.coach-tabel-row__name {
+  flex: 1;
+  font-size: 13px; font-weight: 600;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.coach-tabel-row__stat {
+  font-family: var(--font-display);
+  font-weight: 800; font-size: 15px;
+  display: flex; flex-direction: column; align-items: flex-end;
+  line-height: 1;
+}
+.coach-tabel-row__stat-sub {
+  font-size: 10px; font-weight: 600; color: var(--muted);
+  margin-top: 2px;
+}
+.coach-tabel-row__strip {
+  display: flex; gap: 4px; align-items: center; flex-wrap: nowrap;
+  overflow: hidden;
+}
+.coach-tabel-row__more {
+  font-size: 10px; color: var(--muted); font-weight: 700;
+  padding: 0 4px; flex-shrink: 0;
+}
+.coach-tabel-pill {
+  flex: 1; min-width: 0;
+  height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 1px;
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+  transition: transform .12s, filter .12s;
+}
+.coach-tabel-pill:active { transform: scale(0.92); }
+.coach-tabel-pill__day {
+  font-size: 11px; font-weight: 700;
+  color: var(--ink); line-height: 1;
+}
+.coach-tabel-pill__icon {
+  display: grid; place-items: center;
+  width: 14px; height: 14px;
+}
+.coach-tabel-pill.is-present {
+  background: var(--green-50); border-color: var(--green);
+}
+.coach-tabel-pill.is-present .coach-tabel-pill__day { color: var(--green); }
+.coach-tabel-pill.is-present .coach-tabel-pill__icon { color: var(--green); }
+.coach-tabel-pill.is-absent {
+  background: var(--red-50); border-color: var(--red);
+}
+.coach-tabel-pill.is-absent .coach-tabel-pill__day { color: var(--red); }
+.coach-tabel-pill.is-absent .coach-tabel-pill__icon { color: var(--red); }
+.coach-tabel-pill.is-future {
+  background: var(--bg-soft);
+  border-style: dashed;
+}
+.coach-tabel-pill.is-future .coach-tabel-pill__day { color: var(--muted); }
+.coach-tabel-pill.is-empty {
+  background: oklch(0.98 0.005 250);
+}
+.coach-tabel-pill.is-today {
+  outline: 2px solid var(--blue);
+  outline-offset: -1px;
+}
+.coach-tabel-pill__note {
+  position: absolute; top: -3px; right: -3px;
+  width: 12px; height: 12px;
+  border-radius: 50%;
+  background: var(--yellow);
+  color: var(--yellow-ink);
+  display: grid; place-items: center;
+  border: 1.5px solid #fff;
+}
+
+/* Компактнее списка занятий «сегодня» — меньше воздуха */
+.m-sect { padding: 12px 0 6px !important; }
+.lesson-card { margin-top: 6px; }

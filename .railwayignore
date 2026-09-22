@@ -1,0 +1,16 @@
+# Не заливать в railway up: тяжёлое локальное — иначе аплоад падает по таймауту.
+# Синтаксис gitignore; node_modules/.git Railway исключает и сам, но перечислим явно.
+.git
+node_modules
+frontend/node_modules
+backend/node_modules
+frontend/dist
+.playwright-mcp
+supabase/.temp
+
+# Локальные файлы данных клиента (импорт-эксельки, аудио, бэкапы)
+*.xlsx
+*.docx
+*.opus
+*.bak
+cloud_backup_*

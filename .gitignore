@@ -1,0 +1,124 @@
+# =====================================================================
+# Uniqum Sport ERP — .gitignore
+# =====================================================================
+
+# ----- Dependencies -----
+node_modules/
+.pnp
+.pnp.js
+
+# ----- Build outputs -----
+dist/
+build/
+*.tsbuildinfo
+.vercel/
+.next/
+.turbo/
+.cache/
+
+# ----- Environment variables — NEVER commit -----
+# Pattern matches at any depth (root, frontend/, backend/)
+.env
+.env.local
+.env.*.local
+.env.development
+.env.development.local
+.env.test
+.env.test.local
+.env.production
+.env.production.local
+# But always commit .env.example as the template
+
+# ----- Logs -----
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ----- DB dumps / backups (don't commit data) -----
+*.sql.gz
+*.dump
+*.bak
+
+# ----- Editor / OS -----
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+*.swp
+*.swo
+*~
+.cursor/
+.claude/
+
+# ----- Testing -----
+coverage/
+*.lcov
+.nyc_output/
+
+# ----- Supabase CLI -----
+supabase/.branches/
+supabase/.temp/
+
+# ----- Secrets / certs -----
+*.pem
+*.key
+*.p12
+*.crt
+
+# ----- Sentry source maps upload tokens -----
+.sentryclirc
+
+# ----- Local notes that might contain creds -----
+NOTES.md
+SCRATCH.md
+backend/backups/
+
+# ----- Локальный мусор: медиа, исходные табели, скриншоты, бэкапы env -----
+*.ogg
+*.opus
+*.xlsx
+*.pdf
+/*.png
+backend/.env.bak*
+.playwright-mcp/
+# граф graphify (57 МБ, регенерируется `graphify update .`)
+graphify-out/
+
+# ----- Документы и данные заказчика: КП, ТЗ, ПТ, выгрузки, база -----
+# (в репозитории — только код; исходники присылаются отдельно)
+*.docx
+*.doc
+*.dotx
+*.rtf
+*.odt
+*.pptx
+*.ppt
+*.xls
+*.xlsm
+*.xltx
+*.ods
+*.csv
+*.tsv
+*.numbers
+*.pages
+*КП*.pdf
+# выгрузки/табели/импорты с персональными данными
+backend/scripts/data/
+**/exports/
+**/dumps/
+**/*tabel*.json
+**/*табел*
+**/*выгрузк*
+**/*база*
+**/*База*
+
+# ----- Локальные БД -----
+*.db
+*.sqlite
+*.sqlite3
+*.sql.bak

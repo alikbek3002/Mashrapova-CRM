@@ -1,0 +1,51 @@
+name: Nightly Supabase backup
+
+on:
+  schedule:
+    # 18:00 UTC = 00:00 Bishkek (UTC+6)
+    - cron: "0 18 * * *"
+  workflow_dispatch: # ручной запуск из Actions UI
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install postgres-client + AWS CLI (for B2 S3-compat)
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y postgresql-client awscli
+
+      - name: Dump Postgres
+        run: |
+          DATE=$(date +%Y-%m-%d)
+          FILE="uniqum-prod-${DATE}.sql.gz"
+          PGPASSWORD="${{ secrets.SUPABASE_DB_PASSWORD }}" \
+            pg_dump \
+              --host="${{ secrets.SUPABASE_DB_HOST }}" \
+              --port=5432 \
+              --username="${{ secrets.SUPABASE_DB_USER }}" \
+              --dbname=postgres \
+              --no-owner --no-acl --clean --if-exists \
+            | gzip > "$FILE"
+          ls -lh "$FILE"
+          echo "BACKUP_FILE=$FILE" >> $GITHUB_ENV
+
+      - name: Upload to Backblaze B2 (S3-compat)
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.B2_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.B2_APP_KEY }}
+          AWS_DEFAULT_REGION: us-west-002
+        run: |
+          aws --endpoint-url=https://s3.us-west-002.backblazeb2.com \
+            s3 cp "$BACKUP_FILE" "s3://${{ secrets.B2_BUCKET }}/$BACKUP_FILE"
+
+      - name: Prune backups older than 30 days
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.B2_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.B2_APP_KEY }}
+          AWS_DEFAULT_REGION: us-west-002
+        run: |
+          aws --endpoint-url=https://s3.us-west-002.backblazeb2.com \
+            s3 ls "s3://${{ secrets.B2_BUCKET }}/" | \
+            awk '{ if ($1 < strftime("%Y-%m-%d", systime() - 30*86400)) print $4 }' | \
+            xargs -I{} aws --endpoint-url=https://s3.us-west-002.backblazeb2.com s3 rm "s3://${{ secrets.B2_BUCKET }}/{}"

@@ -1,0 +1,29 @@
+# Блок сервиса isup для добавления в deploy/hetzner/docker-compose.yml
+# (скопировать в `services:`). Не подключать этот файл напрямую —
+# это сниппет, а не самостоятельный compose-файл.
+
+services:
+  isup:
+    build:
+      context: ../../isup-service
+      dockerfile: Dockerfile
+    # native-библиотеки Hikvision — только linux/amd64
+    platform: linux/amd64
+    restart: always
+    ports:
+      - "7660:7660/tcp"   # ISUP CMS: регистрация терминала (терминал -> сервер)
+      - "7660:7660/udp"   # ISUP использует и UDP на том же порту
+      - "7332:7332/tcp"   # ISUP Alarm: канал событий (MQTT/TCP)
+      - "7332:7332/udp"   # ISUP Alarm: UDP-вариант (ISUP_ALARM_TYPE=0/1)
+      # 8080 наружу НЕ публикуем: /enroll доступен только из docker-сети
+    environment:
+      ISUP_DEVICE_IDS: "${ISUP_DEVICE_IDS}"        # напр. "uniqum-door-1,uniqum-door-2"
+      ISUP_KEY: "${ISUP_KEY}"                      # ключ ISUP (тот же, что вбит в терминале)
+      ISUP_CMS_PORT: "7660"
+      ISUP_ALARM_PORT: "7332"
+      # в hetzner-стеке backend слушает 3001 (дефолт кода — backend:8080)
+      CLOUD_INGEST_URL: "http://backend:3001/v1/hik/events"
+      HIK_INGEST_SECRET: "${HIK_INGEST_SECRET}"
+      HTTP_PORT: "8080"
+    networks:
+      - default

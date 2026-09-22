@@ -1,0 +1,11 @@
+{
+  "UserInfo":{
+    "employeeNo": "${employeeNo}",
+    "Valid":{
+      "enable": true,
+      "beginTime":"${beginTime}",
+      "endTime":"${endTime}",
+      "timeType":"local"
+    }
+  }
+}
