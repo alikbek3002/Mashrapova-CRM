@@ -8,6 +8,7 @@ import {
   useGroupEvents,
 } from "../shared/api/queries";
 import type { ActiveCard, GroupEvent } from "../shared/api/queries";
+import type { GroupAudience } from "../shared/types/database";
 import {
   useUpdateGroup, useArchive, useAddEnrollment, useRemoveEnrollment,
   useBulkGenerateLessons,
@@ -123,6 +124,7 @@ const ParamsTab = ({ group, lang, onClose }: { group: any; lang: Lang; onClose: 
   const [ageMin, setAgeMin] = useState(group.age_min != null ? String(group.age_min) : "");
   const [ageMax, setAgeMax] = useState(group.age_max != null ? String(group.age_max) : "");
   const [level, setLevel] = useState(group.level ?? "");
+  const [audience, setAudience] = useState<GroupAudience>(group.audience ?? "kids");
   const [err, setErr] = useState<string | null>(null);
   const busy = upd.isPending || archive.isPending;
 
@@ -146,6 +148,7 @@ const ParamsTab = ({ group, lang, onClose }: { group: any; lang: Lang; onClose: 
         age_min: ageMin === "" ? null : Math.max(0, Number(ageMin) || 0),
         age_max: ageMax === "" ? null : Math.max(0, Number(ageMax) || 0),
         level: level.trim() || null,
+        audience,
       });
       // Смена тренера через параметры — тоже «навсегда»: будущие
       // запланированные занятия переводим на нового, иначе они остались
@@ -202,6 +205,13 @@ const ParamsTab = ({ group, lang, onClose }: { group: any; lang: Lang; onClose: 
           hint={t("Тренер получает эту сумму за каждого пришедшего ребёнка на занятии", "Ар бир келген бала үчүн")}
         >
           <input type="number" min={0} step={1} value={rate} onChange={(e) => setRate(e.target.value)} placeholder="100" />
+        </Field>
+        <Field label={t("Аудитория", "Аудитория")}>
+          <select value={audience} onChange={(e) => setAudience(e.target.value as GroupAudience)}>
+            <option value="kids">{t("Дети", "Балдар")}</option>
+            <option value="adults">{t("Взрослые", "Чоңдор")}</option>
+            <option value="mixed">{t("Смешанная", "Аралаш")}</option>
+          </select>
         </Field>
         <Field label={t("Уровень / примечание", "Деңгээл / эскертүү")}>
           <input value={level} onChange={(e) => setLevel(e.target.value)} placeholder={t("старшая, ОФП…", "улуу топ…")} />

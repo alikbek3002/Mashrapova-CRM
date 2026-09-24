@@ -14,6 +14,8 @@ const cardTypeLbl: Record<string, { ru: string; ky: string }> = {
   monthly: { ru: "Месячный", ky: "Айлык" },
   quarterly: { ru: "3 месяца", ky: "3 ай" },
   nine_month: { ru: "9 месяцев", ky: "9 ай" },
+  half_year: { ru: "6 месяцев", ky: "6 ай" },
+  annual: { ru: "12 месяцев", ky: "12 ай" },
   personal: { ru: "Персональный", ky: "Жеке" },
   single: { ru: "Разовый", ky: "Бирдик" },
   trial: { ru: "Пробный", ky: "Сыноо" },

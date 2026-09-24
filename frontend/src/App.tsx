@@ -3,7 +3,7 @@ import type { ComponentType } from "react";
 import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
-import { I18N, UniqumLogo } from "./data";
+import { I18N, BrandLogo } from "./data";
 import type { Lang } from "./data";
 import { AuthProvider, useAuth } from "./shared/auth/AuthProvider";
 import { Login } from "./shared/auth/Login";
@@ -157,7 +157,7 @@ const Shell = () => {
     return (
       <div className="login-page">
         <div className="login-card login-card--splash">
-          <UniqumLogo size={56} />
+          <BrandLogo size={56} />
           <div className="login-card__title">{lang === "ru" ? "Загрузка..." : "Жүктөлүүдө..."}</div>
         </div>
       </div>
@@ -198,14 +198,14 @@ const Shell = () => {
       <div className={`app-chrome ${isPwaRole ? "app-chrome--pwa" : ""}`}>
         <div className="app-chrome__inner">
           <div className="brand">
-            <UniqumLogo size={36} />
+            <BrandLogo size={36} />
           </div>
 
           <div className="user-chip">
             <div className="user-chip__avatar">
               <img
                 src="/icon-192.png"
-                alt="Uniqum Sport"
+                alt="Академия Машрапова"
                 style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }}
               />
             </div>
@@ -236,7 +236,7 @@ const Shell = () => {
         fallback={
           <div className="login-page">
             <div className="login-card login-card--splash">
-              <UniqumLogo size={56} />
+              <BrandLogo size={56} />
               <div className="login-card__title">{lang === "ru" ? "Загрузка..." : "Жүктөлүүдө..."}</div>
             </div>
           </div>

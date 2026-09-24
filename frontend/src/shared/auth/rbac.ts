@@ -56,13 +56,7 @@ export type Permission =
   | "manage_card_plans"
   | "view_archive"
   | "system_settings"
-  | "manage_users"
-  // Проходная: страница турникетов + команды двери + лица (зеркало SALES_ROLES
-  // бэкенда hik.ts; 09-22 — решение директора: менеджеры тоже)
-  | "manage_turnstiles"
-  // Тумблер/параметры «Доступ по расписанию» — политика на всё здание,
-  // только старшие (зеркало SCHEDULE_ROLES в PATCH /v1/hik/settings)
-  | "manage_access_settings";
+  | "manage_users";
 
 const ALL_OFFICE: Permission[] = [
   "view_kids", "view_parents", "view_schedule",
@@ -88,7 +82,6 @@ export const RBAC: Record<AppRole, Permission[]> = {
     "system_settings",
     "manage_users",
     "view_pt", "manage_pt", "sell_pt",
-    "manage_turnstiles", "manage_access_settings",
   ],
 
   // Fitness Director — everything except system settings.
@@ -105,7 +98,6 @@ export const RBAC: Record<AppRole, Permission[]> = {
     "view_finance_reports",
     "manage_sections", "view_archive",
     "view_pt", "manage_pt", "sell_pt",
-    "manage_turnstiles", "manage_access_settings",
   ],
 
   // Senior Manager — sales, schedule, freezes, refunds (incl. cancel 30%),
@@ -121,7 +113,6 @@ export const RBAC: Record<AppRole, Permission[]> = {
     "view_finance_reports",
     "manage_coaches",
     "view_pt", "manage_pt", "sell_pt",
-    "manage_turnstiles", "manage_access_settings",
   ],
 
   // Manager — clients/sales/leads. Cannot cancel 30%.
@@ -141,7 +132,6 @@ export const RBAC: Record<AppRole, Permission[]> = {
     "manage_coaches", "manage_sections",
     "approve_freezes", "create_freeze",
     "view_pt", "sell_pt",
-    "manage_turnstiles",
   ],
 
   // Cashier — read-only on clients + receive payment. Видит live-зарплаты

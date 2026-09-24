@@ -1,7 +1,7 @@
 // Нормализация телефонов до E.164 (+996) и конструирование pseudo-email
 // для логина по телефону без SMS. Зеркало backend/src/lib/phone.ts.
 
-const PHONE_DOMAIN = "staff.uniqum.local";
+const PHONE_DOMAIN = "staff.mashrapov.local";
 
 export const normalizeE164KG = (raw: string | null | undefined): string => {
   if (!raw) throw new Error("phone_required");

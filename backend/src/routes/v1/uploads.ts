@@ -188,17 +188,9 @@ export const uploadsRoutes = async (app: FastifyInstance) => {
         const stat = await s3.statObject(env.MINIO_BUCKET!, key);
         const contentType =
           stat.metaData?.["content-type"] ?? stat.metaData?.["Content-Type"] ?? "application/octet-stream";
-        // faces/* — единственный «перезаписываемый» ключ (заливка лица на
-        // турникет кладёт файл по faces/<id>.jpg). Это же фото показывается
-        // как аватарка, поэтому immutable-кэш здесь недопустим: после новой
-        // заливки браузер годами отдавал бы старый портрет. ETag делает
-        // ревалидацию дешёвой (304 без тела).
-        const mutable = key.startsWith("faces/");
         const etag = stat.etag ? `"${stat.etag.replace(/"/g, "")}"` : null;
         if (etag) reply.header("ETag", etag);
-        reply.header("Cache-Control", mutable
-          ? "public, max-age=60, must-revalidate"
-          : "public, max-age=31536000, immutable");
+        reply.header("Cache-Control", "public, max-age=31536000, immutable");
         if (etag && req.headers["if-none-match"] === etag) {
           reply.header("Cross-Origin-Resource-Policy", "cross-origin");
           return reply.code(304).send();

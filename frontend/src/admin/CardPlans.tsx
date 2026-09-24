@@ -15,7 +15,8 @@ import { usePerm } from "../shared/auth/rbac";
 const PLAN_TYPE_OPTS: { value: CardType; ru: string; ky: string; days: number }[] = [
   { value: "monthly",    ru: "1 месяц",   ky: "1 ай",       days: 30 },
   { value: "quarterly",  ru: "3 месяца",  ky: "3 ай",       days: 90 },
-  { value: "nine_month", ru: "9 месяцев", ky: "9 ай",       days: 270 },
+  { value: "half_year",  ru: "6 месяцев", ky: "6 ай",       days: 180 },
+  { value: "annual",     ru: "12 месяцев",ky: "12 ай",      days: 360 },
   { value: "single",     ru: "Разовый",   ky: "Бир жолку",  days: 30 },
   { value: "trial",      ru: "Пробный",   ky: "Сыноо",      days: 30 },
 ];

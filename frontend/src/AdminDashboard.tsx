@@ -24,7 +24,6 @@ const RefundsPage = lazy(() => import("./admin/Refunds").then((m) => ({ default:
 const UsersPage = lazy(() => import("./admin/Users").then((m) => ({ default: m.UsersPage })));
 const PersonalTrainingsPage = lazy(() => import("./admin/PersonalTrainings").then((m) => ({ default: m.PersonalTrainingsPage })));
 const DebtorsPage = lazy(() => import("./admin/Debtors").then((m) => ({ default: m.DebtorsPage })));
-const TurnstilesPage = lazy(() => import("./admin/Turnstiles").then((m) => ({ default: m.TurnstilesPage })));
 import { useStats, useAllCardDebts } from "./shared/api/queries";
 import { useAuth } from "./shared/auth/AuthProvider";
 import { can, type Permission } from "./shared/auth/rbac";
@@ -49,7 +48,6 @@ type NavId =
   | "groups"
   | "archive"
   | "users"
-  | "turnstiles"
   | "settings";
 
 const PAGES: Record<NavId, ComponentType<{ lang: Lang }>> = {
@@ -72,7 +70,6 @@ const PAGES: Record<NavId, ComponentType<{ lang: Lang }>> = {
   groups: GroupsPage,
   archive: ArchivePage,
   users: UsersPage,
-  turnstiles: TurnstilesPage,
   settings: SettingsPage,
 };
 
@@ -131,7 +128,6 @@ export const AdminDashboard = ({ lang }: { lang: Lang }) => {
         ["sections",   "category",                t.nav.sections,   "manage_sections"],
         ["groups",     "groups",                  (t.nav as any).groups, "manage_sections"],
         ["users",      "badge",                   lang === "ru" ? "Сотрудники" : "Кызматкерлер", "manage_users"],
-        ["turnstiles", "sensor_door",             lang === "ru" ? "Проходная" : "Өткөрмө", "manage_turnstiles"],
         ["archive",    "inventory_2",             t.nav.archive,    "view_archive"],
         ["settings",   "settings",                t.nav.settings,   "system_settings"],
       ],

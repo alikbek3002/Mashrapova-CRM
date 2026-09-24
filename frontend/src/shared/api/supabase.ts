@@ -1,17 +1,25 @@
 // Anon-only Supabase client. NEVER place service role key here.
 import { createClient } from "@supabase/supabase-js";
 
-const url = import.meta.env.VITE_SUPABASE_URL as string;
-const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string;
+const url = import.meta.env.VITE_SUPABASE_URL as string | undefined;
+const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 
-if (!url || !anonKey) {
-  throw new Error("Missing VITE_SUPABASE_URL or VITE_SUPABASE_ANON_KEY");
+// Без ключей не падаем белым экраном: приложение стартует в демо-режиме
+// (вход по роли без пароля, данные пустые). Запросы уходят на заглушку и
+// завершаются ошибкой, которую экраны показывают как «нет данных».
+export const isSupabaseConfigured = Boolean(url && anonKey);
+
+if (!isSupabaseConfigured) {
+  console.warn(
+    "[Mashrapov] VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY не заданы — демо-режим без базы. " +
+      "Скопируй frontend/.env.example в frontend/.env и заполни ключи."
+  );
 }
 
-export const supabase = createClient(url, anonKey, {
+export const supabase = createClient(url || "http://127.0.0.1:54321", anonKey || "demo-anon-key", {
   auth: {
-    persistSession: true,
-    autoRefreshToken: true,
+    persistSession: isSupabaseConfigured,
+    autoRefreshToken: isSupabaseConfigured,
     detectSessionInUrl: true,
   },
 });
@@ -26,7 +34,7 @@ if (
   /localhost|127\.0\.0\.1/.test(rawApiUrl)
 ) {
   console.error(
-    `[Uniqum] VITE_API_URL указывает на ${rawApiUrl}, но фронт открыт на ${window.location.origin}. ` +
+    `[Mashrapov] VITE_API_URL указывает на ${rawApiUrl}, но фронт открыт на ${window.location.origin}. ` +
       "Запросы к /v1/* упадут с CORS. Пропиши боевой URL бэкенда в переменные окружения Railway/Vercel и пересобери фронт."
   );
 }

@@ -15,14 +15,13 @@ import { normalizeE164KG, isValidPhoneInput } from "../shared/auth/normalizePhon
 import { Gate } from "../shared/auth/Gate";
 import { useAuth } from "../shared/auth/AuthProvider";
 import { resolveAvatarUrl } from "../shared/api/avatar";
-import { AccessTab } from "./ChildDrawer";
 
 const ROLE_LABELS: Record<StaffMember["role"], { ru: string; ky: string }> = {
   director:         { ru: "Директор",         ky: "Директор" },
-  fitness_director: { ru: "Фитнес-директор",  ky: "Фитнес-директор" },
+  fitness_director: { ru: "Управляющий",      ky: "Башкаруучу" },
   senior_manager:   { ru: "Старший менеджер", ky: "Башкы менеджер" },
   manager:          { ru: "Менеджер",         ky: "Менеджер" },
-  cashier:          { ru: "Кассир",           ky: "Кассир" },
+  cashier:          { ru: "Ресепшен",         ky: "Ресепшен" },
 };
 
 const StaffAvatar = ({ url, name, size = 32 }: { url: string | null; name: string; size?: number }) => {
@@ -501,10 +500,10 @@ const StaffModal = ({
           </Field>
           <Field label={t("Должность", "Кызмат") + " *"}>
             <select value={role} onChange={(e) => setRole(e.target.value as StaffRole)} disabled={busy}>
-              <option value="fitness_director">{t("Фитнес-директор", "Фитнес-директор")}</option>
+              <option value="fitness_director">{t("Управляющий", "Башкаруучу")}</option>
               <option value="senior_manager">{t("Старший менеджер", "Башкы менеджер")}</option>
               <option value="manager">{t("Менеджер", "Менеджер")}</option>
-              <option value="cashier">{t("Кассир", "Кассир")}</option>
+              <option value="cashier">{t("Ресепшен / кассир", "Ресепшен / кассир")}</option>
             </select>
           </Field>
 
@@ -526,7 +525,7 @@ const StaffModal = ({
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={busy}
-              placeholder="staff@uniqumsport.kg"
+              placeholder="staff@mashrapov.kg"
               style={emailInvalid ? { borderColor: "var(--red-600)" } : undefined}
             />
           </Field>
@@ -651,13 +650,6 @@ const StaffModal = ({
             </button>
           </div>
         </div>
-        {/* Проходная: номер, лицо на терминалах, история — у всех сотрудников */}
-        {!isCreate && initial?.id && (
-          <div style={{ marginTop: 18, paddingTop: 14, borderTop: "1px solid var(--line)" }}>
-            <div className="m-sect"><span className="m-sect__title">{t("Проходная", "Өткөрмө")}</span></div>
-            <AccessTab subject={{ kind: "staff", id: initial.id }} lang={lang} />
-          </div>
-        )}
       </Modal>
 
       {initial && (

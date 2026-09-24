@@ -132,6 +132,7 @@ export const useAddChild = () => {
       card_number?: string | null;
       responsible_manager_id?: string | null;
       amo_url?: string | null;
+      source?: "target" | "referral" | "other" | null;
     }) => {
       const orgId = await getMyOrgId();
       const { data, error } = await supabase
@@ -451,53 +452,6 @@ export const useRestore = (table: ArchivableTable) => {
   });
 };
 
-// Hard-delete для архивных записей. Идёт через RPC hard_delete_with_cascade —
-// она каскадно сносит ВСЕ FK-зависимые строки (платежи, посещения, уроки,
-// карты и т.д.) в правильном порядке внутри одной транзакции. Без RPC
-// прямой DELETE падал с 409/FK violation, и пользователю приходилось
-// вручную чистить десяток таблиц.
-//
-// Auth-гейт (director/fitness_director) проверяется внутри функции через
-// auth.uid() + profiles.role. UI всё равно прячет кнопку у остальных.
-export const useHardDelete = (table: ArchivableTable) => {
-  const qc = useQueryClient();
-  return useMutation({
-    mutationFn: async (id: string) => {
-      const { data, error } = await supabase.rpc("hard_delete_with_cascade", {
-        p_table: table,
-        p_id: id,
-      });
-      if (error) throw error;
-      return data as Record<string, number>;
-    },
-    onSuccess: () => {
-      invalidateArchiveRelated(qc);
-      toast.ok("Удалено навсегда (со всеми связанными записями)");
-    },
-    onError: (e: Error) => {
-      const msg = e.message || "";
-      if (/forbidden|requires director/i.test(msg)) {
-        toast.err("Удалять навсегда могут только директор/фитнес-директор.");
-      } else {
-        toast.err("Ошибка: " + msg);
-      }
-    },
-  });
-};
-
-// Сколько строк связано с архивной записью — для confirm-диалога перед
-// каскадным удалением. UI показывает «удалит N платежей, M посещений…».
-export const useArchiveDependentsCount = () => {
-  return async (table: ArchivableTable, id: string): Promise<Record<string, number>> => {
-    const { data, error } = await supabase.rpc("archive_dependents_count", {
-      p_table: table,
-      p_id: id,
-    });
-    if (error) throw error;
-    return (data ?? {}) as Record<string, number>;
-  };
-};
-
 // ============ Card plans (каталог тарифов абонементов) ============
 export const useAddCardPlan = () => {
   const qc = useQueryClient();
@@ -607,6 +561,7 @@ export const useAddGroup = () => {
       starts_on?: string | null; ends_on?: string | null;
       // Детали группы: секция — общее название, конкретика здесь.
       age_min?: number | null; age_max?: number | null; level?: string | null;
+      audience?: "kids" | "adults" | "mixed";
     }) => {
       const orgId = await getMyOrgId();
       const { data, error } = await supabase

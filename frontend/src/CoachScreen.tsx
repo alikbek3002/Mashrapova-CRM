@@ -4,7 +4,6 @@ import type { Lang, AttStatus } from "./data";
 import { useAuth } from "./shared/auth/AuthProvider";
 import { useLessons, useLessonRoster, useGroups, useAttendanceForLesson, useChildren, useCoachTabel, useMyPayroll, useMyLivePayroll, useFreezesForLessonDate, useProfile, useLessonNotesForLesson, useLessonNotesForLessons, useMyLessonNotes, useSignedLessonNotePhoto, useGroupRoster, useProgressNotes } from "./shared/api/queries";
 import { resolveAvatarUrl } from "./shared/api/avatar";
-import { useAccessEventsForDate } from "./shared/api/hik";
 import { useMarkAttendance, lessonMarkingDeadline, useAddProgressNote } from "./shared/api/mutations";
 import { ChildDrawer } from "./admin/ChildDrawer";
 import type { AttendanceStatus } from "./shared/types/database";
@@ -57,7 +56,7 @@ export const CoachScreen = ({ lang }: { lang: Lang }) => {
 
   return (
     <Shell
-      brand={{ title: lang === "ru" ? "Тренер" : "Тренер", subtitle: "Uniqum Sport" }}
+      brand={{ title: lang === "ru" ? "Тренер" : "Тренер", subtitle: "Академия Машрапова" }}
       user={{ name: user.full_name, subtitle: t.hello, avatar: "/icon-192.png" }}
       tabs={tabs}
       active={tab}
@@ -68,7 +67,7 @@ export const CoachScreen = ({ lang }: { lang: Lang }) => {
           <div className="m-avatar" style={{ overflow: "hidden", padding: 0 }}>
             <img
               src="/icon-192.png"
-              alt="Uniqum Sport"
+              alt="Академия Машрапова"
               style={{ width: "100%", height: "100%", objectFit: "cover" }}
             />
           </div>
@@ -201,10 +200,6 @@ const CoachToday = ({ lang, t, setActive, coachId }: { lang: Lang; t: CoachT; se
 // кнопки заблокированы и показан бейдж «Заморожен».
 type SimpleStatus = "present" | "absent";
 
-// Локальное время «ЧЧ:ММ» для маркера входа в здание.
-const fmtEntryTime = (iso: string) =>
-  new Date(iso).toLocaleTimeString("ru-RU", { hour: "2-digit", minute: "2-digit" });
-
 const CoachLessonView = ({ lang, t, lessonId, back }: { lang: Lang; t: CoachT; lessonId: string; back: () => void }) => {
   const tt = (ru: string, ky: string) => (lang === "ru" ? ru : ky);
   const { data: lessonsAll = [] } = useLessons({});
@@ -217,8 +212,6 @@ const CoachLessonView = ({ lang, t, lessonId, back }: { lang: Lang; t: CoachT; l
 
   const childIds = useMemo(() => enrollments.map((e: any) => e.child_id), [enrollments]);
   const { data: frozenSet = new Set<string>() } = useFreezesForLessonDate(lesson?.date, childIds);
-  // Маркер «в здании»: первый вход через турникет в день занятия (child_id → occurred_at).
-  const { data: entryByChild } = useAccessEventsForDate(lesson?.date, childIds);
 
   const [state, setState] = useState<Record<string, SimpleStatus>>({});
   const [activeChildId, setActiveChildId] = useState<string | null>(null);
@@ -348,7 +341,6 @@ const CoachLessonView = ({ lang, t, lessonId, back }: { lang: Lang; t: CoachT; l
         const status = merged[k.id];
         const disabled = isFuture || isFrozen || isClosed;
         const note = noteByChild.get(k.id);
-        const entryAt = entryByChild?.get(k.id);
         return (
           <div key={k.id} className="roster-block">
             <div className="roster-row">
@@ -362,23 +354,6 @@ const CoachLessonView = ({ lang, t, lessonId, back }: { lang: Lang; t: CoachT; l
               <div onClick={() => setActiveChildId(k.id)} style={{ cursor: "pointer", flex: 1, minWidth: 0 }}>
                 <div className="roster-row__name">
                   {k.full_name}
-                  {entryAt && (
-                    <span
-                      title={tt(`Вошёл в здание в ${fmtEntryTime(entryAt)}`, `Имаратка ${fmtEntryTime(entryAt)} кирген`)}
-                      aria-label={tt(`Вошёл в здание в ${fmtEntryTime(entryAt)}`, `Имаратка ${fmtEntryTime(entryAt)} кирген`)}
-                      style={{
-                        display: "inline-flex", alignItems: "center", gap: 3,
-                        marginLeft: 6, fontSize: 10.5, fontWeight: 600,
-                        color: "var(--green, #16a34a)", verticalAlign: "middle",
-                      }}
-                    >
-                      <span style={{
-                        width: 6, height: 6, borderRadius: "50%", flexShrink: 0,
-                        background: "var(--green, #16a34a)", display: "inline-block",
-                      }} />
-                      {fmtEntryTime(entryAt)}
-                    </span>
-                  )}
                 </div>
                 <div className="roster-row__meta">{k.card_number ?? ""}</div>
               </div>

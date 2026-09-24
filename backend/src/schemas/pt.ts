@@ -133,7 +133,7 @@ export const ptCompleteSchema = z.object({
     .max(20),
   actual_coach_id: z.string().uuid().nullable().optional(),
   substitution_comment: z.string().max(500).nullable().optional(),
-  source: z.enum(["coach", "admin", "turnstile"]).default("admin"),
+  source: z.enum(["coach", "admin"]).default("admin"),
 });
 
 // §9 Отмена / перенос

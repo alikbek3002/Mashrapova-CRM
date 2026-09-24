@@ -18,7 +18,7 @@ jobs:
       - name: Dump Postgres
         run: |
           DATE=$(date +%Y-%m-%d)
-          FILE="uniqum-prod-${DATE}.sql.gz"
+          FILE="mashrapov-prod-${DATE}.sql.gz"
           PGPASSWORD="${{ secrets.SUPABASE_DB_PASSWORD }}" \
             pg_dump \
               --host="${{ secrets.SUPABASE_DB_HOST }}" \

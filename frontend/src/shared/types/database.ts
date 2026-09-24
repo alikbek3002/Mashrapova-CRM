@@ -11,10 +11,13 @@ export type UserRole =
   | "parent";
 export type ChildStatus = "active" | "frozen" | "expired" | "debtor" | "archived";
 // therapy/developmental добавлены в 20260514000006; special — legacy.
-export type SectionCategory = "gymnastics" | "martial_arts" | "special" | "therapy" | "developmental";
+// gymnastics/special/therapy/developmental — наследие движка Uniqum, в UI
+// Академии Машрапова используются только martial_arts и fitness.
+export type SectionCategory = "martial_arts" | "fitness" | "gymnastics" | "special" | "therapy" | "developmental";
 export type LessonType = "regular" | "trial" | "single";
 export type LessonStatus = "scheduled" | "completed" | "cancelled" | "force_majeure";
-export type CardType = "monthly" | "quarterly" | "nine_month" | "personal" | "single" | "trial";
+// nine_month — наследие Uniqum; у Академии Машрапова пакеты 1/3/6/12 месяцев (ТЗ §4.1).
+export type CardType = "monthly" | "quarterly" | "half_year" | "annual" | "nine_month" | "personal" | "single" | "trial";
 export type CardStatus = "active" | "ending" | "frozen" | "expired" | "debt" | "archived";
 export type AttendanceStatus = "present" | "absent" | "excused" | "late" | "makeup";
 export type FreezeStatus = "pending" | "approved" | "rejected";
@@ -91,7 +94,12 @@ export type Child = Timestamps & {
   card_number: string | null;
   status: ChildStatus;
   responsible_manager_id: string | null;
+  source: ClientSource | null;
 };
+
+// Источник клиента (ТЗ §3.2).
+export type ClientSource = "target" | "referral" | "other";
+export type GroupAudience = "kids" | "adults" | "mixed";
 
 export type Coach = {
   id: string;
@@ -128,6 +136,8 @@ export type Group = Timestamps & {
   age_min: number | null;
   age_max: number | null;
   level: string | null;
+  // Аудитория (ТЗ §5.1, 20260925000001).
+  audience: GroupAudience;
 };
 
 // Каталог тарифов абонементов (20260807000003): при продаже менеджер
@@ -454,7 +464,7 @@ export type PtSession = {
   status: PtSessionStatus;
   completed_at: string | null;
   completed_by: string | null;
-  completed_source: "coach" | "admin" | "turnstile" | null;
+  completed_source: "coach" | "admin" | null;
   cancelled_at: string | null;
   cancelled_by: string | null;
   cancel_reason: string | null;

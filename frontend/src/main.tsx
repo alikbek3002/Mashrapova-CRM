@@ -109,8 +109,44 @@ if ("serviceWorker" in navigator) {
   });
 }
 
+// Любая ошибка рендера показывается текстом, а не белым экраном.
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { error: Error | null }> {
+  state = { error: null as Error | null };
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  componentDidCatch(error: Error, info: React.ErrorInfo) {
+    console.error("[ErrorBoundary]", error, info.componentStack);
+  }
+  render() {
+    const { error } = this.state;
+    if (!error) return this.props.children;
+    return (
+      <div style={{ padding: 24, fontFamily: "var(--font-sans, sans-serif)", maxWidth: 720, margin: "40px auto" }}>
+        <h2 style={{ margin: "0 0 8px" }}>Что-то пошло не так</h2>
+        <p style={{ color: "#666", margin: "0 0 16px" }}>Приложение столкнулось с ошибкой. Текст ниже поможет разработчику.</p>
+        <pre style={{ whiteSpace: "pre-wrap", background: "#f6f6f6", padding: 12, borderRadius: 8, fontSize: 12 }}>
+          {error.message}
+          {error.stack ? "\n\n" + error.stack : ""}
+        </pre>
+        <button
+          style={{ marginTop: 16, padding: "10px 16px", borderRadius: 8, border: "1px solid #ccc", cursor: "pointer" }}
+          onClick={() => {
+            try { localStorage.removeItem("uq-query-cache"); } catch {}
+            window.location.reload();
+          }}
+        >
+          Перезагрузить
+        </button>
+      </div>
+    );
+  }
+}
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <App />
+    <ErrorBoundary>
+      <App />
+    </ErrorBoundary>
   </React.StrictMode>
 );

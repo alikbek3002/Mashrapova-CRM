@@ -1,5 +1,4 @@
 // Concrete modal forms used across admin pages.
-import { AccessTab } from "../../admin/ChildDrawer";
 import { useEffect, useMemo, useState } from "react";
 import { Modal, Field } from "./Modal";
 import { PasswordChangedDialog } from "./PasswordChangedDialog";
@@ -14,7 +13,7 @@ import { useAuth } from "../auth/AuthProvider";
 import { normalizeE164KG, isValidPhoneInput } from "../auth/normalizePhone";
 import { supabase } from "../api/supabase";
 import type { Lang } from "../../data";
-import type { CardType, PaymentMethod, SectionCategory, LeadStage, Family } from "../types/database";
+import type { CardType, PaymentMethod, SectionCategory, LeadStage, Family, ClientSource, GroupAudience } from "../types/database";
 
 // =============================================================
 // AddFamily — create or edit (with archive)
@@ -777,6 +776,7 @@ type ChildInitial = {
   card_number?: string | null;
   responsible_manager_id?: string | null;
   amo_url?: string | null;
+  source?: ClientSource | null;
 };
 
 export const AddChildModal = ({
@@ -818,6 +818,7 @@ export const AddChildModal = ({
   const [birth, setBirth] = useState(initial?.birth_date ?? "");
   const [card, setCard] = useState(initial?.card_number ?? "");
   const [amoUrl, setAmoUrl] = useState(initial?.amo_url ?? "");
+  const [source, setSource] = useState<ClientSource | "">(initial?.source ?? "");
   const [managerId, setManagerId] = useState<string>(
     initial?.responsible_manager_id
       ?? (currentUserIsManagerLike ? (user?.id ?? "") : ""),
@@ -906,6 +907,7 @@ export const AddChildModal = ({
           card_number: card || null,
           responsible_manager_id: managerId || null,
           amo_url: amoUrl.trim() || null,
+          source: source || null,
         });
         // Полная карточка: правки родителей/телефонов/адреса сохраняются
         // в выбранную семью тем же сабмитом.
@@ -948,12 +950,13 @@ export const AddChildModal = ({
         card_number: card || null,
         responsible_manager_id: managerId || null,
         amo_url: amoUrl.trim() || null,
+        source: source || null,
       });
       if (onCreated && created && (created as { id?: string }).id) {
         onCreated((created as { id: string }).id);
       }
       onClose();
-      setFullName(""); setBirth(""); setCard("");
+      setFullName(""); setBirth(""); setCard(""); setSource("");
       setFather(""); setFatherPhone(""); setFatherPassport("");
       setMother(""); setMotherPhone(""); setMotherPassport("");
       setAddress("");
@@ -1154,12 +1157,21 @@ export const AddChildModal = ({
         </Field>
       </div>
 
+      <Field label={t("Источник клиента", "Кардардын булагы")}>
+        <select value={source} onChange={(e) => setSource(e.target.value as ClientSource | "")} disabled={busy}>
+          <option value="">{t("— не указан —", "— көрсөтүлгөн эмес —")}</option>
+          <option value="target">{t("Таргет (Instagram)", "Таргет (Instagram)")}</option>
+          <option value="referral">{t("Рекомендация", "Сунуштама")}</option>
+          <option value="other">{t("Другое", "Башка")}</option>
+        </select>
+      </Field>
+
       <Field label={t("Ссылка AmoCRM (опц.)", "AmoCRM шилтемеси (опц.)")}>
         <input
           value={amoUrl}
           onChange={(e) => setAmoUrl(e.target.value)}
           disabled={busy}
-          placeholder="https://uniqumsport.amocrm.ru/leads/detail/…"
+          placeholder="https://mashrapov.amocrm.ru/leads/detail/…"
         />
       </Field>
 
@@ -1730,13 +1742,6 @@ export const AddCoachModal = ({
       )}
 
       {err && <div className="field__error" style={{ marginTop: 8 }}>{err}</div>}
-      {/* Проходная тренера: номер, лицо на терминалах, история */}
-       {initial?.id && (
-         <div style={{ marginTop: 18, paddingTop: 14, borderTop: "1px solid var(--line)" }}>
-           <div className="m-sect"><span className="m-sect__title">{t("Проходная", "Өткөрмө")}</span></div>
-           <AccessTab subject={{ kind: "staff", id: initial.id }} lang={lang} />
-         </div>
-       )}
        <div className="modal__foot">
         {isEdit && (
           <button className="btn" style={{ marginRight: "auto", color: "var(--red-600)" }} onClick={handleArchive} disabled={busy}>
@@ -1784,7 +1789,7 @@ export const AddSectionModal = ({ open, onClose, lang, initial }: { open: boolea
   const isEdit = !!initial?.id;
   const [nameRu, setNameRu] = useState(initial?.name_ru ?? "");
   const [nameKy, setNameKy] = useState(initial?.name_ky ?? "");
-  const [category, setCategory] = useState<SectionCategory>(initial?.category ?? "gymnastics");
+  const [category, setCategory] = useState<SectionCategory>(initial?.category ?? "martial_arts");
   const [color, setColor] = useState(initial?.color ?? "#3b82f6");
   const [err, setErr] = useState<string | null>(null);
 
@@ -1822,13 +1827,8 @@ export const AddSectionModal = ({ open, onClose, lang, initial }: { open: boolea
         <Field label={t("Направление", "Багыт")}>
           {/* Направление = category в БД; страница «Секции» группирует по нему. */}
           <select value={category} onChange={(e) => setCategory(e.target.value as SectionCategory)} disabled={busy}>
-            <option value="therapy">{t("ЛФК", "ДДТ")}</option>
-            <option value="gymnastics">{t("Гимнастика", "Гимнастика")}</option>
             <option value="martial_arts">{t("Единоборства", "Күрөш спорттору")}</option>
-            <option value="developmental">{t("Развивающая гимнастика", "Өнүктүрүүчү гимнастика")}</option>
-            {category === "special" && (
-              <option value="special">{t("Специальная (устар.)", "Атайын (эски)")}</option>
-            )}
+            <option value="fitness">{t("Фитнес-зона", "Фитнес-зона")}</option>
           </select>
         </Field>
         <Field label={t("Цвет", "Түс")}>
@@ -1867,6 +1867,7 @@ type GroupInitial = {
   age_min?: number | null;
   age_max?: number | null;
   level?: string | null;
+  audience?: GroupAudience;
 };
 
 // Горизонт автогенерации занятий при сохранении группы (8 недель).
@@ -1906,6 +1907,7 @@ export const AddGroupModal = ({ open, onClose, lang, defaultSectionId, initial }
   const [ageMin, setAgeMin] = useState(initial?.age_min != null ? String(initial.age_min) : "");
   const [ageMax, setAgeMax] = useState(initial?.age_max != null ? String(initial.age_max) : "");
   const [level, setLevel] = useState(initial?.level ?? "");
+  const [audience, setAudience] = useState<GroupAudience>(initial?.audience ?? "kids");
   // День недели → время начала. По умолчанию при создании — Пн/Ср/Пт 16:00.
   const [dayTimes, setDayTimes] = useState<Record<number, string>>(
     isEdit ? {} : { 1: "16:00", 3: "16:00", 5: "16:00" },
@@ -1983,6 +1985,7 @@ export const AddGroupModal = ({ open, onClose, lang, defaultSectionId, initial }
         age_min: ageMin === "" ? null : Math.max(0, Number(ageMin) || 0),
         age_max: ageMax === "" ? null : Math.max(0, Number(ageMax) || 0),
         level: level.trim() || null,
+        audience,
       };
       let groupId = initial?.id;
       if (isEdit) {
@@ -2049,7 +2052,7 @@ export const AddGroupModal = ({ open, onClose, lang, defaultSectionId, initial }
       onClose();
       if (!isEdit) {
         setName(""); setSectionId(defaultSectionId ?? ""); setCoachId("");
-        setAgeMin(""); setAgeMax(""); setLevel("");
+        setAgeMin(""); setAgeMax(""); setLevel(""); setAudience("kids");
         setDayTimes({ 1: "16:00", 3: "16:00", 5: "16:00" });
       }
     } catch (e: unknown) {
@@ -2107,6 +2110,13 @@ export const AddGroupModal = ({ open, onClose, lang, defaultSectionId, initial }
           hint={t("За каждого пришедшего ребёнка на занятии", "Ар бир келген бала үчүн")}
         >
           <input type="number" min={0} step={1} value={rate} onChange={(e) => setRate(e.target.value)} placeholder="100" />
+        </Field>
+        <Field label={t("Аудитория", "Аудитория")}>
+          <select value={audience} onChange={(e) => setAudience(e.target.value as GroupAudience)}>
+            <option value="kids">{t("Дети", "Балдар")}</option>
+            <option value="adults">{t("Взрослые", "Чоңдор")}</option>
+            <option value="mixed">{t("Смешанная", "Аралаш")}</option>
+          </select>
         </Field>
         <Field label={t("Уровень / примечание", "Деңгээл / эскертүү")}>
           <input value={level} onChange={(e) => setLevel(e.target.value)} placeholder={t("старшая, ОФП…", "улуу топ…")} disabled={busy} />
@@ -2490,7 +2500,7 @@ export const SellCardModal = ({
   };
   // Срок карты: из тарифа; при ручном вводе — фолбэк по типу.
   const periodDays = plan?.duration_days
-    ?? (type === "monthly" ? 30 : type === "quarterly" ? 90 : type === "nine_month" ? 270 : 30);
+    ?? (type === "quarterly" ? 90 : type === "half_year" ? 180 : type === "annual" ? 360 : type === "nine_month" ? 270 : 30);
 
   // Окно записи: считаем только если выбрана группа с расписанием.
   // Иначе окно открытое (null/null) и карта живёт по обычному периоду.
@@ -2702,7 +2712,8 @@ export const SellCardModal = ({
             <select value={type} onChange={(e) => setType(e.target.value as CardType)}>
               <option value="monthly">{t("Месячный (12)", "Айлык (12)")}</option>
               <option value="quarterly">{t("3 месяца (36)", "3 айлык (36)")}</option>
-              <option value="nine_month">{t("9 месяцев (108)", "9 айлык (108)")}</option>
+              <option value="half_year">{t("6 месяцев (72)", "6 айлык (72)")}</option>
+              <option value="annual">{t("12 месяцев (144)", "12 айлык (144)")}</option>
               <option value="single">{t("Разовый (1)", "Бирдик (1)")}</option>
               <option value="trial">{t("Пробный", "Сыноо")}</option>
             </select>

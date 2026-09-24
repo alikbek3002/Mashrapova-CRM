@@ -9,12 +9,10 @@ import {
   useArchivedSections,
   useArchivedGroups,
 } from "../shared/api/queries";
-import { useRestore, useHardDelete, useArchiveDependentsCount, type ArchivableTable } from "../shared/api/mutations";
+import { useRestore, type ArchivableTable } from "../shared/api/mutations";
 import { usePerm } from "../shared/auth/rbac";
-import { useAuth } from "../shared/auth/AuthProvider";
 import { ChildDrawer } from "./ChildDrawer";
 import { GroupDrawer } from "./GroupDrawer";
-import { Modal } from "../shared/ui/Modal";
 import { AddFamilyModal, AddCoachModal, AddSectionModal } from "../shared/ui/forms";
 
 type TabId = "kids" | "families" | "coaches" | "sections" | "groups";
@@ -94,13 +92,8 @@ export const ArchivePage = ({ lang }: { lang: Lang }) => {
 };
 
 // ---------- Row actions ----------
-// Restore — для всех с доступом к архиву.
-// Hard-delete — только директор; перед запуском показываем модалку с
-// списком зависимостей (X платежей, Y посещений и т.д.), чтобы было
-// видно что именно будет снесено каскадом.
-//
-// stopPropagation на onClick кнопок — обязательно: строка таблицы
-// сама кликабельна и открывает деталку.
+// Только восстановление: по ТЗ (§2.2, §12.3) удалять данные не может никто —
+// архивная запись хранится вместе со всей историей.
 const RowActions = ({
   id,
   table,
@@ -111,126 +104,18 @@ const RowActions = ({
   lang: Lang;
 }) => {
   const restore = useRestore(table);
-  const hardDelete = useHardDelete(table);
-  const fetchDeps = useArchiveDependentsCount();
-  const { user } = useAuth();
-  const isDirector = user?.role === "director" || user?.role === "fitness_director";
   const t = (ru: string, ky: string) => (lang === "ru" ? ru : ky);
 
-  const [confirmOpen, setConfirmOpen] = useState(false);
-  const [deps, setDeps] = useState<Record<string, number> | null>(null);
-  const [depsLoading, setDepsLoading] = useState(false);
-
-  const openConfirm = async (e: React.MouseEvent) => {
-    e.stopPropagation();
-    setConfirmOpen(true);
-    setDepsLoading(true);
-    try {
-      const d = await fetchDeps(table, id);
-      setDeps(d);
-    } catch {
-      setDeps({});
-    } finally {
-      setDepsLoading(false);
-    }
-  };
-
-  const confirmDelete = () => {
-    hardDelete.mutate(id, {
-      onSettled: () => setConfirmOpen(false),
-    });
-  };
-
-  const busy = restore.isPending || hardDelete.isPending;
-  const totalDeps = deps ? Object.values(deps).reduce((a, b) => a + b, 0) : 0;
-
-  // Подписи на русском для счётчиков (ключи из archive_dependents_count).
-  const DEP_LABEL: Record<string, string> = {
-    club_cards: "карт абонементов",
-    payments: "платежей",
-    deposit_transactions: "транзакций по депозиту",
-    attendance: "отметок посещаемости",
-    enrollments: "записей в группы",
-    freezes: "заморозок",
-    refunds: "возвратов",
-    lesson_notes: "заметок тренера",
-    progress_notes: "отметок прогресса",
-    child_internal_notes: "внутренних заметок",
-    children: "детей",
-    lessons: "уроков",
-    group_schedule: "слотов расписания",
-    section_coaches: "связей секция-тренер",
-    groups: "групп",
-    groups_as_coach: "групп (как тренер)",
-    lessons_as_coach: "уроков (как тренер)",
-    children_as_mgr: "детей (как менеджер)",
-  };
-
   return (
-    <>
-      <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }} onClick={(e) => e.stopPropagation()}>
-        <button
-          className="btn btn--ghost"
-          disabled={busy}
-          onClick={(e) => { e.stopPropagation(); restore.mutate(id); }}
-        >
-          <Icon name="restore" size={14} /> {t("Восстановить", "Калыбына келтирүү")}
-        </button>
-        {isDirector && (
-          <button
-            className="btn btn--ghost"
-            style={{ color: "var(--red-600)" }}
-            disabled={busy}
-            onClick={openConfirm}
-            title={t("Удалить навсегда", "Биротоло өчүрүү")}
-          >
-            <Icon name="x" size={14} /> {t("Удалить навсегда", "Биротоло өчүрүү")}
-          </button>
-        )}
-      </div>
-
-      <Modal open={confirmOpen} onClose={() => setConfirmOpen(false)} title={t("Удалить навсегда?", "Биротоло өчүрөбүзбү?")}>
-        <div style={{ padding: 16, display: "flex", flexDirection: "column", gap: 12 }}>
-          <div style={{ fontSize: 14, color: "var(--ink)" }}>
-            {t(
-              "Это действие необратимо. Запись будет удалена вместе со всей связанной историей.",
-              "Бул кайтарылбайт. Жазуу бардык байланышкан тарых менен өчүрүлөт.",
-            )}
-          </div>
-          {depsLoading ? (
-            <div style={{ color: "var(--muted)", fontSize: 13 }}>{t("Считаем зависимости…", "Байланыштарды эсептейбиз…")}</div>
-          ) : totalDeps === 0 ? (
-            <div style={{ color: "var(--muted)", fontSize: 13 }}>
-              {t("Связанных записей нет.", "Байланышкан жазуулар жок.")}
-            </div>
-          ) : (
-            <div style={{ background: "var(--bg-soft)", border: "1px solid var(--line)", borderRadius: "var(--r-md)", padding: 12 }}>
-              <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 8 }}>
-                {t("Будет удалено вместе с записью:", "Жазуу менен бирге өчүрүлөт:")}
-              </div>
-              <ul style={{ margin: 0, paddingLeft: 18, fontSize: 13, color: "var(--ink)" }}>
-                {Object.entries(deps ?? {}).filter(([, n]) => n > 0).map(([k, n]) => (
-                  <li key={k}>{n} {DEP_LABEL[k] ?? k}</li>
-                ))}
-              </ul>
-            </div>
-          )}
-          <div style={{ display: "flex", gap: 8, justifyContent: "flex-end", marginTop: 4 }}>
-            <button className="btn btn--ghost" onClick={() => setConfirmOpen(false)} disabled={hardDelete.isPending}>
-              {t("Отмена", "Жокко чыгаруу")}
-            </button>
-            <button
-              className="btn"
-              style={{ background: "var(--red-600)", color: "#fff", borderColor: "var(--red-600)" }}
-              onClick={confirmDelete}
-              disabled={hardDelete.isPending}
-            >
-              {hardDelete.isPending ? t("Удаляем…", "Өчүрүүдө…") : t("Удалить навсегда", "Биротоло өчүрүү")}
-            </button>
-          </div>
-        </div>
-      </Modal>
-    </>
+    <div style={{ display: "flex", gap: 8, justifyContent: "flex-end" }} onClick={(e) => e.stopPropagation()}>
+      <button
+        className="btn btn--ghost"
+        disabled={restore.isPending}
+        onClick={(e) => { e.stopPropagation(); restore.mutate(id); }}
+      >
+        <Icon name="restore" size={14} /> {t("Восстановить", "Калыбына келтирүү")}
+      </button>
+    </div>
   );
 };
 
