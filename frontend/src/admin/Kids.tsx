@@ -162,6 +162,20 @@ export const KidsPage = ({ lang }: { lang: Lang }) => {
                       </td>
                       <td>
                         <span className={`pill pill--${k.status}`}>{k.status}</span>
+                        {/* ТЗ §4.5: флаг «риск оттока» — нет посещений 10+ дней */}
+                        {k.churn_risk_at && (
+                          <span
+                            className="pill"
+                            title={t("Нет посещений 10+ дней", "10+ күн катышуу жок")}
+                            style={{
+                              marginLeft: 4,
+                              background: "var(--red-50, var(--bg-soft))",
+                              color: "var(--red-600)",
+                            }}
+                          >
+                            {t("риск оттока", "агып кетүү коркунучу")}
+                          </span>
+                        )}
                       </td>
                       <td className="cell-sub" style={{ fontSize: 12 }}>{groupsLabel}</td>
                       <td>{k.card_number ?? "—"}</td>

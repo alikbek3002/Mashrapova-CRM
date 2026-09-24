@@ -65,6 +65,7 @@ export const cardsRoutes = async (app: FastifyInstance) => {
         p_coach_rate_per_lesson: input.coach_rate_per_lesson,
         p_plan_id: input.plan_id ?? null,
         p_duration_days: input.duration_days ?? null,
+        p_discount_reason: input.discount_reason ?? null,
       });
 
       if (error) {
@@ -77,6 +78,12 @@ export const cardsRoutes = async (app: FastifyInstance) => {
           return reply.code(409).send({
             error: "active_card_exists",
             message: "У ребёнка уже есть активный абонемент. Закройте его перед продажей нового.",
+          });
+        }
+        if (msg.includes("discount_reason_required")) {
+          return reply.code(422).send({
+            error: "discount_reason_required",
+            message: "Укажите причину скидки — этого требует регламент (ТЗ §3.3).",
           });
         }
         if (msg.includes("deposit_insufficient")) {

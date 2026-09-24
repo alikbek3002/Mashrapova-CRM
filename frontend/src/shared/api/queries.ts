@@ -616,6 +616,11 @@ export type OrgSettingsRow = {
   lead_first_contact_min: number;
   lead_escalation_min: number;
   lead_no_show_hours: number;
+  // ТЗ §3.3 — бонус «Приведи друга».
+  referral_enabled: boolean;
+  referral_bonus_amount: number;
+  // ТЗ §4.5 — сколько дней без посещений считать риском оттока.
+  churn_no_visit_days: number;
   updated_by: string | null;
   updated_at: string;
 };

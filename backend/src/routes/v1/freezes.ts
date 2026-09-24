@@ -43,9 +43,11 @@ export const freezesRoutes = async (app: FastifyInstance) => {
     {
       preHandler: [
         authenticate,
-        // Заморозку ставит только офис: родитель и тренер исключены
-        // (запрос клиента 2026-08-04). Их RLS insert-политики тоже сняты.
-        requireRole("director", "fitness_director", "senior_manager", "manager"),
+        // ТЗ §4.3: заморозку ставит менеджер ИЛИ тренер (через своё
+        // приложение). Тренеру вернули доступ миграцией 20260926000005 —
+        // в движке Uniqum его отключали по решению того клиента.
+        // Родитель по-прежнему не ставит: в ТЗ его среди инициаторов нет.
+        requireRole("director", "fitness_director", "senior_manager", "manager", "coach"),
       ],
     },
     async (req, reply) => {
@@ -126,6 +128,15 @@ export const freezesRoutes = async (app: FastifyInstance) => {
         .single();
 
       if (error || !freeze) {
+        // ТЗ §4.3: число заморозок ограничено типом абонемента.
+        // Проверку делает триггер check_freeze_quota — правило одно для
+        // всех путей создания (офис через API, тренер через RLS).
+        if (error?.message?.includes("freeze_quota_exceeded")) {
+          return reply.code(409).send({
+            error: "freeze_quota_exceeded",
+            message: "Лимит заморозок по этому абонементу исчерпан — он зависит от типа абонемента.",
+          });
+        }
         req.log.error({ err: error }, "freeze_insert_failed");
         // Гонка: параллельный approve мог создать пересечение уже после
         // нашей проверки — тогда сработает триггер trg_freezes_aa_no_overlap.

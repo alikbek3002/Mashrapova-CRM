@@ -148,6 +148,9 @@ export const RBAC: Record<AppRole, Permission[]> = {
   coach: [
     "view_schedule",
     "view_own_payroll",
+    // ТЗ §4.3: заморозку ставит менеджер ИЛИ тренер через своё приложение.
+    // Тренер создаёт заявку (pending) — подтверждает офис.
+    "create_freeze",
   ],
 
   // Parent — own data + own schedule. Заморозку запрашивает через офис.

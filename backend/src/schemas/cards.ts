@@ -13,6 +13,10 @@ export const cardSellSchema = z
     price: z.number().nonnegative(),
     // Обязательное поле: процент скидки (0..100). Менеджер всегда вводит явно.
     discount_pct: z.number().min(0).max(100),
+    // ТЗ §3.3: причина индивидуальной скидки обязательна. Проверку делает
+    // и RPC (discount_reason_required) — чтобы правило нельзя было обойти
+    // в обход API.
+    discount_reason: z.string().trim().min(1).nullable().optional(),
     start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     payment_method: z.enum(["cash", "terminal"]),

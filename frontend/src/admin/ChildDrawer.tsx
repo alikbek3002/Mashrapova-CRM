@@ -228,6 +228,7 @@ export const ChildDrawer = ({
             responsible_manager_id: child.responsible_manager_id,
             amo_url: (child as any).amo_url ?? null,
             source: child.source ?? null,
+            referred_by_child_id: child.referred_by_child_id ?? null,
           }}
         />
       )}

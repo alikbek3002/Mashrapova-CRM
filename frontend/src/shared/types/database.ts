@@ -108,6 +108,11 @@ export type Child = Timestamps & {
   status: ChildStatus;
   responsible_manager_id: string | null;
   source: ClientSource | null;
+  // ТЗ §3.3 «Приведи друга»: ученик, который привёл этого клиента.
+  referred_by_child_id: string | null;
+  // ТЗ §4.5: помечен риском оттока (нет посещений 10+ дней). Снимается
+  // автоматически при первом же посещении.
+  churn_risk_at: string | null;
 };
 
 // Источник клиента (ТЗ §3.2).
@@ -374,6 +379,11 @@ export type OrgSettings = {
   lead_first_contact_min: number;
   lead_escalation_min: number;
   lead_no_show_hours: number;
+  // ТЗ §3.3: бонус «Приведи друга».
+  referral_enabled: boolean;
+  referral_bonus_amount: number;
+  // ТЗ §4.5: сколько дней без посещений считать риском оттока.
+  churn_no_visit_days: number;
   updated_by: string | null;
   updated_at: string;
 };

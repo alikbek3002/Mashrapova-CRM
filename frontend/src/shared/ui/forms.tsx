@@ -778,6 +778,7 @@ type ChildInitial = {
   responsible_manager_id?: string | null;
   amo_url?: string | null;
   source?: ClientSource | null;
+  referred_by_child_id?: string | null;
 };
 
 export const AddChildModal = ({
@@ -820,6 +821,9 @@ export const AddChildModal = ({
   const [card, setCard] = useState(initial?.card_number ?? "");
   const [amoUrl, setAmoUrl] = useState(initial?.amo_url ?? "");
   const [source, setSource] = useState<ClientSource | "">(initial?.source ?? "");
+  // ТЗ §3.3 «Приведи друга»: кто привёл этого клиента. Бонус −300 сом
+  // начисляется рефереру и применяется к его следующему абонементу.
+  const [referredBy, setReferredBy] = useState(initial?.referred_by_child_id ?? "");
   const [managerId, setManagerId] = useState<string>(
     initial?.responsible_manager_id
       ?? (currentUserIsManagerLike ? (user?.id ?? "") : ""),
@@ -909,6 +913,7 @@ export const AddChildModal = ({
           responsible_manager_id: managerId || null,
           amo_url: amoUrl.trim() || null,
           source: source || null,
+          referred_by_child_id: referredBy || null,
         });
         // Полная карточка: правки родителей/телефонов/адреса сохраняются
         // в выбранную семью тем же сабмитом.
@@ -952,12 +957,13 @@ export const AddChildModal = ({
         responsible_manager_id: managerId || null,
         amo_url: amoUrl.trim() || null,
         source: source || null,
+        referred_by_child_id: referredBy || null,
       });
       if (onCreated && created && (created as { id?: string }).id) {
         onCreated((created as { id: string }).id);
       }
       onClose();
-      setFullName(""); setBirth(""); setCard(""); setSource("");
+      setFullName(""); setBirth(""); setCard(""); setSource(""); setReferredBy("");
       setFather(""); setFatherPhone(""); setFatherPassport("");
       setMother(""); setMotherPhone(""); setMotherPassport("");
       setAddress("");
@@ -1166,6 +1172,22 @@ export const AddChildModal = ({
           <option value="other">{t("Другое", "Башка")}</option>
         </select>
       </Field>
+
+      {/* ТЗ §3.3 «Приведи друга»: −300 сом с абонемента того, кто привёл */}
+      {source === "referral" && (
+        <Field label={t("Кто привёл", "Ким алып келди")}>
+          <select value={referredBy} onChange={(e) => setReferredBy(e.target.value)} disabled={busy}>
+            <option value="">{t("— не указан —", "— көрсөтүлгөн эмес —")}</option>
+            {kidsForFamilies
+              .filter((c) => c.id !== initial?.id && !c.deleted_at)
+              .map((c) => <option key={c.id} value={c.id}>{c.full_name}</option>)}
+          </select>
+          <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4, lineHeight: 1.45 }}>
+            {t("Бонус 300 сом спишется с его следующего абонемента — после того, как этот клиент купит свой.",
+               "300 сом бонус ал кийинки абонементинен кемийт.")}
+          </div>
+        </Field>
+      )}
 
       <Field label={t("Ссылка AmoCRM (опц.)", "AmoCRM шилтемеси (опц.)")}>
         <input
@@ -2480,6 +2502,11 @@ export const SellCardModal = ({
   // Скидка в сомах (0..цена). Обязательное поле. Бэкенд принимает процент,
   // поэтому перед отправкой сумма конвертируется в точную долю от цены.
   const [discountAmt, setDiscountAmt] = useState("0");
+  // ТЗ §3.3: индивидуальную скидку менеджер обязан обосновать. Поле
+  // появляется, только когда скидка больше нуля; авто-скидку на 2-го
+  // ребёнка и реферальный бонус проставляет сама БД, обосновывать их
+  // руками не нужно.
+  const [discountReason, setDiscountReason] = useState("");
   const [method, setMethod] = useState<PaymentMethod>("cash");
   // Деньги с депозита — строка чтобы можно было вводить вручную и контролировать.
   const [depositInput, setDepositInput] = useState("0");
@@ -2647,6 +2674,10 @@ export const SellCardModal = ({
       setErr(t("Скидка не может быть больше цены", "Жеңилдик баадан чоң боло албайт"));
       return;
     }
+    if (Number(discountAmt) > 0 && !discountReason.trim()) {
+      setErr(t("Укажите причину скидки", "Жеңилдиктин себебин көрсөтүңүз"));
+      return;
+    }
     if (!sectionId) {
       setErr(t("Выберите секцию", "Секцияны тандаңыз"));
       return;
@@ -2676,6 +2707,7 @@ export const SellCardModal = ({
         duration_days: periodDays,
         freeze_quota: plan?.freeze_quota ?? 0,
         price: Number(price), discount_pct: pctNum,
+        discount_reason: discountReason.trim() || null,
         // При окне: карта стартует с первой тренировки и «действует до»
         // даты N-го занятия (совпадает с окном ростера). Иначе — обычный период.
         start_date: windowStart ?? today,
@@ -2882,6 +2914,18 @@ export const SellCardModal = ({
           />
         </Field>
       </div>
+
+      {/* ТЗ §3.3: причина обязательна для любой ручной скидки */}
+      {Number(discountAmt) > 0 && (
+        <Field label={<>{t("Причина скидки", "Жеңилдиктин себеби")} <span style={{ color: "var(--red-600)" }}>*</span></>}>
+          <input
+            value={discountReason}
+            onChange={(e) => setDiscountReason(e.target.value)}
+            required
+            placeholder={t("многодетная семья / сотрудник / акция…", "көп балалуу үй-бүлө / кызматкер / акция…")}
+          />
+        </Field>
+      )}
 
       {/* Окно записи: дата первой тренировки → дата N-го занятия */}
       {groupId && (

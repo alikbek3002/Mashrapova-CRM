@@ -11,6 +11,7 @@ import { Shell } from "./shared/ui/Shell";
 import { AttendanceGrid } from "./shared/ui/AttendanceGrid";
 import { ChildAvatar } from "./shared/ui/ChildAvatar";
 import { CoachLessonNoteModal } from "./CoachLessonNoteModal";
+import { CoachFreezeModal } from "./CoachFreezeModal";
 import { BookModal } from "./admin/PersonalTrainings";
 import {
   usePtSessions,
@@ -216,6 +217,9 @@ const CoachLessonView = ({ lang, t, lessonId, back }: { lang: Lang; t: CoachT; l
   const [state, setState] = useState<Record<string, SimpleStatus>>({});
   const [activeChildId, setActiveChildId] = useState<string | null>(null);
   const [noteFor, setNoteFor] = useState<{ id: string; name: string } | null>(null);
+  // ТЗ §4.3: тренер ставит заморозку из своего приложения — заявкой,
+  // менеджер получает уведомление и подтверждает.
+  const [freezeFor, setFreezeFor] = useState<{ id: string; name: string } | null>(null);
   const { data: kids = [] } = useChildren();
   const { data: lessonNotes = [] } = useLessonNotesForLesson(lessonId);
   // Полная карта заметок по ребёнку — нужна не только для бейджа,
@@ -411,6 +415,18 @@ const CoachLessonView = ({ lang, t, lessonId, back }: { lang: Lang; t: CoachT; l
                 <Icon name="note" size={14} />
                 {note ? tt("Заметка", "Эскертүү") : tt("+ Заметка", "+ Эскертүү")}
               </button>
+              {/* ТЗ §4.3: заморозку ставит и тренер — заявкой, менеджер подтверждает */}
+              {!isFrozen && (
+                <button
+                  type="button"
+                  className="icon-btn"
+                  title={tt("Заморозить абонемент", "Абонементти тындыруу")}
+                  onClick={() => setFreezeFor({ id: k.id, name: k.full_name })}
+                  style={{ marginLeft: 6 }}
+                >
+                  <Icon name="freeze" size={14} />
+                </button>
+              )}
             </div>
             {note && (
               <button
@@ -469,6 +485,16 @@ const CoachLessonView = ({ lang, t, lessonId, back }: { lang: Lang; t: CoachT; l
           lessonId={lessonId}
           childId={noteFor.id}
           childName={noteFor.name}
+        />
+      )}
+
+      {freezeFor && (
+        <CoachFreezeModal
+          open={!!freezeFor}
+          onClose={() => setFreezeFor(null)}
+          lang={lang}
+          childId={freezeFor.id}
+          childName={freezeFor.name}
         />
       )}
     </>

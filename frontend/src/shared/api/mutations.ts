@@ -133,6 +133,8 @@ export const useAddChild = () => {
       responsible_manager_id?: string | null;
       amo_url?: string | null;
       source?: "target" | "referral" | "other" | null;
+      // ТЗ §3.3: кто привёл клиента — основание для бонуса «Приведи друга».
+      referred_by_child_id?: string | null;
     }) => {
       const orgId = await getMyOrgId();
       const { data, error } = await supabase
@@ -1072,6 +1074,8 @@ export const useSellCard = () => {
       plan_id?: string | null; duration_days?: number | null;
       freeze_quota?: number; price: number;
       discount_pct: number;
+      // ТЗ §3.3: причина обязательна, если скидка больше нуля.
+      discount_reason?: string | null;
       start_date: string; end_date: string; payment_method: PaymentMethod;
       section_id?: string | null;
       group_id?: string | null;
