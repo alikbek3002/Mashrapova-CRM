@@ -1,6 +1,13 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase, apiUrl } from "./supabase";
 import { apiPost, apiPatch, apiDelete } from "./api-client";
+// Офлайн-очередь (ТЗ §12.4): продажа за наличные и отметка посещаемости
+// откладываются, если связи нет, и уходят сами при её появлении.
+import { enqueue } from "../offline/outbox";
+import { writeAttendanceMarks } from "../offline/ops";
+
+/** Подпись операции в списке ожидающих отправки. */
+const formatSum = (n: number): string => `${Math.round(n).toLocaleString("ru-RU")} сом`;
 import { toast } from "../ui/toast";
 import { useAuth } from "../auth/AuthProvider";
 import type { CardType, PaymentMethod, LeadStage, LeadSource, Lead, AttendanceStatus, SectionCategory, LessonFault } from "../types/database";
@@ -1113,6 +1120,36 @@ export const useSellCard = () => {
       );
       const deposit_amount = input.deposit_amount ?? 0;
       const cash_amount = input.cash_amount ?? Math.max(0, finalAmount - deposit_amount);
+      const body = { freeze_quota: 0, ...input, deposit_amount, cash_amount };
+
+      // ТЗ §12.4: без интернета доступна продажа ЗА НАЛИЧНЫЕ. Терминал
+      // офлайн невозможен физически, а списание с депозита требует
+      // проверки баланса на сервере — их в очередь не кладём.
+      const cashOnly = input.payment_method === "cash" && deposit_amount === 0;
+      if (!navigator.onLine && cashOnly) {
+        const op = enqueue("card.sell", { body }, `Продажа абонемента · ${formatSum(cash_amount)}`, {
+          idempotent: true,
+        });
+        // Ответ сервера появится только после синхронизации. Возвращаем
+        // заглушку, чтобы экран продажи закрылся: деньги от клиента
+        // получены, задерживать кассира нечем.
+        return {
+          ok: true,
+          queued: true,
+          op_id: op.id,
+          card_id: "",
+          applied_discount: 0,
+          applied_discount_pct: 0,
+          discount_reason: null,
+          enrollment_id: null,
+        };
+      }
+      if (!navigator.onLine) {
+        throw new Error(
+          "Нет связи. Офлайн можно продать только за наличные — без терминала и списания с депозита.",
+        );
+      }
+
       return apiPost<{
         ok: boolean;
         card_id: string;
@@ -1120,11 +1157,7 @@ export const useSellCard = () => {
         applied_discount_pct: number;
         discount_reason: string | null;
         enrollment_id: string | null;
-      }>(
-        "/v1/cards/sell",
-        { freeze_quota: 0, ...input, deposit_amount, cash_amount },
-        { idempotent: true }
-      );
+      }>("/v1/cards/sell", body, { idempotent: true });
     },
     onSuccess: (data, vars) => {
       qc.invalidateQueries({ queryKey: ["club_cards"] });
@@ -1149,6 +1182,12 @@ export const useSellCard = () => {
       qc.invalidateQueries({ queryKey: ["deposit_summary"] });
       qc.invalidateQueries({ queryKey: ["payroll_live"] });
       qc.invalidateQueries({ queryKey: ["payroll_me_live"] });
+      // Офлайн-продажа (ТЗ §12.4): сервер её ещё не видел, поэтому ни
+      // скидок, ни записи в группу в ответе нет — не выдумываем их.
+      if ((data as { queued?: boolean } | undefined)?.queued) {
+        toast.ok("Продажа сохранена и уйдёт, как появится связь. Абонемент появится после синхронизации.");
+        return;
+      }
       const enrolled = !!data?.enrollment_id;
       const sibling = data?.discount_reason === "auto_2nd_child";
       const msg = enrolled
@@ -1532,6 +1571,33 @@ export const useMarkAttendance = () => {
   const role = user?.role ?? null;
   return useMutation({
     mutationFn: async ({ lessonId, marks }: { lessonId: string; marks: { child_id: string; status: AttendanceStatus }[] }) => {
+      if (marks.length === 0) throw new Error("Нечего сохранять");
+
+      // ТЗ §12.4: офлайн отметка посещений должна работать. Проверяем
+      // связь ПЕРВЫМ делом: и сверка занятия ниже, и auth.getUser() ходят
+      // в сеть, то есть офлайн мы бы упали, не дойдя до очереди.
+      //
+      // Серверные проверки (будущая дата, 24-часовое окно) при этом не
+      // теряются: экран тренера уже блокирует кнопки по тем же правилам,
+      // а на синхронизации границу держит RLS. Отклонённое попадёт в
+      // список отклонённых, а не растворится.
+      if (!navigator.onLine) {
+        // getSession читает токен из локального хранилища, без сети —
+        // в отличие от getUser().
+        const { data: sess } = await supabase.auth.getSession();
+        enqueue(
+          "attendance.mark",
+          {
+            lessonId,
+            marks,
+            markedBy: sess.session?.user?.id ?? null,
+            markedAt: new Date().toISOString(),
+          },
+          `Посещаемость · ${marks.length} отметок`,
+        );
+        return { failedIds: [] as string[], failedNames: [] as string[], queued: true };
+      }
+
       // 1. Lesson must not be in the future, and for coaches the 24h
       // marking window must still be open. Mirrors the RLS policy, gives
       // a clearer error than the obscure RLS denial.
@@ -1568,45 +1634,20 @@ export const useMarkAttendance = () => {
       const acceptedMarks = marks;
       if (acceptedMarks.length === 0) throw new Error("Нечего сохранять");
 
-      const { data: sess } = await supabase.auth.getUser();
-      const markedBy = sess.user?.id ?? null;
-      const nowIso = new Date().toISOString();
-      const rows = acceptedMarks.map((m) => ({
-        lesson_id: lessonId,
-        ...m,
-        marked_by: markedBy,
-        marked_at: nowIso,
-      }));
-      // Delete existing for these children in this lesson then insert
-      // (simplest atomic-ish path; the table doesn't have ON CONFLICT for the pair).
-      const acceptedIds = acceptedMarks.map((m) => m.child_id);
-      const { error: dErr } = await supabase
-        .from("attendance")
-        .delete()
-        .eq("lesson_id", lessonId)
-        .in("child_id", acceptedIds);
-      if (dErr) throw dErr;
-      const { error } = await supabase.from("attendance").insert(rows);
-      if (error) {
-        // Пакет не прошёл целиком (RLS/триггер заморозки у одного ребёнка
-        // валит весь insert) — сохраняем построчно и собираем, кто не прошёл.
-        const failedIds: string[] = [];
-        let lastMsg = error.message;
-        for (const r of rows) {
-          const { error: e1 } = await supabase.from("attendance").insert(r);
-          if (e1) { failedIds.push(r.child_id); lastMsg = e1.message; }
-        }
-        if (failedIds.length === rows.length) {
-          throw new Error(/row-level security|42501/i.test(lastMsg)
-            ? "У выбранных детей нет абонемента или записи в группу на эту дату"
-            : lastMsg);
-        }
-        const { data: kids } = await supabase.from("children").select("id, full_name").in("id", failedIds);
-        const names = (kids ?? []).map((k) => k.full_name);
-        return { failedIds, failedNames: names };
-      }
+      const { data: sess } = await supabase.auth.getSession();
+      // Время отметки, а не отправки: тренер отмечает в зале, а очередь
+      // может уйти вечером. marked_at должен показывать первое.
+      const payload = {
+        lessonId,
+        marks: acceptedMarks,
+        markedBy: sess.session?.user?.id ?? null,
+        markedAt: new Date().toISOString(),
+      };
 
-      return { failedIds: [] as string[], failedNames: [] as string[] };
+      // Онлайн идём тем же исполнителем, что и очередь: две копии пути
+      // записи неизбежно разъехались бы.
+      const res = await writeAttendanceMarks(payload);
+      return { ...res, queued: false };
     },
     onSuccess: (res, vars) => {
       qc.invalidateQueries({ queryKey: ["attendance_lesson", vars.lessonId] });
@@ -1627,6 +1668,12 @@ export const useMarkAttendance = () => {
       // ["stats"] намеренно НЕ инвалидируем: отметку делает тренер, а это
       // запускало 11-запросный пересчёт KPI, который тренеру не показывается.
       // Посещаемость в Dashboard обновится по staleTime.
+      // Офлайн-отметка ещё не доехала до сервера — не говорим «сохранено»,
+      // это разные вещи (ТЗ §12.4).
+      if ((res as { queued?: boolean } | undefined)?.queued) {
+        toast.ok("Отмечено. Отправим, как появится связь.");
+        return;
+      }
       const failed = res?.failedIds?.length ?? 0;
       if (failed > 0) {
         const who = res.failedNames.length ? res.failedNames.join(", ") : `${failed} детей`;

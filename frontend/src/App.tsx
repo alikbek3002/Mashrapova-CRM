@@ -8,6 +8,10 @@ import type { Lang } from "./data";
 import { AuthProvider, useAuth } from "./shared/auth/AuthProvider";
 import { Login } from "./shared/auth/Login";
 import { MfaGate } from "./shared/auth/MfaGate";
+// Офлайн-режим (ТЗ §12.4): очередь отложенных операций и её индикатор.
+import { startOutbox } from "./shared/offline/outbox";
+import { registerOutboxHandlers } from "./shared/offline/ops";
+import { OfflineBar } from "./shared/offline/OfflineBar";
 import { ToastHost } from "./shared/ui/toast";
 
 // Code-splitting по роли: каждый persona-экран — отдельный чанк. Тренер/родитель
@@ -109,6 +113,14 @@ const Shell = () => {
       localStorage.setItem("uq_lang", lang);
     } catch {}
   }, [lang]);
+
+  // Офлайн-очередь (ТЗ §12.4): регистрируем обработчики и запускаем
+  // автоотправку. Должно случиться один раз и до любых early-return —
+  // иначе число хуков меняется между рендерами (React error #310).
+  useEffect(() => {
+    registerOutboxHandlers();
+    startOutbox();
+  }, []);
 
   // Ставим класс на body для CSS-правил «PWA-режим» (тренер/родитель).
   // ВАЖНО: useEffect должен быть до любых early-return — иначе число
@@ -251,6 +263,7 @@ const Shell = () => {
         {user.role === "parent" && <ParentScreen lang={lang} />}
       </Suspense>
     </div>
+    <OfflineBar lang={lang} />
     </MfaGate>
   );
 };
