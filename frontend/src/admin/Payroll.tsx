@@ -214,6 +214,8 @@ export const PayrollPage = ({ lang }: { lang: Lang }) => {
                   <th className="num">{t("Начислено", "Эсептелди")}</th>
                   <th className="num">{t("Корректировка", "Оңдоо")}</th>
                   <th className="num">{t("Итого", "Жалпы")}</th>
+                  <th className="num">{t("Аванс", "Аванс")}</th>
+                  <th className="num">{t("К доплате", "Кошумча")}</th>
                   <th>{t("Статус", "Абалы")}</th>
                   <th></th>
                 </tr>
@@ -221,6 +223,9 @@ export const PayrollPage = ({ lang }: { lang: Lang }) => {
               <tbody>
                 {periods.map((p) => {
                   const total = Number(p.computed_amount) + Number(p.manual_adjustment);
+                  // ТЗ §10.2: 20-го выдан аванс, 5–10-го следующего месяца —
+                  // остаток. «К доплате» — сколько ещё должны тренеру.
+                  const advancePaid = Number(p.advance_amount ?? 0);
                   const lbl = STATUS_LABEL[p.status];
                   return (
                     <tr key={p.id ?? p.coach_id}>
@@ -233,6 +238,12 @@ export const PayrollPage = ({ lang }: { lang: Lang }) => {
                         )}
                       </td>
                       <td className="num"><b>{formatCurrency(total)}</b></td>
+                      <td className="num" style={{ color: advancePaid > 0 ? "var(--ink-2)" : undefined }}>
+                        {advancePaid > 0 ? formatCurrency(advancePaid) : "—"}
+                      </td>
+                      <td className="num">
+                        {advancePaid > 0 ? formatCurrency(Math.max(0, total - advancePaid)) : "—"}
+                      </td>
                       <td><span className={lbl.cls}>{lbl[lang]}</span></td>
                       <td style={{ textAlign: "right", width: 1 }}>
                         {p.status !== "paid" && canApprove && (

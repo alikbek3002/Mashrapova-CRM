@@ -23,7 +23,20 @@ export type AttendanceStatus = "present" | "absent" | "excused" | "late" | "make
 export type FreezeStatus = "pending" | "approved" | "rejected";
 export type FreezeInitiatorRole = "coach" | "manager";
 export type PaymentMethod = "cash" | "terminal";
-export type LeadStage = "new" | "trial" | "waiting";
+// Этапы воронки ТЗ §8.2. `waiting` — лист ожидания из движка Uniqum,
+// оставлен, чтобы не потерять уже заведённые лиды.
+export type LeadStage =
+  | "new"
+  | "contacted"
+  | "trial_booked"
+  | "trial_attended"
+  | "no_show"
+  | "converted"
+  | "lost"
+  | "waiting";
+
+// Источники лидов ТЗ §8.1.
+export type LeadSource = "target" | "referral" | "direct" | "other";
 export type DepositTxType =
   | "top_up"
   | "withdraw"
@@ -101,11 +114,20 @@ export type Child = Timestamps & {
 export type ClientSource = "target" | "referral" | "other";
 export type GroupAudience = "kids" | "adults" | "mixed";
 
+// ТЗ §10.1 — модель оплаты тренера:
+//   percent   — % от выручки занятия за каждого пришедшего (единоборства, 40%);
+//   fixed     — оклад в месяц (дежурный тренер фитнес-зоны);
+//   per_child — ставка за ребёнка (режим движка Uniqum).
+export type CoachPayMode = "percent" | "fixed" | "per_child";
+
 export type Coach = {
   id: string;
   bio: string | null;
   achievements: string | null;
   experience_years: number | null;
+  pay_mode: CoachPayMode;
+  percent_rate: number;
+  fixed_monthly: number;
 };
 
 export type Section = Timestamps & {
@@ -289,15 +311,32 @@ export type Lead = {
   organization_id: string;
   parent_name: string | null;
   phone: string | null;
+  instagram: string | null;
   child_name: string | null;
   child_age: number | null;
   section_interest_id: string | null;
   stage: LeadStage;
   responsible_manager_id: string | null;
-  source: string | null;
+  source: LeadSource | null;
   comment: string | null;
   created_at: string;
+  updated_at: string;
   converted_at: string | null;
+  // ТЗ §8.3 — нормативы времени. Проставляются триггером и refresh_lead_sla().
+  first_contact_at: string | null;
+  first_contact_by: string | null;
+  sla_notified_at: string | null;
+  escalated_at: string | null;
+  // ТЗ §8.2 — запись на пробную и отработанные системой события.
+  trial_at: string | null;
+  trial_group_id: string | null;
+  trial_coach_id: string | null;
+  reminder_24h_at: string | null;
+  reminder_2h_at: string | null;
+  no_show_task_at: string | null;
+  conversion_task_at: string | null;
+  lost_reason: string | null;
+  converted_child_id: string | null;
 };
 
 export type ChildDeposit = {
@@ -328,6 +367,13 @@ export type OrgSettings = {
   organization_id: string;
   sibling_discount_enabled: boolean;
   sibling_discount_amount: number;
+  // ТЗ §10.2: аванс — доля от заработанного с 1-го по advance_day число.
+  advance_share_pct: number;
+  advance_day: number;
+  // ТЗ §8.3: нормативы воронки лидов.
+  lead_first_contact_min: number;
+  lead_escalation_min: number;
+  lead_no_show_hours: number;
   updated_by: string | null;
   updated_at: string;
 };

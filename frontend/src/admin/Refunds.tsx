@@ -32,7 +32,9 @@ export const RefundsPage = ({ lang }: { lang: Lang }) => {
           lang={lang}
           activeCards={cards.map((c) => ({
             id: c.id,
-            label: `${c.child?.full_name ?? "?"} · ${c.type} · ${formatCurrency(Number(c.price_paid))}`,
+            // Показываем сумму, которую клиент реально заплатил (со скидкой) —
+            // от неё же backend считает возврат.
+            label: `${c.child?.full_name ?? "?"} · ${c.type} · ${formatCurrency(Math.max(0, Number(c.price_paid) - Number(c.discount ?? 0)))}`,
           }))}
         />
       )}

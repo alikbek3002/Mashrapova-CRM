@@ -31,9 +31,9 @@ export const refundsRoutes = async (app: FastifyInstance) => {
     },
   );
 
-  // Create a refund. Backend computes amount + fee per ТЗ formula:
-  //   refund = (remaining/total) * card_price - 30% (if kind=with_30pct)
-  //   refund = (remaining/total) * card_price       (if kind=full_no_fee)
+  // Create a refund. Backend computes amount + fee per ТЗ §7.3:
+  //   refund = (remaining/total) * (price_paid - discount) - 30% (kind=with_30pct)
+  //   refund = (remaining/total) * (price_paid - discount)       (kind=full_no_fee)
   // full_no_fee additionally requires director / fitness_director / senior_manager.
   //
   // Возврат идёт АВТОМАТОМ на депозит ребёнка (deposit_transactions.type=refund_in).
@@ -64,7 +64,7 @@ export const refundsRoutes = async (app: FastifyInstance) => {
       // Pull card info (price + lessons left).
       const { data: card, error: cErr } = await supabaseAdmin
         .from("club_cards")
-        .select("id, child_id, price_paid, total_lessons, organization_id")
+        .select("id, child_id, price_paid, discount, total_lessons, organization_id")
         .eq("id", club_card_id)
         .single();
       if (cErr || !card) return reply.code(404).send({ error: "card_not_found" });
@@ -78,7 +78,12 @@ export const refundsRoutes = async (app: FastifyInstance) => {
         .maybeSingle();
       const remaining = Number(bal?.remaining ?? card.total_lessons ?? 0);
       const total = Number(card.total_lessons ?? 0) || 1;
-      const price = Number(card.price_paid ?? 0);
+      // Возвращаем от того, что клиент реально заплатил: price_paid — это
+      // цена тарифа, а discount уже вычтен при продаже (sell_card_with_deposit
+      // пишет их раздельно). Считали от price_paid — при абонементе 2500 со
+      // скидкой 500 клуб возвращал базу 2500 вместо 2000. Та же «чистая» цена
+      // используется в отчёте по выручке (queries.ts) и в расчёте зарплаты.
+      const price = Math.max(0, Number(card.price_paid ?? 0) - Number(card.discount ?? 0));
       const baseRefund = total > 0 ? (remaining / total) * price : 0;
       const fee = kind === "with_30pct" ? baseRefund * 0.3 : 0;
       const refundAmount = Math.max(0, Math.round((baseRefund - fee) * 100) / 100);

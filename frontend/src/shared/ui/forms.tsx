@@ -10,10 +10,11 @@ import { resolveAvatarUrl } from "../api/avatar";
 import { computeWindowEnd, formatWindow } from "../lib/enrollmentWindow";
 import { fmtD } from "../lib/dates";
 import { useAuth } from "../auth/AuthProvider";
+import { usePerm } from "../auth/rbac";
 import { normalizeE164KG, isValidPhoneInput } from "../auth/normalizePhone";
 import { supabase } from "../api/supabase";
 import type { Lang } from "../../data";
-import type { CardType, PaymentMethod, SectionCategory, LeadStage, Family, ClientSource, GroupAudience } from "../types/database";
+import type { CardType, PaymentMethod, SectionCategory, LeadStage, LeadSource, Family, ClientSource, GroupAudience, CoachPayMode } from "../types/database";
 
 // =============================================================
 // AddFamily — create or edit (with archive)
@@ -1221,6 +1222,9 @@ type CoachInitial = {
   experience_years?: number | null;
   is_active?: boolean;
   avatar_url?: string | null;
+  pay_mode?: CoachPayMode | null;
+  percent_rate?: number | null;
+  fixed_monthly?: number | null;
 };
 
 // =============================================================
@@ -1441,6 +1445,15 @@ export const AddCoachModal = ({
   const [achievements, setAchievements] = useState(initial?.achievements ?? "");
   const [exp, setExp] = useState(String(initial?.experience_years ?? ""));
   const [avatarUrl, setAvatarUrl] = useState<string>(initial?.avatar_url ?? "");
+  // Оплата тренера (ТЗ §6.1, §10.1). По умолчанию процент от выручки 40% —
+  // основной режим для единоборств.
+  // Ставки тренера по ТЗ §2.2 ставит только директор/управляющий — то же
+  // правило, что и в триггере forbid_coach_pay_change. Старший менеджер
+  // тренера заводит, но блок оплаты не видит, иначе упрётся в ошибку БД.
+  const canSetPay = usePerm("manage_coach_rates");
+  const [payMode, setPayMode] = useState<CoachPayMode>(initial?.pay_mode ?? "percent");
+  const [percentRate, setPercentRate] = useState(String(initial?.percent_rate ?? 40));
+  const [fixedMonthly, setFixedMonthly] = useState(String(initial?.fixed_monthly ?? 0));
   const [sectionIds, setSectionIds] = useState<Set<string>>(new Set());
   const [sectionsLoaded, setSectionsLoaded] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -1490,7 +1503,17 @@ export const AddCoachModal = ({
   const reset = () => {
     setEmail(""); setPassword(""); setFullName(""); setPhone(""); setBio(""); setAchievements(""); setExp("");
     setAvatarUrl(""); setSectionIds(new Set()); setErr(null);
+    setPayMode("percent"); setPercentRate("40"); setFixedMonthly("0");
   };
+
+  // Поля оплаты пишутся прямо в coaches (RLS пускает только директора и
+  // управляющего — ТЗ §2.2). Неактуальное для режима поле не обнуляем:
+  // переключили на оклад и обратно — процент остался прежним.
+  const payFields = () => ({
+    pay_mode: payMode,
+    percent_rate: percentRate === "" ? 0 : Number(percentRate),
+    fixed_monthly: fixedMonthly === "" ? 0 : Number(fixedMonthly),
+  });
 
   const submit = async () => {
     setErr(null);
@@ -1500,6 +1523,17 @@ export const AddCoachModal = ({
     }
     if (!isEdit && !isValidPhoneInput(phone)) {
       setErr(t("Укажите телефон в формате +996 700 12 34 56", "+996 700 12 34 56 форматында"));
+      return;
+    }
+    // Без права на ставки поля оплаты вообще не отправляем: БД их всё
+    // равно отклонит триггером, а затирать чужую настройку нельзя.
+    const pay = canSetPay ? payFields() : null;
+    if (pay && payMode === "percent" && (!Number.isFinite(pay.percent_rate) || pay.percent_rate < 0 || pay.percent_rate > 100)) {
+      setErr(t("Процент тренера — число от 0 до 100", "Тренердин пайызы 0дөн 100гө чейин"));
+      return;
+    }
+    if (pay && payMode === "fixed" && (!Number.isFinite(pay.fixed_monthly) || pay.fixed_monthly <= 0)) {
+      setErr(t("Укажите оклад в месяц", "Айлык маяна көрсөтүңүз"));
       return;
     }
     try {
@@ -1515,6 +1549,7 @@ export const AddCoachModal = ({
             bio: bio || null,
             achievements: achievements || null,
             experience_years: exp ? Number(exp) : 0,
+            ...(pay ?? {}),
           },
         });
         // Sync sections
@@ -1531,11 +1566,13 @@ export const AddCoachModal = ({
         achievements: achievements || null,
         experience_years: exp ? Number(exp) : 0,
       });
-      // Сохраняем avatar_url отдельно (POST /v1/coaches его не принимает)
-      if (avatarUrl) {
+      // Аватар и модель оплаты POST /v1/coaches не принимает — дописываем
+      // их отдельным апдейтом сразу после создания.
+      if (avatarUrl || pay) {
         await upd.mutateAsync({
           id: created.coach_id,
-          profile: { avatar_url: avatarUrl },
+          profile: avatarUrl ? { avatar_url: avatarUrl } : undefined,
+          coach: pay ?? undefined,
         });
       }
       // Sync sections after coach is created
@@ -1728,6 +1765,77 @@ export const AddCoachModal = ({
           </div>
         )}
       </div>
+
+      {/* Оплата тренера — ТЗ §6.1 «тип оплаты», §10.1 логика расчёта */}
+      {canSetPay && (
+      <div style={{
+        padding: 12, marginBottom: 12,
+        background: "var(--bg-soft)",
+        border: "1px solid var(--line)",
+        borderRadius: "var(--r-sm)",
+      }}>
+        <div style={{
+          fontSize: 11, fontWeight: 600, color: "var(--muted)",
+          textTransform: "uppercase", letterSpacing: 0.04, marginBottom: 8,
+        }}>
+          {t("Оплата тренера", "Тренердин төлөмү")}
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+          {([
+            { v: "percent", ru: "% от выручки", ky: "Түшүмдөн %" },
+            { v: "fixed", ru: "Оклад в месяц", ky: "Айлык маяна" },
+            { v: "per_child", ru: "Ставка за ребёнка", ky: "Бала үчүн ставка" },
+          ] as Array<{ v: CoachPayMode; ru: string; ky: string }>).map((o) => (
+            <button
+              key={o.v}
+              type="button"
+              className={`btn ${payMode === o.v ? "btn--primary" : ""}`}
+              style={{ padding: "6px 12px", fontSize: 12 }}
+              onClick={() => setPayMode(o.v)}
+              disabled={busy}
+            >
+              {payMode === o.v ? <Icon name="check" size={12} stroke={2.5} /> : null} {t(o.ru, o.ky)}
+            </button>
+          ))}
+        </div>
+
+        {payMode === "percent" && (
+          <Field label={t("Процент от выручки занятия, %", "Сабактын түшүмүнөн пайыз, %")}>
+            <input
+              type="number" min={0} max={100} step={1}
+              value={percentRate}
+              onChange={(e) => setPercentRate(e.target.value)}
+              disabled={busy}
+            />
+          </Field>
+        )}
+        {payMode === "fixed" && (
+          <Field label={t("Оклад в месяц, сом", "Айлык маяна, сом")}>
+            <input
+              type="number" min={0} step={500}
+              value={fixedMonthly}
+              onChange={(e) => setFixedMonthly(e.target.value)}
+              disabled={busy}
+            />
+          </Field>
+        )}
+
+        <div style={{ fontSize: 11, color: "var(--muted)", lineHeight: 1.45 }}>
+          {payMode === "percent" && t(
+            "За каждого пришедшего: доля абонемента, приходящаяся на одно занятие, × процент. Пробные не оплачиваются.",
+            "Келген ар бир бала үчүн: бир сабакка туура келген абонементтин үлүшү × пайыз. Сыноо сабактары төлөнбөйт.",
+          )}
+          {payMode === "fixed" && t(
+            "Посещения не влияют. Для дежурного тренера фитнес-зоны. В аванс попадает часть оклада за отработанные дни.",
+            "Катышуулар таасир этпейт. Фитнес-зонанын кезметчи тренери үчүн.",
+          )}
+          {payMode === "per_child" && t(
+            "Фиксированная ставка группы за каждого пришедшего ребёнка. Задаётся в карточке группы.",
+            "Келген ар бир бала үчүн топтун белгиленген ставкасы. Топтун карточкасында коюлат.",
+          )}
+        </div>
+      </div>
+      )}
 
       <Field label={t("Био / квалификация", "Био / квалификация")}>
         <textarea rows={2} value={bio} onChange={(e) => setBio(e.target.value)} disabled={busy} />
@@ -2256,21 +2364,32 @@ export const AddLeadModal = ({ open, onClose, lang }: { open: boolean; onClose: 
   const [phone, setPhone] = useState("");
   const [cname, setCname] = useState("");
   const [age, setAge] = useState("");
-  const [stage, setStage] = useState<LeadStage>("new");
   const [secId, setSecId] = useState("");
-  const [source, setSource] = useState("Instagram");
+  // ТЗ §8.1: таргет Instagram — основной канал, поэтому он по умолчанию.
+  const [source, setSource] = useState<LeadSource>("target");
+  const [instagram, setInstagram] = useState("");
   const [err, setErr] = useState<string | null>(null);
 
   const submit = async () => {
     setErr(null);
+    if (!phone.trim() && !instagram.trim()) {
+      setErr(t("Нужен телефон или Instagram — иначе с лидом не связаться",
+               "Телефон же Instagram керек"));
+      return;
+    }
     try {
+      // Этап всегда «новый»: с этого момента идёт отсчёт норматива
+      // первого контакта (ТЗ §8.3 — 10 минут). Выбирать этап руками при
+      // создании нельзя, иначе SLA можно обойти, заведя лид сразу
+      // «сконвертированным».
       await add.mutateAsync({
         parent_name: pname || null, phone: phone || null,
         child_name: cname || null, child_age: age ? Number(age) : null,
-        section_interest_id: secId || null, stage, source,
+        section_interest_id: secId || null, stage: "new", source,
+        instagram: instagram.trim() ? instagram.trim().replace(/^@/, "") : null,
       });
       onClose();
-      setPname(""); setPhone(""); setCname(""); setAge("");
+      setPname(""); setPhone(""); setCname(""); setAge(""); setInstagram("");
     } catch (e: unknown) { setErr((e as Error).message); }
   };
 
@@ -2296,17 +2415,20 @@ export const AddLeadModal = ({ open, onClose, lang }: { open: boolean; onClose: 
           </select>
         </Field>
         <Field label={t("Источник", "Булак")}>
-          <select value={source} onChange={(e) => setSource(e.target.value)}>
-            {["Instagram", "WhatsApp", "Сарафан", "Google Ads", "Другое"].map((s) => <option key={s}>{s}</option>)}
+          <select value={source} onChange={(e) => setSource(e.target.value as LeadSource)}>
+            <option value="target">{t("Таргет Instagram", "Instagram таргет")}</option>
+            <option value="referral">{t("Рекомендация", "Сунуштама")}</option>
+            <option value="direct">{t("Прямое обращение", "Түз кайрылуу")}</option>
+            <option value="other">{t("Другое", "Башка")}</option>
           </select>
         </Field>
-        <Field label={t("Стадия", "Этап")}>
-          <select value={stage} onChange={(e) => setStage(e.target.value as LeadStage)}>
-            <option value="new">{t("Новый", "Жаңы")}</option>
-            <option value="trial">{t("Пробное", "Сыноо")}</option>
-            <option value="waiting">{t("В ожидании", "Күтүүдө")}</option>
-          </select>
+        <Field label={t("Instagram", "Instagram")}>
+          <input value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="@nickname" />
         </Field>
+      </div>
+      <div style={{ fontSize: 11, color: "var(--muted)", marginTop: -4, marginBottom: 8, lineHeight: 1.45 }}>
+        {t("Лид создаётся на этапе «Новый». Связаться нужно в течение 10 минут — дальше воронка подсветит просрочку.",
+           "Арыз «Жаңы» этабында түзүлөт. 10 мүнөттүн ичинде байланышуу керек.")}
       </div>
       {err && <div className="field__error" style={{ marginTop: 8 }}>{err}</div>}
       <div className="modal__foot">

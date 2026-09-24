@@ -13,25 +13,18 @@ const recomputeSchema = z.object({
   period_end: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
 });
 
-// Отметки «пришёл», за которые тренеру начисляется ставка — как в
-// compute_coach_payroll и в остатке абонемента (v_child_card_balance).
-const PAID_STATUSES = ["present", "late", "makeup"];
-
-// Сколько посещений было на занятиях тренера за период.
-// Считаем напрямую по attendance (без миграции/SQL-функции): та же база,
-// по которой начисляется зарплата — отметки «пришёл» на занятиях тренера,
-// исключая trial и отменённые. Дни approved-freeze present не содержат
+// Сколько оплачиваемых посещений было на занятиях тренера за период.
+// Источник — v_payroll_attendance: ровно те строки, за которые
+// compute_coach_payroll начисляет деньги (отметки «пришёл» на не-пробных
+// и не отменённых занятиях). Дни approved-freeze present не содержат
 // (триггер блокирует отметку), отдельного фильтра не нужно.
 const countCoachVisits = async (coachId: string, from: string, to: string): Promise<number> => {
   const { count, error } = await supabaseAdmin
-    .from("attendance")
-    .select("lessons!inner(coach_id, date, type, status)", { count: "exact", head: true })
-    .in("status", PAID_STATUSES)
-    .eq("lessons.coach_id", coachId)
-    .gte("lessons.date", from)
-    .lte("lessons.date", to)
-    .neq("lessons.type", "trial")
-    .not("lessons.status", "in", "(cancelled,force_majeure)");
+    .from("v_payroll_attendance")
+    .select("attendance_id", { count: "exact", head: true })
+    .eq("coach_id", coachId)
+    .gte("date", from)
+    .lte("date", to);
   if (error) throw error;
   return count ?? 0;
 };
@@ -52,11 +45,12 @@ const currentMonthRange = () => {
 };
 
 // Разбивка «посещения + заработано» по группам каждого тренера за период.
-// Та же база, что compute_coach_payroll: отметки «пришёл» на не-пробных,
-// не отменённых занятиях × ставка группы. Статус completed не требуется:
-// раньше earned считался только по completed, а занятия, отмеченные самим
-// тренером, оставались scheduled (триггер упирался в RLS) — и «заработано»
-// показывало 0 при полном зале (жалоба офиса 2026-09-02).
+// Суммы НЕ пересчитываем здесь: берём готовый amount из v_payroll_attendance
+// — того же view, по которому считает compute_coach_payroll. Раньше формула
+// жила и в SQL, и тут (посещения × groups.coach_rate_per_child), и две копии
+// разъезжались: по ТЗ §10.1 ставка за ребёнка больше не единственная модель,
+// у тренера может быть процент от выручки или оклад, и умножение на ставку
+// группы дало бы цифру, не совпадающую с начисленной.
 type LiveGroupRow = { group_id: string; name: string; visits: number; earned: number };
 const coachGroupBreakdown = async (
   coachIds: string[],
@@ -66,68 +60,57 @@ const coachGroupBreakdown = async (
   const out = new Map<string, LiveGroupRow[]>();
   if (coachIds.length === 0) return out;
 
-  type AttRow = {
-    lessons?: { coach_id: string; group_id: string; status: string } | Array<{ coach_id: string; group_id: string; status: string }> | null;
-  };
-  const lessonOf = (l: AttRow["lessons"]) => (Array.isArray(l) ? l[0] : l) ?? null;
+  type PayrollRow = { attendance_id: string; coach_id: string; group_id: string; amount: number | string };
 
   // PostgREST режет выдачу (max-rows), поэтому листаем страницами.
-  const rows: AttRow[] = [];
+  const rows: PayrollRow[] = [];
   const PAGE = 1000;
   for (let offset = 0; ; offset += PAGE) {
     const { data, error } = await supabaseAdmin
-      .from("attendance")
-      .select("lessons!inner(coach_id, group_id, status)")
-      .in("status", PAID_STATUSES)
-      .in("lessons.coach_id", coachIds)
-      .gte("lessons.date", from)
-      .lte("lessons.date", to)
-      .neq("lessons.type", "trial")
-      .not("lessons.status", "in", "(cancelled,force_majeure)")
+      .from("v_payroll_attendance")
+      .select("attendance_id, coach_id, group_id, amount")
+      .in("coach_id", coachIds)
+      .gte("date", from)
+      .lte("date", to)
       // Без ORDER BY страницы range() могут пересекаться/пропускать строки.
-      .order("id", { ascending: true })
+      .order("attendance_id", { ascending: true })
       .range(offset, offset + PAGE - 1);
     if (error) throw error;
-    rows.push(...((data ?? []) as AttRow[]));
+    rows.push(...((data ?? []) as PayrollRow[]));
     if ((data ?? []).length < PAGE) break;
   }
 
   // coach → group → счётчики.
-  const acc = new Map<string, Map<string, { visits: number }>>();
+  const acc = new Map<string, Map<string, { visits: number; earned: number }>>();
   const groupIds = new Set<string>();
   for (const r of rows) {
-    const l = lessonOf(r.lessons);
-    if (!l) continue;
-    groupIds.add(l.group_id);
-    const byGroup = acc.get(l.coach_id) ?? new Map<string, { visits: number }>();
-    const cnt = byGroup.get(l.group_id) ?? { visits: 0 };
+    groupIds.add(r.group_id);
+    const byGroup = acc.get(r.coach_id) ?? new Map<string, { visits: number; earned: number }>();
+    const cnt = byGroup.get(r.group_id) ?? { visits: 0, earned: 0 };
     cnt.visits += 1;
-    byGroup.set(l.group_id, cnt);
-    acc.set(l.coach_id, byGroup);
+    cnt.earned += Number(r.amount ?? 0);
+    byGroup.set(r.group_id, cnt);
+    acc.set(r.coach_id, byGroup);
   }
   if (groupIds.size === 0) return out;
 
   const { data: groups, error: gErr } = await supabaseAdmin
     .from("groups")
-    .select("id, name, coach_rate_per_child")
+    .select("id, name")
     .in("id", Array.from(groupIds));
   if (gErr) throw gErr;
-  const groupMeta = new Map(
-    ((groups ?? []) as Array<{ id: string; name: string; coach_rate_per_child: number }>).map((g) => [
-      g.id,
-      { name: g.name, rate: Number(g.coach_rate_per_child ?? 0) },
-    ]),
+  const groupNames = new Map(
+    ((groups ?? []) as Array<{ id: string; name: string }>).map((g) => [g.id, g.name]),
   );
 
   for (const [coachId, byGroup] of acc) {
     const list: LiveGroupRow[] = [];
     for (const [groupId, cnt] of byGroup) {
-      const meta = groupMeta.get(groupId);
       list.push({
         group_id: groupId,
-        name: meta?.name ?? "—",
+        name: groupNames.get(groupId) ?? "—",
         visits: cnt.visits,
-        earned: cnt.visits * (meta?.rate ?? 0),
+        earned: Math.round(cnt.earned * 100) / 100,
       });
     }
     list.sort((a, b) => b.earned - a.earned || b.visits - a.visits);
@@ -493,24 +476,53 @@ export const payrollRoutes = async (app: FastifyInstance) => {
     },
   );
 
-  // Mark advance as paid (50% per ТЗ). Compare-and-swap on status='draft'
-  // — if two managers click simultaneously only one update wins.
+  // Аванс 20-го числа (ТЗ §10.2): 50% от заработанного с 1-го по 20-е.
+  // Сумму считает compute_coach_advance — она же знает день аванса и долю
+  // из org_settings, — и мы её сохраняем: раньше статус переключался, а
+  // сколько выдано на руки нигде не фиксировалось.
+  // Compare-and-swap на status='draft': при одновременном клике двух
+  // управляющих выигрывает только один update.
   app.post(
     "/v1/payroll/:id/advance",
     { preHandler: [authenticate, requireRole("director", "fitness_director")] },
     async (req, reply) => {
       const { id } = req.params as { id: string };
+      const user = req.user!;
+
+      const { data: period, error: pErr } = await supabaseAdmin
+        .from("payroll_periods")
+        .select("id, coach_id, period_start, period_end, status, organization_id")
+        .eq("id", id)
+        .maybeSingle();
+      if (pErr) return reply.code(500).send({ error: "advance_failed", message: pErr.message });
+      if (!period) return reply.code(404).send({ error: "period_not_found" });
+      if (period.organization_id !== user.organization_id) {
+        return reply.code(403).send({ error: "period_outside_org" });
+      }
+
+      const { data: amount, error: aErr } = await supabaseAdmin.rpc("compute_coach_advance", {
+        p_coach: period.coach_id,
+        p_from: period.period_start,
+        p_to: period.period_end,
+      });
+      if (aErr) return reply.code(500).send({ error: "compute_advance_failed", message: aErr.message });
+
       const { data, error } = await supabaseAdmin
         .from("payroll_periods")
-        .update({ status: "advance_paid" })
+        .update({
+          status: "advance_paid",
+          advance_amount: Number(amount ?? 0),
+          advance_paid_at: new Date().toISOString(),
+          advance_paid_by: user.id,
+        })
         .eq("id", id)
         .eq("status", "draft")
-        .select("id");
+        .select("id, advance_amount");
       if (error) return reply.code(500).send({ error: "advance_failed", message: error.message });
       if (!data || data.length === 0) {
         return reply.code(409).send({ error: "wrong_status", message: "Already advanced or paid" });
       }
-      return reply.send({ ok: true });
+      return reply.send({ ok: true, advance_amount: Number(data[0]!.advance_amount ?? 0) });
     },
   );
 

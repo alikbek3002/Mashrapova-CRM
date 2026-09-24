@@ -51,6 +51,9 @@ export const CoachesPage = ({ lang }: { lang: Lang }) => {
             experience_years: editing.coach?.experience_years,
             is_active: editing.is_active,
             avatar_url: editing.avatar_url,
+            pay_mode: editing.coach?.pay_mode,
+            percent_rate: editing.coach?.percent_rate,
+            fixed_monthly: editing.coach?.fixed_monthly,
           }}
         />
       )}

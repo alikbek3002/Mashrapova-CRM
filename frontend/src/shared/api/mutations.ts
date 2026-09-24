@@ -3,7 +3,7 @@ import { supabase, apiUrl } from "./supabase";
 import { apiPost, apiPatch, apiDelete } from "./api-client";
 import { toast } from "../ui/toast";
 import { useAuth } from "../auth/AuthProvider";
-import type { CardType, PaymentMethod, LeadStage, AttendanceStatus, SectionCategory } from "../types/database";
+import type { CardType, PaymentMethod, LeadStage, LeadSource, Lead, AttendanceStatus, SectionCategory } from "../types/database";
 
 // Парсит сырое сообщение из apiPost/apiPatch (формат "API 409: {\"error\":\"code\"}")
 // и возвращает понятный русский текст. Если код не распознан — возвращает
@@ -749,7 +749,8 @@ export const useAddLead = () => {
       parent_name?: string | null; phone?: string | null;
       child_name?: string | null; child_age?: number | null;
       section_interest_id?: string | null; stage?: LeadStage;
-      source?: string | null; comment?: string | null;
+      source?: LeadSource | null; comment?: string | null;
+      instagram?: string | null;
     }) => {
       const orgId = await getMyOrgId();
       const { data, error } = await supabase
@@ -781,6 +782,25 @@ export const useUpdateLeadStage = () => {
       qc.invalidateQueries({ queryKey: ["leads"] });
       qc.invalidateQueries({ queryKey: ["stats"] });
     },
+  });
+};
+
+// Правка карточки лида целиком (ТЗ §8.2): запись на пробную, причина
+// отказа, ответственный менеджер. first_contact_at при уходе с этапа
+// «новый» проставляет триггер в БД — руками его слать не нужно.
+export const useUpdateLead = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Lead> }) => {
+      const { data, error } = await supabase.from("leads").update(patch).eq("id", id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["leads"] });
+      qc.invalidateQueries({ queryKey: ["stats"] });
+    },
+    onError: (e: Error) => toast.err("Ошибка: " + e.message),
   });
 };
 
@@ -1645,10 +1665,15 @@ export const useAdjustPayroll = () => {
 export const useAdvancePayroll = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => apiPost<{ ok: boolean }>(`/v1/payroll/${id}/advance`, {}),
-    onSuccess: () => {
+    mutationFn: async (id: string) =>
+      apiPost<{ ok: boolean; advance_amount: number }>(`/v1/payroll/${id}/advance`, {}),
+    onSuccess: (r) => {
       qc.invalidateQueries({ queryKey: ["payroll"] });
-      toast.ok("Аванс отмечен");
+      // Сумму показываем сразу: по ТЗ §10.2 её считает сервер (50% от
+      // заработанного с 1-го по 20-е), и управляющий должен увидеть,
+      // сколько выдавать на руки, не открывая отчёт.
+      const amount = Number(r?.advance_amount ?? 0);
+      toast.ok(amount > 0 ? `Аванс отмечен: ${amount.toLocaleString("ru-RU")} сом` : "Аванс отмечен");
     },
     onError: (e: Error) => toast.err("Ошибка: " + e.message),
   });

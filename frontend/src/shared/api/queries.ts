@@ -41,6 +41,37 @@ export type FreezeWithChild = Freeze & {
 };
 export type LeadWithSection = Lead & { section: Section | null };
 
+// ТЗ §7.4 — шесть KPI менеджера за период. Считает SQL-функция
+// manager_kpi: метрики берутся из трёх источников (лиды, абонементы,
+// платежи), собирать их на клиенте значило бы выкачивать все три
+// таблицы целиком. Строка с manager_id = null — записи без
+// ответственного менеджера, в итогах они нужны.
+export type ManagerKpiRow = {
+  manager_id: string | null;
+  manager_name: string | null;
+  leads_total: number;
+  first_contact_total: number;
+  avg_first_contact_min: number | null;
+  within_sla_total: number;
+  trial_booked_total: number;
+  trial_attended_total: number;
+  converted_total: number;
+  renewals_due: number;
+  renewals_done: number;
+  sales_total: number;
+  sales_per_day: number;
+};
+
+export const useManagerKpi = (from: string, to: string) =>
+  useQuery({
+    queryKey: ["manager_kpi", from, to],
+    queryFn: async (): Promise<ManagerKpiRow[]> => {
+      const { data, error } = await supabase.rpc("manager_kpi", { p_from: from, p_to: to });
+      if (error) throw error;
+      return (data ?? []) as ManagerKpiRow[];
+    },
+  });
+
 // ======================================================================
 // Children / Families / Sections / Coaches
 // ======================================================================
@@ -578,6 +609,13 @@ export type OrgSettingsRow = {
   organization_id: string;
   sibling_discount_enabled: boolean;
   sibling_discount_amount: number;
+  // ТЗ §10.2 — аванс тренерам.
+  advance_share_pct: number;
+  advance_day: number;
+  // ТЗ §8.3 — нормативы воронки лидов.
+  lead_first_contact_min: number;
+  lead_escalation_min: number;
+  lead_no_show_hours: number;
   updated_by: string | null;
   updated_at: string;
 };
@@ -1919,6 +1957,10 @@ export type PayrollPeriod = {
   manual_adjustment: number;
   adjustment_reason: string | null;
   status: "draft" | "advance_paid" | "paid";
+  // ТЗ §10.2: сумма аванса фиксируется в момент выдачи (50% заработанного
+  // с 1-го по 20-е), чтобы к итоговой выплате было видно, что уже выдано.
+  advance_amount: number | null;
+  advance_paid_at: string | null;
   approved_at: string | null;
   coach?: { full_name: string } | null;
   approver?: { full_name: string } | null;
