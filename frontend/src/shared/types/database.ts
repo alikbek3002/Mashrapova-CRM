@@ -16,6 +16,9 @@ export type ChildStatus = "active" | "frozen" | "expired" | "debtor" | "archived
 export type SectionCategory = "martial_arts" | "fitness" | "gymnastics" | "special" | "therapy" | "developmental";
 export type LessonType = "regular" | "trial" | "single";
 export type LessonStatus = "scheduled" | "completed" | "cancelled" | "force_majeure";
+// ТЗ §5.3 п.4: причина отмены по существу. От неё зависит оплата тренера
+// (coach — занятие не оплачивается) и компенсация клиенту (force_majeure).
+export type LessonFault = "coach" | "club" | "force_majeure" | "client" | "other";
 // nine_month — наследие Uniqum; у Академии Машрапова пакеты 1/3/6/12 месяцев (ТЗ §4.1).
 export type CardType = "monthly" | "quarterly" | "half_year" | "annual" | "nine_month" | "personal" | "single" | "trial";
 export type CardStatus = "active" | "ending" | "frozen" | "expired" | "debt" | "archived";

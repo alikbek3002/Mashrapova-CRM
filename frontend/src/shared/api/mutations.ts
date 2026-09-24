@@ -3,7 +3,7 @@ import { supabase, apiUrl } from "./supabase";
 import { apiPost, apiPatch, apiDelete } from "./api-client";
 import { toast } from "../ui/toast";
 import { useAuth } from "../auth/AuthProvider";
-import type { CardType, PaymentMethod, LeadStage, LeadSource, Lead, AttendanceStatus, SectionCategory } from "../types/database";
+import type { CardType, PaymentMethod, LeadStage, LeadSource, Lead, AttendanceStatus, SectionCategory, LessonFault } from "../types/database";
 
 // Парсит сырое сообщение из apiPost/apiPatch (формат "API 409: {\"error\":\"code\"}")
 // и возвращает понятный русский текст. Если код не распознан — возвращает
@@ -1461,12 +1461,29 @@ export const useUpdateLesson = () => {
 export const useCancelLesson = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, reason, force_majeure }: { id: string; reason: string; force_majeure: boolean }) =>
-      apiPost<{ ok: boolean }>(`/v1/lessons/${id}/cancel`, { reason, force_majeure }, { idempotent: true }),
-    onSuccess: () => {
+    mutationFn: async ({ id, reason, force_majeure, cancellation_fault }: {
+      id: string;
+      reason: string;
+      force_majeure: boolean;
+      // ТЗ §5.3 п.4: от вины зависит оплата тренера.
+      cancellation_fault?: LessonFault;
+    }) =>
+      apiPost<{ ok: boolean; credited: number; notified: number }>(
+        `/v1/lessons/${id}/cancel`,
+        { reason, force_majeure, cancellation_fault },
+        { idempotent: true },
+      ),
+    onSuccess: (r) => {
       qc.invalidateQueries({ queryKey: ["lessons"] });
       qc.invalidateQueries({ queryKey: ["freezes"] });
-      toast.ok("Занятие отменено");
+      // Компенсация по ТЗ §4.4 — не молчаливая: офис должен видеть,
+      // скольким детям вернули занятие.
+      qc.invalidateQueries({ queryKey: ["club_cards"] });
+      qc.invalidateQueries({ queryKey: ["card_balance"] });
+      const credited = Number(r?.credited ?? 0);
+      toast.ok(credited > 0
+        ? `Занятие отменено · +1 занятие вернули ${credited} детям`
+        : "Занятие отменено");
     },
     onError: (e: Error) => toast.err("Ошибка отмены: " + e.message),
   });

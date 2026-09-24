@@ -1808,6 +1808,107 @@ export const useOutreachWeek = (weekStart: string) =>
 // ======================================================================
 // Aggregated counts (for sidebar badges + dashboard KPIs)
 // ======================================================================
+// ======================================================================
+// Дашборд директора — ТЗ §11.1
+//
+// Одна RPC вместо каскада клиентских выборок: считать выручку с
+// динамикой, зону риска и заполненность групп на клиенте означало бы
+// выкачивать платежи и зачисления целиком.
+// ======================================================================
+export type DirectorDashboard = {
+  revenue_day: number;
+  revenue_day_prev: number;
+  revenue_week: number;
+  revenue_week_prev: number;
+  revenue_month: number;
+  revenue_month_prev: number;
+  active_clients: number;
+  new_clients_month: number;
+  new_clients_month_prev: number;
+  risk_no_visits: number;
+  risk_expiring_7: number;
+};
+
+export const useDirectorDashboard = () =>
+  useQuery({
+    queryKey: ["director_dashboard"],
+    staleTime: 60_000,
+    queryFn: async (): Promise<DirectorDashboard | null> => {
+      const { data, error } = await supabase.rpc("director_dashboard");
+      if (error) throw error;
+      const row = Array.isArray(data) ? data[0] : data;
+      return (row ?? null) as DirectorDashboard | null;
+    },
+  });
+
+export type SectionLoadRow = {
+  section_id: string;
+  name_ru: string;
+  name_ky: string;
+  groups_count: number;
+  capacity: number;
+  enrolled: number;
+  fill_pct: number | null;
+};
+
+export const useSectionLoad = () =>
+  useQuery({
+    queryKey: ["section_load"],
+    staleTime: 60_000,
+    queryFn: async (): Promise<SectionLoadRow[]> => {
+      const { data, error } = await supabase
+        .from("v_section_load")
+        .select("section_id, name_ru, name_ky, groups_count, capacity, enrolled, fill_pct")
+        .order("fill_pct", { ascending: false, nullsFirst: false });
+      if (error) throw error;
+      return (data ?? []) as SectionLoadRow[];
+    },
+  });
+
+export type ActiveBySectionRow = {
+  section_id: string;
+  name_ru: string;
+  name_ky: string;
+  active_clients: number;
+};
+
+export const useActiveClientsBySection = () =>
+  useQuery({
+    queryKey: ["active_by_section"],
+    staleTime: 60_000,
+    queryFn: async (): Promise<ActiveBySectionRow[]> => {
+      const { data, error } = await supabase
+        .from("v_active_clients_by_section")
+        .select("section_id, name_ru, name_ky, active_clients")
+        .order("active_clients", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as ActiveBySectionRow[];
+    },
+  });
+
+export type ClientAtRisk = {
+  child_id: string;
+  full_name: string;
+  churn_risk_at: string | null;
+  card_end_date: string | null;
+  reason: "no_visits" | "expiring";
+};
+
+export const useClientsAtRisk = (limit = 50) =>
+  useQuery({
+    queryKey: ["clients_at_risk", limit],
+    staleTime: 60_000,
+    queryFn: async (): Promise<ClientAtRisk[]> => {
+      const { data, error } = await supabase
+        .from("v_clients_at_risk")
+        .select("child_id, full_name, churn_risk_at, card_end_date, reason")
+        .order("card_end_date", { ascending: true, nullsFirst: false })
+        .limit(limit);
+      if (error) throw error;
+      return (data ?? []) as ClientAtRisk[];
+    },
+  });
+
 export const useStats = () =>
   useQuery({
     queryKey: ["stats"],

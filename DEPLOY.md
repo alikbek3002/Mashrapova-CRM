@@ -1,4 +1,8 @@
-# Production Deploy Guide — Uniqum Sport ERP
+# Production Deploy Guide — ERP «Академия Машрапова»
+
+> Движок форкнут из Uniqum Sport ERP и адаптируется под Академию Машрапова.
+> Инструкция уже переписана под новый проект: имена репозиториев, проектов
+> и бакетов относятся к Машрапову, не к Uniqum.
 
 ## Архитектура прода
 
@@ -23,13 +27,13 @@
 ## Шаг 1 — GitHub репозиторий
 
 ```bash
-cd "/Users/alikbekmukanbetov/Desktop/Uniqum Sport"
+cd "<путь к репозиторию>"
 git init
 git add .
-git commit -m "Initial Phase 1 MVP"
+git commit -m "Initial import"
 git branch -M main
-# Создай репо https://github.com/new (private, name = uniqum-sport)
-git remote add origin https://github.com/<your-user>/uniqum-sport.git
+# Репозиторий: https://github.com/alikbek3002/Mashrapova-CRM (private)
+git remote add origin https://github.com/alikbek3002/Mashrapova-CRM.git
 git push -u origin main
 ```
 
@@ -46,7 +50,7 @@ git push -u origin main
 Текущий `achvpwatdonjpqanzsgw` — это **dev**. Для прода создай **отдельный** проект:
 
 1. https://app.supabase.com/projects → New project
-2. Name: `uniqum-sport-prod`, Region: **Singapore** (`ap-southeast-1`) или **Frankfurt** (`eu-central-1`) — ближе к Бишкеку чем Sydney
+2. Name: `mashrapova-prod`, Region: **Singapore** (`ap-southeast-1`) или **Frankfurt** (`eu-central-1`) — ближе к Бишкеку чем Sydney
 3. Создай DB пароль и **сохрани в надёжном месте**
 4. Дождись провижионинга (~2 мин)
 5. Settings → API → скопируй:
@@ -62,7 +66,7 @@ git push -u origin main
 export PROD_PG="host=aws-0-ap-southeast-1.pooler.supabase.com port=5432 user=postgres.<ref> dbname=postgres sslmode=require"
 export PGPASSWORD='<твой_DB_пароль>'
 
-cd "/Users/alikbekmukanbetov/Desktop/Uniqum Sport/supabase"
+cd "<путь к репозиторию>/supabase"
 for f in migrations/*.sql; do
   echo "=== $f ==="
   psql "$PROD_PG" -v ON_ERROR_STOP=1 -f "$f"
@@ -82,7 +86,7 @@ const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_R
 (async () => {
   // 1. Создать организацию
   const { data: org } = await sb.from("organizations").insert({
-    name: "Uniqum Sport",
+    name: "Академия Машрапова",
     timezone: "Asia/Bishkek"
   }).select().single();
   // 2. Создать admin auth-юзера
@@ -106,15 +110,15 @@ const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_R
 ## Шаг 3 — Railway (бэкенд)
 
 1. https://railway.com → New Project → Deploy from GitHub repo
-2. Выбери репо `uniqum-sport`, root directory = `/backend`
-3. Settings → Networking → Generate Domain (получишь `https://uniqum-sport-production.up.railway.app`)
+2. Выбери репо `Mashrapova-CRM`, root directory = `/backend`
+3. Settings → Networking → Generate Domain (получишь `https://mashrapova-crm-production.up.railway.app`)
 4. Settings → Healthcheck → Path `/health`
 5. **Variables** (Settings → Variables):
    ```
    SUPABASE_URL=<prod url>
    SUPABASE_SERVICE_ROLE_KEY=<prod service key>
    SUPABASE_ANON_KEY=<prod anon key>
-   FRONTEND_ORIGINS=https://uniqum-sport.vercel.app
+   FRONTEND_ORIGINS=https://mashrapova-crm.vercel.app
    PORT=8080
    NODE_ENV=production
    LOG_LEVEL=info
@@ -126,17 +130,17 @@ const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_R
 
 ## Шаг 4 — Vercel (фронт)
 
-1. https://vercel.com/new → импорт `uniqum-sport`
+1. https://vercel.com/new → импорт `Mashrapova-CRM`
 2. Framework: Vite, Root: `frontend`
 3. **Environment Variables**:
    ```
    VITE_SUPABASE_URL=<prod url>
    VITE_SUPABASE_ANON_KEY=<prod anon key>
-   VITE_API_URL=https://uniqum-sport-production.up.railway.app
+   VITE_API_URL=https://mashrapova-crm-production.up.railway.app
    VITE_SENTRY_DSN=<позже>
    ```
-4. Deploy → дождись green → URL `https://uniqum-sport.vercel.app`
-5. После первого деплоя обнови `FRONTEND_ORIGINS` на Railway, добавив `https://*-uniqum-sport-<account>.vercel.app` для preview-деплоев.
+4. Deploy → дождись green → URL `https://mashrapova-crm.vercel.app`
+5. После первого деплоя обнови `FRONTEND_ORIGINS` на Railway, добавив `https://*-mashrapova-crm-<account>.vercel.app` для preview-деплоев.
 
 ---
 
@@ -144,8 +148,8 @@ const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_R
 
 1. https://sentry.io/signup → free tier (5k events/мес)
 2. Create org → 2 проекта:
-   - `uniqum-frontend` (platform: React)
-   - `uniqum-backend` (platform: Node.js)
+   - `mashrapova-frontend` (platform: React)
+   - `mashrapova-backend` (platform: Node.js)
 3. Скопируй DSN из каждого
 4. Обнови env vars на Vercel (`VITE_SENTRY_DSN`) и Railway (`SENTRY_DSN`)
 5. Redeploy оба сервиса (push в main или Settings → Redeploy)
@@ -162,8 +166,8 @@ Settings → Secrets and variables → Actions → New repository secret:
 | `SUPABASE_DB_USER` | `postgres.<your-ref>` |
 | `SUPABASE_DB_PASSWORD` | DB пароль prod-проекта |
 | `B2_KEY_ID` | Backblaze App Key ID |
-| `B2_APP_KEY` | Backblaze App Key (создай в B2: bucket `uniqum-backups`, key с правами read/write на этот bucket) |
-| `B2_BUCKET` | `uniqum-backups` |
+| `B2_APP_KEY` | Backblaze App Key (создай в B2: bucket `mashrapova-backups`, key с правами read/write на этот bucket) |
+| `B2_BUCKET` | `mashrapova-backups` |
 
 После добавления → запусти вручную: Actions → "Nightly Supabase backup" → Run workflow → проверь что файл появился в B2 bucket.
 
@@ -173,12 +177,12 @@ Settings → Secrets and variables → Actions → New repository secret:
 
 После деплоя залогинься admin-аккаунтом и проверь:
 
-1. ✅ Открывается https://uniqum-sport.vercel.app, экран логина
+1. ✅ Открывается https://mashrapova-crm.vercel.app, экран логина
 2. ✅ Логин email/пароль → попадаешь на дашборд
 3. ✅ Создание секции работает (Settings → Секции → Новая)
 4. ✅ Создание тренера через UI работает (Coaches → Добавить тренера) — проверь что присылается email юзеру (Supabase Auth настроен на confirm)
 5. ✅ Создание группы → авто-генерация расписания на 8 недель (Schedule → выбор группы из dropdown)
-6. ✅ Создание ребёнка + продажа карты второму ребёнку семьи → авто-скидка 500 KGS
+6. ✅ Создание ребёнка + продажа карты второму ребёнку семьи → авто-скидка 500 сом (ТЗ §3.3)
 7. ✅ Логин тренером (тестового либо реального) на телефоне → отметка посещения
 8. ✅ Логин родителем → видит ребёнка, баланс, заметки, кнопка WhatsApp
 9. ✅ В Chrome на телефоне → «Добавить на главный экран» → запускается standalone
@@ -202,42 +206,40 @@ Settings → Secrets and variables → Actions → New repository secret:
 - **DB**: восстановить из nightly B2 backup:
   ```bash
   # Скачать
-  aws --endpoint-url=https://s3.us-west-002.backblazeb2.com s3 cp s3://uniqum-backups/uniqum-prod-2026-05-06.sql.gz .
+  aws --endpoint-url=https://s3.us-west-002.backblazeb2.com s3 cp s3://mashrapova-backups/mashrapova-prod-2026-05-06.sql.gz .
   # Применить
-  gunzip uniqum-prod-2026-05-06.sql.gz
-  PGPASSWORD=<prod_pwd> psql "$PROD_PG" -f uniqum-prod-2026-05-06.sql
+  gunzip mashrapova-prod-2026-05-06.sql.gz
+  PGPASSWORD=<prod_pwd> psql "$PROD_PG" -f mashrapova-prod-2026-05-06.sql
   ```
 
 ---
 
-## Поддерживаемые юзерские потоки в Phase 1
+## Что работает
 
-✅ Login email/password (admin / manager / cashier / coach / parent)
-✅ Создание / редактирование / архив секций
-✅ Создание / редактирование тренеров (через бэк)
-✅ Создание групп с расписанием → авто-генерация занятий
-✅ Создание семей и детей
-✅ Продажа абонементов с авто-скидкой 2-му ребёнку
-✅ Приём платежей (наличные / терминал) с idempotency
-✅ Отмена занятий с force-majeure → авто-заморозки всем детям группы
-✅ Заморозка по запросу тренера → одобрение админом
-✅ Журнал посещений тренером (44px тапы, optimistic, последние 7 дней редактируемо)
-✅ Прогресс-заметки тренера (публичные → видны родителю)
-✅ Просмотр своего ребёнка родителем (баланс, расписание, заметки, платежи)
-✅ Outreach: чекбоксы «звонок сделан» / «WhatsApp отправлен» по неделе
-✅ CSV-экспорт выручки и должников
-✅ Audit log в Settings (для compliance)
-✅ Sidebar бейджи с живыми счётчиками
-✅ PWA установка через Chrome / Safari add-to-home
+Актуальный статус по разделам ТЗ ведётся в [docs/План_адаптации_Машрапова.md](docs/План_адаптации_Машрапова.md)
+— здесь только крупными мазками.
 
-## Out of scope Phase 1 (будем делать в Phase 1.5+)
+✅ Вход по телефону/email с паролем, 7 ролей (§2.1) и матрица прав (§2.2)
+✅ Секции, группы с расписанием и авто-генерацией занятий, лимит группы с ручным превышением (§5)
+✅ Семьи и ученики, источник клиента, ответственный менеджер (§3)
+✅ Продажа абонементов: скидка 2-му ребёнку, бонус «Приведи друга», обязательная причина ручной скидки (§3.3)
+✅ Приём платежей наличными / терминалом с idempotency (§7.2)
+✅ Возврат с удержанием 30% и без него для старшего менеджера (§7.3)
+✅ Отмена занятия с причиной и виной; форс-мажор → клиентам +1 занятие, родителям уведомление (§5.3, §4.4)
+✅ Заморозка менеджером и тренером, лимит по типу абонемента, продление срока (§4.3)
+✅ Контроль срока абонемента: за 7/3/0 дней, win-back, риск оттока, закрытие по последней тренировке (§4.5)
+✅ Зарплаты тренеров: % от выручки, оклад, аванс 20-го, утверждение управляющим (§6, §10)
+✅ Воронка лидов с нормативами SLA и KPI менеджеров (§7.4, §8)
+✅ Журнал посещений тренером, заметки о прогрессе, приложение родителя
+✅ CSV-экспорт выручки и должников, audit log, PWA-установка
 
-❌ Phone OTP для родителей (требует Twilio paid)
-❌ Push-уведомления (требует service worker push handler + backend Web Push)
-❌ Online payments (MBank / Optima)
-❌ AmoCRM integration
-❌ Зарплатный модуль
-❌ Возвраты с удержанием 30%
-❌ Offline-режим тренера (write queue)
-❌ PDF-отчёты
-❌ Свой домен (uniqum.kg) — добавится по DNS-config когда заказчик готов
+## Ещё не сделано
+
+❌ SMS и WhatsApp клиенту (§9, §13) — нет провайдера, открытые вопросы 1–3 к Академии
+❌ Push клиенту (§9.1) — упирается в решение по приложению родителя в v1.0
+❌ Дашборд директора целиком (§11.1) — часть метрик есть, конверсий и зоны риска пока нет
+❌ 2FA для директора и управляющего (§12.3)
+❌ Офлайн-режим с записью и синхронизацией (§12.4) — сейчас только кэш чтения
+❌ Мультифилиальность (§12.2) — по ТЗ не срочно, филиал один
+❌ AmoCRM, онлайн-оплата MBank, Face ID (§13) — версия 2.0
+❌ Свой домен — добавится по DNS-config, когда Академия определится с доменом

@@ -3,6 +3,13 @@ import { z } from "zod";
 export const lessonCancelSchema = z.object({
   reason: z.string().min(1).max(500),
   force_majeure: z.boolean().default(false),
+  // ТЗ §5.3 п.4: от вины зависит оплата тренера, поэтому причина по
+  // существу — отдельное поле, а не разбор свободного текста.
+  // Не обязательное: офис может не знать причину сразу, но если отмена
+  // помечена force_majeure — вина проставляется автоматически.
+  cancellation_fault: z
+    .enum(["coach", "club", "force_majeure", "client", "other"])
+    .optional(),
 });
 export type LessonCancelInput = z.infer<typeof lessonCancelSchema>;
 

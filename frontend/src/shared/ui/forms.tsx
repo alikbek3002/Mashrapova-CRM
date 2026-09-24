@@ -14,7 +14,7 @@ import { usePerm } from "../auth/rbac";
 import { normalizeE164KG, isValidPhoneInput } from "../auth/normalizePhone";
 import { supabase } from "../api/supabase";
 import type { Lang } from "../../data";
-import type { CardType, PaymentMethod, SectionCategory, LeadStage, LeadSource, Family, ClientSource, GroupAudience, CoachPayMode } from "../types/database";
+import type { CardType, PaymentMethod, SectionCategory, LeadStage, LeadSource, Family, ClientSource, GroupAudience, CoachPayMode, LessonFault } from "../types/database";
 
 // =============================================================
 // AddFamily — create or edit (with archive)
@@ -3760,14 +3760,21 @@ export const CancelLessonModal = ({
   const cancel = useCancelLesson();
   const [reason, setReason] = useState("");
   const [forceMaj, setForceMaj] = useState(false);
+  // ТЗ §5.3 п.4: вина определяет, оплачивается ли занятие тренеру.
+  const [fault, setFault] = useState<LessonFault | "">("");
   const [err, setErr] = useState<string | null>(null);
 
   const submit = async () => {
     setErr(null);
     try {
-      await cancel.mutateAsync({ id: lessonId, reason, force_majeure: forceMaj });
+      await cancel.mutateAsync({
+        id: lessonId,
+        reason,
+        force_majeure: forceMaj,
+        cancellation_fault: fault || undefined,
+      });
       onClose();
-      setReason(""); setForceMaj(false);
+      setReason(""); setForceMaj(false); setFault("");
     } catch (e: unknown) { setErr((e as Error).message); }
   };
 
@@ -3776,11 +3783,34 @@ export const CancelLessonModal = ({
       <Field label={t("Причина", "Себеп")}>
         <textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} />
       </Field>
+
+      <Field label={t("Из-за чего отмена", "Эмнеден улам")}>
+        <select
+          value={forceMaj ? "force_majeure" : fault}
+          onChange={(e) => setFault(e.target.value as LessonFault | "")}
+          disabled={forceMaj}
+        >
+          <option value="">{t("— не указано —", "— көрсөтүлгөн эмес —")}</option>
+          <option value="coach">{t("Вина тренера", "Тренердин күнөөсү")}</option>
+          <option value="club">{t("Вина клуба", "Клубдун күнөөсү")}</option>
+          <option value="force_majeure">{t("Форс-мажор", "Форс-мажор")}</option>
+          <option value="client">{t("По просьбе клиентов", "Кардарлардын өтүнүчү")}</option>
+          <option value="other">{t("Другое", "Башка")}</option>
+        </select>
+        <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4, lineHeight: 1.45 }}>
+          {fault === "coach" && !forceMaj
+            ? t("Это занятие не войдёт в зарплату тренера.", "Бул сабак тренердин эмгек акысына кирбейт.")
+            : t("Влияет на зарплату тренера и на отчётность по отменам.",
+                "Тренердин эмгек акысына жана отчётко таасир этет.")}
+        </div>
+      </Field>
+
       <label className="check">
         <input type="checkbox" checked={forceMaj} onChange={(e) => setForceMaj(e.target.checked)} />
         <span>
           <b>{t("Форс-мажор", "Форс-мажор")}</b>
-          <small>{t("Создаст +1 заморозку на занятие всем детям группы", "Топтогу балдарга +1 тындыруу түзөт")}</small>
+          <small>{t("Всем детям группы вернётся +1 занятие к абонементу, родители получат уведомление",
+                    "Топтогу бардык балдарга абонементке +1 сабак кайтарылат")}</small>
         </span>
       </label>
       {err && <div className="field__error" style={{ marginTop: 8 }}>{err}</div>}
