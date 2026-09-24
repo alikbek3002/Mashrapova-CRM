@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { supabase, apiUrl } from "./supabase";
+import { supabase, apiUrl, isSupabaseConfigured } from "./supabase";
 import { apiPost, apiPatch, apiDelete } from "./api-client";
 import { toast } from "../ui/toast";
 import { useAuth } from "../auth/AuthProvider";
@@ -103,6 +103,7 @@ export const useAddFamily = () => {
       mother_passport?: string | null;
       address?: string | null;
       comment?: string | null;
+      responsible_manager_id?: string | null;
     }) => {
       const orgId = await getMyOrgId();
       const safe = stripPendingFamilyFields(input);
@@ -340,7 +341,7 @@ export const useUploadAvatar = () => {
     mutationFn: async (file: File): Promise<{ url: string; key: string }> => {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
-      if (!token) throw new Error("not_authenticated");
+      if (!token) throw new Error(isSupabaseConfigured ? "not_authenticated" : "Демо-режим: сервер не подключён");
 
       const fd = new FormData();
       fd.append("file", file);
@@ -371,7 +372,7 @@ export const useUploadChildPhoto = () => {
     mutationFn: async ({ childId, file }: { childId: string; file: File }): Promise<{ url: string; key: string }> => {
       const { data: sessionData } = await supabase.auth.getSession();
       const token = sessionData.session?.access_token;
-      if (!token) throw new Error("not_authenticated");
+      if (!token) throw new Error(isSupabaseConfigured ? "not_authenticated" : "Демо-режим: сервер не подключён");
 
       const fd = new FormData();
       fd.append("file", file);
@@ -1938,7 +1939,7 @@ export const useMarkAllNotificationsRead = () => {
   return useMutation({
     mutationFn: async () => {
       const { data: u } = await supabase.auth.getUser();
-      if (!u.user) throw new Error("not_authenticated");
+      if (!u.user) throw new Error(isSupabaseConfigured ? "not_authenticated" : "Демо-режим: сервер не подключён");
       const { error } = await supabase
         .from("notifications")
         .update({ is_read: true })

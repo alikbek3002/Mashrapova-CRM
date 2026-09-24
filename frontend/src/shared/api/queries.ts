@@ -318,7 +318,7 @@ export const useCardsForChild = (childId?: string) =>
     queryFn: async (): Promise<CardWithChild[]> => {
       const { data, error } = await supabase
         .from("club_cards")
-        .select("*, child:children(full_name, family_id)")
+        .select("*, child:children(full_name, family_id), section:sections(name_ru, name_ky)")
         .eq("child_id", childId!)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -622,7 +622,7 @@ export const usePaymentsForChild = (childId?: string) =>
     queryFn: async (): Promise<PaymentWithChild[]> => {
       const { data, error } = await supabase
         .from("payments")
-        .select("*, child:children(full_name), receiver:profiles!received_by(full_name)")
+        .select("*, child:children(full_name), receiver:profiles!received_by(full_name), card:club_cards(type, section:sections(name_ru, name_ky))")
         .eq("child_id", childId!)
         .order("paid_at", { ascending: false });
       if (error) throw error;
@@ -689,7 +689,7 @@ export const useAttendanceForChild = (childId?: string, sinceDays = 60) =>
       since.setDate(since.getDate() - sinceDays);
       const { data, error } = await supabase
         .from("attendance")
-        .select("*, lesson:lessons!inner(date, start_time, group:groups(name, section:sections(name_ru, name_ky)))")
+        .select("*, lesson:lessons!inner(date, start_time, group:groups(name, section_id, section:sections(name_ru, name_ky)))")
         .eq("child_id", childId!)
         .gte("lesson.date", since.toISOString().slice(0, 10))
         .order("marked_at", { ascending: false });

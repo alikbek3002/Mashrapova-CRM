@@ -26,9 +26,7 @@ type FamilyInitial = {
   mother_phone?: string | null;
   comment?: string | null;
   parent_user_id?: string | null;
-  address?: string | null;
-  father_passport?: string | null;
-  mother_passport?: string | null;
+  responsible_manager_id?: string | null;
 };
 
 export const AddFamilyModal = ({
@@ -43,12 +41,12 @@ export const AddFamilyModal = ({
   const isEdit = !!initial?.id;
   const [father, setFather] = useState(initial?.father_name ?? "");
   const [fatherPhone, setFatherPhone] = useState(initial?.father_phone ?? "");
-  const [fatherPassport, setFatherPassport] = useState(initial?.father_passport ?? "");
   const [mother, setMother] = useState(initial?.mother_name ?? "");
   const [motherPhone, setMotherPhone] = useState(initial?.mother_phone ?? "");
-  const [motherPassport, setMotherPassport] = useState(initial?.mother_passport ?? "");
-  const [address, setAddress] = useState(initial?.address ?? "");
   const [comment, setComment] = useState(initial?.comment ?? "");
+  // Ответственный менеджер — на уровне семьи (ТЗ §3.2).
+  const { data: familyManagers = [] } = useManagers();
+  const [familyManagerId, setFamilyManagerId] = useState(initial?.responsible_manager_id ?? "");
   // Parent PWA login. На create — обязательно (родитель должен иметь
   // доступ в PWA, чтобы видеть детей и платить). На edit — опционально:
   // checkbox «Выдать доступ» появляется только если parent_user_id ещё нет.
@@ -140,8 +138,8 @@ export const AddFamilyModal = ({
     if (!isEdit) {
       if (!parentLoginPhone) {
         setErr(t(
-          "Укажите телефон отца или матери — он будет использован как логин в PWA",
-          "Атасынын же энесинин телефонун жазыңыз — ал PWA логину болот",
+          "Укажите телефон отца или матери — по нему родитель будет входить в приложение",
+          "Атасынын же энесинин телефонун жазыңыз — ата-эне тиркемеге ошол номер менен кирет",
         ));
         return;
       }
@@ -164,8 +162,8 @@ export const AddFamilyModal = ({
       }
       if (!parentLoginPhone) {
         setErr(t(
-          "Укажите телефон отца или матери — он будет использован как логин в PWA",
-          "Атасынын же энесинин телефонун жазыңыз — ал PWA логину болот",
+          "Укажите телефон отца или матери — по нему родитель будет входить в приложение",
+          "Атасынын же энесинин телефонун жазыңыз — ата-эне тиркемеге ошол номер менен кирет",
         ));
         return;
       }
@@ -174,12 +172,10 @@ export const AddFamilyModal = ({
       const payload = {
         father_name: father || null,
         father_phone: fatherPhone || null,
-        father_passport: fatherPassport || null,
         mother_name: mother || null,
         mother_phone: motherPhone || null,
-        mother_passport: motherPassport || null,
-        address: address || null,
         comment: comment || null,
+        responsible_manager_id: familyManagerId || null,
       };
       if (isEdit && withLogin && !initial?.parent_user_id) {
         // Edit-mode "grant access": save family changes + attach a new
@@ -200,13 +196,17 @@ export const AddFamilyModal = ({
       } else {
         // На создании ВСЕГДА создаём родительский auth-аккаунт.
         const finalName = (parentName.trim() || defaultLoginName || "").trim();
-        await createAcct.mutateAsync({
+        const created = await createAcct.mutateAsync({
           email: parentEmail.trim() || null,
           password: parentPassword,
           full_name: finalName,
           phone: parentLoginPhone || null,
           ...payload,
         });
+        // Сервер создания родителя менеджера семьи не принимает — сохраняем отдельно.
+        if (familyManagerId && created?.family_id) {
+          await upd.mutateAsync({ id: created.family_id, responsible_manager_id: familyManagerId });
+        }
         setPwChangedValue(parentPassword);
         setPwChangedOpen(true);
         // НЕ закрываем модал и НЕ чистим поля — дадим директору скопировать
@@ -229,43 +229,40 @@ export const AddFamilyModal = ({
   return (
     <Modal open={open} onClose={onClose} width={620} title={isEdit ? t("Редактировать семью", "Үй-бүлөнү өзгөртүү") : t("Новая семья", "Жаңы үй-бүлө")}>
       <div className="grid-2">
-        <Field label={t("Имя отца", "Атасынын аты")}>
+        <Field label={t("ФИО отца", "Атасынын аты-жөнү")}>
           <input value={father} onChange={(e) => setFather(e.target.value)} disabled={busy} />
         </Field>
         <Field label={t("Телефон отца", "Атасынын телефону")}>
-          <input value={fatherPhone} onChange={(e) => setFatherPhone(e.target.value)} disabled={busy} placeholder="+996 …" />
+          <input type="tel" inputMode="tel" value={fatherPhone} onChange={(e) => setFatherPhone(e.target.value)} disabled={busy} placeholder="+996 …" />
         </Field>
-        <Field label={t("Паспорт/ID отца (КР)", "Атасынын паспорту/ID (КР)")} hint={t("Серия и номер или 14-значный ПИН", "Серия+номер же 14-сан ПИН")}>
-          <input value={fatherPassport} onChange={(e) => setFatherPassport(e.target.value)} disabled={busy} placeholder="AN1234567 / 20706200012345" />
-        </Field>
-        <div />
-        <Field label={t("Имя матери", "Энесинин аты")}>
+        <Field label={t("ФИО матери", "Энесинин аты-жөнү")}>
           <input value={mother} onChange={(e) => setMother(e.target.value)} disabled={busy} />
         </Field>
         <Field label={t("Телефон матери", "Энесинин телефону")}>
-          <input value={motherPhone} onChange={(e) => setMotherPhone(e.target.value)} disabled={busy} placeholder="+996 …" />
+          <input type="tel" inputMode="tel" value={motherPhone} onChange={(e) => setMotherPhone(e.target.value)} disabled={busy} placeholder="+996 …" />
         </Field>
-        <Field label={t("Паспорт/ID матери (КР)", "Энесинин паспорту/ID (КР)")} hint={t("Серия и номер или 14-значный ПИН", "Серия+номер же 14-сан ПИН")}>
-          <input value={motherPassport} onChange={(e) => setMotherPassport(e.target.value)} disabled={busy} placeholder="AN1234567 / 20706200012345" />
-        </Field>
-        <div />
       </div>
-      <Field label={t("Домашний адрес", "Үй дареги")}>
-        <input value={address} onChange={(e) => setAddress(e.target.value)} disabled={busy} placeholder={t("г. Бишкек, ул. ...", "Бишкек ш., ... көч.")} />
+      <Field label={t("Ответственный менеджер", "Жооптуу менеджер")}>
+        <select value={familyManagerId} onChange={(e) => setFamilyManagerId(e.target.value)} disabled={busy}>
+          <option value="">{t("— не назначен —", "— дайындалган эмес —")}</option>
+          {familyManagers.map((m) => (
+            <option key={m.id} value={m.id}>{m.full_name}{m.phone ? ` · ${m.phone}` : ""}</option>
+          ))}
+        </select>
       </Field>
-      <Field label={t("Комментарий", "Комментарий")}>
+      <Field label={t("Комментарий к семье", "Үй-бүлөгө комментарий")} hint={t("Его видят менеджеры и тренеры", "Муну менеджерлер жана тренерлер көрөт")}>
         <textarea rows={2} value={comment} onChange={(e) => setComment(e.target.value)} disabled={busy} />
       </Field>
 
       {!isEdit && (
         <div style={{ marginTop: 8, padding: 12, background: "var(--bg-soft)", borderRadius: "var(--r-sm)" }}>
           <div style={{ fontWeight: 600, marginBottom: 6 }}>
-            {t("Вход в PWA для родителя", "Ата-эне үчүн PWA логину")}
+            {t("Вход в приложение для родителя", "Ата-эненин тиркемеге кирүүсү")}
           </div>
           <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 10 }}>
             {t(
-              "Логин для входа — телефон одного из родителей. Пароль обязателен и передаётся семье вручную.",
-              "Кирүү логину — ата-энелердин бирөөнүн телефону. Сырсөз милдеттүү, үй-бүлөгө кол менен өткөрүлөт.",
+              "Родитель входит по номеру телефона. Пароль нужно придумать и передать семье лично.",
+              "Ата-эне телефон номери менен кирет. Сырсөздү ойлоп таап, үй-бүлөгө жеке бериңиз.",
             )}
           </div>
           <div style={{
@@ -277,7 +274,7 @@ export const AddFamilyModal = ({
           }}>
             {parentLoginPhone
               ? t(`Логин-телефон: ${parentLoginPhone}`, `Кирүү телефону: ${parentLoginPhone}`)
-              : t("Заполните телефон отца или матери выше — он станет логином", "Жогоруда атасынын же энесинин телефонун жазыңыз")}
+              : t("Укажите выше телефон отца или матери — он станет логином", "Жогоруда атасынын же энесинин телефонун жазыңыз — ал логин болот")}
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             <Field label={<>{t("ФИО родителя для входа", "Ата-эненин толук аты")} <span style={{ color: "var(--red-600)" }}>*</span></>}>
@@ -285,7 +282,7 @@ export const AddFamilyModal = ({
                 value={parentName}
                 onChange={(e) => setParentName(e.target.value)}
                 disabled={busy}
-                placeholder={defaultLoginName || t("Имя для аккаунта PWA", "PWA аккаунту үчүн ат")}
+                placeholder={defaultLoginName || t("Имя родителя в приложении", "Тиркемедеги ата-эненин аты")}
                 required
               />
             </Field>
@@ -302,7 +299,7 @@ export const AddFamilyModal = ({
                   placeholder="••••••••"
                 />
                 <button type="button" className="btn" onClick={generateParentPassword} disabled={busy}>
-                  <Icon name="sparkle" size={14} /> {t("Сгенерировать", "Жаратуу")}
+                  <Icon name="sparkle" size={14} /> {t("Придумать пароль", "Сырсөз ойлоп табуу")}
                 </button>
               </div>
             </Field>
@@ -335,13 +332,13 @@ export const AddFamilyModal = ({
               onChange={(e) => setWithLogin(e.target.checked)}
               disabled={busy || !parentLoginPhone}
             />
-            {t("Выдать доступ в PWA родителю", "Ата-энеге PWA-га кирүү берүү")}
+            {t("Выдать родителю доступ в приложение", "Ата-энеге тиркемеге кирүү берүү")}
           </label>
           {!parentLoginPhone && (
             <div style={{ marginTop: 8, fontSize: 12, color: "var(--red-600)" }}>
               {t(
-                "Сначала укажите телефон отца или матери выше — он будет логином в PWA.",
-                "Жогоруда атасынын же энесинин телефонун жазыңыз — ал PWA логину болот.",
+                "Сначала укажите выше телефон отца или матери — по нему родитель будет входить в приложение.",
+                "Адегенде жогоруда атасынын же энесинин телефонун жазыңыз — ата-эне тиркемеге ошол номер менен кирет.",
               )}
             </div>
           )}
@@ -377,13 +374,13 @@ export const AddFamilyModal = ({
                     placeholder="••••••••"
                   />
                   <button type="button" className="btn" onClick={generateParentPassword} disabled={busy}>
-                    <Icon name="sparkle" size={14} /> {t("Сгенерировать", "Жаратуу")}
+                    <Icon name="sparkle" size={14} /> {t("Придумать пароль", "Сырсөз ойлоп табуу")}
                   </button>
                 </div>
               </Field>
               <div style={{ fontSize: 12, color: "var(--muted)" }}>
-                {t("Этот родитель войдёт в свою PWA и увидит только своих детей. Передайте email/пароль семье.",
-                   "Ата-эне PWA-га кирип, өз балдарын гана көрөт.")}
+                {t("Родитель войдёт в приложение и увидит только своих детей. Передайте логин и пароль семье лично.",
+                   "Ата-эне тиркемеге кирип, өз балдарын гана көрөт. Логин менен сырсөздү үй-бүлөгө жеке бериңиз.")}
               </div>
             </div>
           )}
@@ -449,7 +446,7 @@ export const AddFamilyModal = ({
             textTransform: "uppercase", letterSpacing: 0.04,
           }}>
             <Icon name="check" size={14} />
-            {t("Доступ в PWA", "PWA доступу")}
+            {t("Доступ в приложение", "Тиркемеге кирүү")}
           </div>
 
           {parentProfile ? (
@@ -641,9 +638,9 @@ export const AddFamilyModal = ({
           if (!isEdit || (isEdit && withLogin)) {
             onClose();
             if (!isEdit) {
-              setFather(""); setFatherPhone(""); setFatherPassport("");
-              setMother(""); setMotherPhone(""); setMotherPassport("");
-              setAddress(""); setComment("");
+              setFather(""); setFatherPhone("");
+              setMother(""); setMotherPhone("");
+              setComment(""); setFamilyManagerId("");
               setParentName(""); setParentEmail(""); setParentPassword("");
             }
             setWithLogin(false);
@@ -809,15 +806,15 @@ export const AddChildModal = ({
   const [familyId, setFamilyId] = useState(initial?.family_id ?? "");
   const [father, setFather] = useState("");
   const [fatherPhone, setFatherPhone] = useState("");
-  const [fatherPassport, setFatherPassport] = useState("");
+
   const [mother, setMother] = useState("");
   const [motherPhone, setMotherPhone] = useState("");
-  const [motherPassport, setMotherPassport] = useState("");
-  const [address, setAddress] = useState("");
+  const [familyComment, setFamilyComment] = useState("");
   const [fullName, setFullName] = useState(initial?.full_name ?? "");
   const [birth, setBirth] = useState(initial?.birth_date ?? "");
   const [card, setCard] = useState(initial?.card_number ?? "");
-  const [amoUrl, setAmoUrl] = useState(initial?.amo_url ?? "");
+  // AmoCRM — версия 2.0 по ТЗ: поля в форме нет, но ссылку у существующих не теряем.
+  const [amoUrl] = useState(initial?.amo_url ?? "");
   const [source, setSource] = useState<ClientSource | "">(initial?.source ?? "");
   const [managerId, setManagerId] = useState<string>(
     initial?.responsible_manager_id
@@ -847,11 +844,10 @@ export const AddChildModal = ({
     if (!isEdit || !selectedFamily) return;
     setFather(selectedFamily.father_name ?? "");
     setFatherPhone(selectedFamily.father_phone ?? "");
-    setFatherPassport(selectedFamily.father_passport ?? "");
+
     setMother(selectedFamily.mother_name ?? "");
     setMotherPhone(selectedFamily.mother_phone ?? "");
-    setMotherPassport(selectedFamily.mother_passport ?? "");
-    setAddress(selectedFamily.address ?? "");
+    setFamilyComment((selectedFamily as { comment?: string | null }).comment ?? "");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isEdit, selectedFamily?.id]);
   // Учётка родителя: показываем существующую, а если её нет — выдаём
@@ -873,7 +869,7 @@ export const AddChildModal = ({
     setErr(null);
     const phone = fatherPhone || motherPhone;
     if (!phone) {
-      setErr(t("Укажите телефон отца или матери — он станет логином родителя в PWA", "Ата-эненин телефонун жазыңыз — ал PWA логину болот"));
+      setErr(t("Укажите телефон отца или матери — по нему родитель будет входить в приложение", "Атасынын же энесинин телефонун жазыңыз — ата-эне тиркемеге ошол номер менен кирет"));
       return;
     }
     const name = grantName.trim() || (fatherPhone ? father : mother) || father || mother;
@@ -916,11 +912,10 @@ export const AddChildModal = ({
             id: familyId,
             father_name: father || null,
             father_phone: fatherPhone || null,
-            father_passport: fatherPassport || null,
             mother_name: mother || null,
             mother_phone: motherPhone || null,
-            mother_passport: motherPassport || null,
-            address: address || null,
+            comment: familyComment.trim() || null,
+            responsible_manager_id: managerId || null,
           });
         }
         onClose();
@@ -931,16 +926,15 @@ export const AddChildModal = ({
         const f = await addFamily.mutateAsync({
           father_name: father || null,
           father_phone: fatherPhone || null,
-          father_passport: fatherPassport || null,
           mother_name: mother || null,
           mother_phone: motherPhone || null,
-          mother_passport: motherPassport || null,
-          address: address || null,
+          comment: familyComment.trim() || null,
+          responsible_manager_id: managerId || null,
         });
         fid = f.id;
       }
       if (!fid) {
-        setErr(t("Выберите или создайте семью", "Үй-бүлөнү тандаңыз же түзүңүз"));
+        setErr(t("Выберите семью из списка", "Үй-бүлөнү тизмеден тандаңыз"));
         return;
       }
       const created = await addChild.mutateAsync({
@@ -957,9 +951,9 @@ export const AddChildModal = ({
       }
       onClose();
       setFullName(""); setBirth(""); setCard(""); setSource("");
-      setFather(""); setFatherPhone(""); setFatherPassport("");
-      setMother(""); setMotherPhone(""); setMotherPassport("");
-      setAddress("");
+      setFather(""); setFatherPhone("");
+      setMother(""); setMotherPhone("");
+      setFamilyComment("");
       setFamilyId(""); setMode("new");
     } catch (e: unknown) {
       setErr((e as Error).message);
@@ -975,56 +969,49 @@ export const AddChildModal = ({
     } catch (e: unknown) { setErr((e as Error).message); }
   };
 
+  // Поля семьи по ТЗ §3.2: ФИО и телефон отца, ФИО и телефон матери.
+  const parentFields = (
+    <div className="grid-2">
+      <Field label={t("ФИО отца", "Атасынын аты-жөнү")}>
+        <input value={father} onChange={(e) => setFather(e.target.value)} disabled={busy} />
+      </Field>
+      <Field label={t("Телефон отца", "Атасынын телефону")}>
+        <input type="tel" inputMode="tel" value={fatherPhone} onChange={(e) => setFatherPhone(e.target.value)} disabled={busy} placeholder="+996 …" />
+      </Field>
+      <Field label={t("ФИО матери", "Энесинин аты-жөнү")}>
+        <input value={mother} onChange={(e) => setMother(e.target.value)} disabled={busy} />
+      </Field>
+      <Field label={t("Телефон матери", "Энесинин телефону")}>
+        <input type="tel" inputMode="tel" value={motherPhone} onChange={(e) => setMotherPhone(e.target.value)} disabled={busy} placeholder="+996 …" />
+      </Field>
+    </div>
+  );
+
   return (
-    <Modal open={open} onClose={onClose} title={isEdit ? t("Редактировать ребёнка", "Баланы өзгөртүү") : t("Новый ребёнок", "Жаңы бала")}>
+    <Modal open={open} onClose={onClose} title={isEdit ? t("Карточка ребёнка", "Баланын картасы") : t("Новый ребёнок", "Жаңы бала")}>
       {!isEdit && (
         <div className="seg" style={{ marginBottom: 12 }}>
           <button className={`seg__btn ${mode === "new" ? "is-active" : ""}`} onClick={() => setMode("new")}>
             {t("Новая семья", "Жаңы үй-бүлө")}
           </button>
           <button className={`seg__btn ${mode === "existing" ? "is-active" : ""}`} onClick={() => setMode("existing")}>
-            {t("Существующая семья", "Бар үй-бүлө")}
+            {t("Семья уже есть в базе", "Үй-бүлө базада бар")}
           </button>
         </div>
       )}
 
+      <div className="form-sec">{t("Семья", "Үй-бүлө")}</div>
       {!isEdit && mode === "new" ? (
-        <>
-          <div className="grid-2">
-            <Field label={t("Имя отца", "Атасынын аты")}>
-              <input value={father} onChange={(e) => setFather(e.target.value)} disabled={busy} />
-            </Field>
-            <Field label={t("Телефон отца", "Атасынын телефону")}>
-              <input value={fatherPhone} onChange={(e) => setFatherPhone(e.target.value)} disabled={busy} placeholder="+996 …" />
-            </Field>
-            <Field label={t("Паспорт/ID отца (КР)", "Атасынын паспорту/ID (КР)")} hint={t("Серия+номер или ПИН", "Серия+номер же ПИН")}>
-              <input value={fatherPassport} onChange={(e) => setFatherPassport(e.target.value)} disabled={busy} placeholder="AN1234567 / 20706200012345" />
-            </Field>
-            <div />
-            <Field label={t("Имя матери", "Энесинин аты")}>
-              <input value={mother} onChange={(e) => setMother(e.target.value)} disabled={busy} />
-            </Field>
-            <Field label={t("Телефон матери", "Энесинин телефону")}>
-              <input value={motherPhone} onChange={(e) => setMotherPhone(e.target.value)} disabled={busy} placeholder="+996 …" />
-            </Field>
-            <Field label={t("Паспорт/ID матери (КР)", "Энесинин паспорту/ID (КР)")} hint={t("Серия+номер или ПИН", "Серия+номер же ПИН")}>
-              <input value={motherPassport} onChange={(e) => setMotherPassport(e.target.value)} disabled={busy} placeholder="AN1234567 / 20706200012345" />
-            </Field>
-            <div />
-          </div>
-          <Field label={t("Домашний адрес", "Үй дареги")}>
-            <input value={address} onChange={(e) => setAddress(e.target.value)} disabled={busy} placeholder={t("г. Бишкек, ул. ...", "Бишкек ш., ... көч.")} />
-          </Field>
-        </>
+        parentFields
       ) : (
         <>
           <Field
-            label={t("Семья", "Үй-бүлө")}
-            hint={isEdit ? undefined : t("Поиск по родителям, телефону или имени ребёнка", "Ата-эне, телефон же баланын аты боюнча издөө")}
+            label={isEdit ? t("Семья", "Үй-бүлө") : t("Найдите семью", "Үй-бүлөнү табыңыз")}
+            hint={isEdit ? undefined : t("Можно искать по имени родителя, телефону или имени другого ребёнка из семьи", "Ата-эненин аты, телефону же үй-бүлөдөгү башка баланын аты боюнча издесеңиз болот")}
           >
             {isEdit ? (
               <select value={familyId} onChange={(e) => setFamilyId(e.target.value)} disabled={busy}>
-                <option value="">— {t("выбрать", "тандоо")} —</option>
+                <option value="">— {t("выберите семью", "үй-бүлөнү тандаңыз")} —</option>
                 {families.map((f) => (
                   <option key={f.id} value={f.id}>{familyLabel(f)}</option>
                 ))}
@@ -1042,41 +1029,11 @@ export const AddChildModal = ({
           </Field>
           {isEdit && familyId && (
             <>
-              {/* Полная карточка: родители, телефоны, паспорта, адрес —
-                  редактируются прямо здесь и сохраняются в семью. */}
-              <div className="grid-2">
-                <Field label={t("Имя отца", "Атасынын аты")}>
-                  <input value={father} onChange={(e) => setFather(e.target.value)} disabled={busy} />
-                </Field>
-                <Field label={t("Телефон отца", "Атасынын телефону")}>
-                  <input value={fatherPhone} onChange={(e) => setFatherPhone(e.target.value)} disabled={busy} placeholder="+996 …" />
-                </Field>
-                <Field label={t("Паспорт/ID отца (КР)", "Атасынын паспорту/ID (КР)")}>
-                  <input value={fatherPassport} onChange={(e) => setFatherPassport(e.target.value)} disabled={busy} />
-                </Field>
-                <div />
-                <Field label={t("Имя матери", "Энесинин аты")}>
-                  <input value={mother} onChange={(e) => setMother(e.target.value)} disabled={busy} />
-                </Field>
-                <Field label={t("Телефон матери", "Энесинин телефону")}>
-                  <input value={motherPhone} onChange={(e) => setMotherPhone(e.target.value)} disabled={busy} placeholder="+996 …" />
-                </Field>
-                <Field label={t("Паспорт/ID матери (КР)", "Энесинин паспорту/ID (КР)")}>
-                  <input value={motherPassport} onChange={(e) => setMotherPassport(e.target.value)} disabled={busy} />
-                </Field>
-                <div />
-              </div>
-              <Field label={t("Домашний адрес", "Үй дареги")}>
-                <input value={address} onChange={(e) => setAddress(e.target.value)} disabled={busy} placeholder={t("г. Бишкек, ул. ...", "Бишкек ш., ... көч.")} />
-              </Field>
-              <div style={{
-                padding: "8px 10px", marginBottom: 4,
-                background: "var(--bg-soft)", border: "1px solid var(--line)",
-                borderRadius: "var(--r-sm)", fontSize: 12.5,
-              }}>
+              {parentFields}
+              <div className="form-access">
                 <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                   <Icon name="user" size={13} />
-                  <b>{t("Учётка родителя:", "Ата-эне аккаунту:")}</b>
+                  <b>{t("Вход в приложение для родителя:", "Ата-эненин тиркемеге кирүүсү:")}</b>
                   {parentAccount ? (
                     <>
                       <span>{parentAccount.full_name}</span>
@@ -1085,12 +1042,12 @@ export const AddChildModal = ({
                     </>
                   ) : grantDone ? (
                     <span style={{ color: "var(--green, #1a7f37)", fontWeight: 600 }}>
-                      {t(`Создана! Логин — телефон родителя, пароль: ${grantDone}. Передайте лично.`,
-                         `Түзүлдү! Логин — телефон, сырсөз: ${grantDone}. Жеке бериңиз.`)}
+                      {t(`Готово. Логин — телефон родителя, пароль: ${grantDone}. Передайте его лично.`,
+                         `Даяр. Логин — ата-эненин телефону, сырсөз: ${grantDone}. Жеке бериңиз.`)}
                     </span>
                   ) : (
                     <>
-                      <span style={{ color: "var(--muted)" }}>{t("не создана", "түзүлгөн эмес")}</span>
+                      <span style={{ color: "var(--muted)" }}>{t("ещё не выдан", "азырынча берилген эмес")}</span>
                       {!grantOpen && (
                         <button
                           type="button"
@@ -1099,7 +1056,7 @@ export const AddChildModal = ({
                           onClick={() => { setGrantOpen(true); if (!grantPw) genGrantPw(); }}
                           disabled={busy}
                         >
-                          {t("Выдать доступ в PWA", "PWA мүмкүнчүлүк берүү")}
+                          {t("Выдать доступ", "Мүмкүнчүлүк берүү")}
                         </button>
                       )}
                     </>
@@ -1110,17 +1067,17 @@ export const AddChildModal = ({
                     <input
                       value={grantName}
                       onChange={(e) => setGrantName(e.target.value)}
-                      placeholder={t("ФИО родителя (по умолч. из семьи)", "Ата-эненин аты")}
+                      placeholder={t("Имя родителя (по умолчанию из семьи)", "Ата-эненин аты (демейки үй-бүлөдөн)")}
                       style={{ height: 34, padding: "0 10px", border: "1px solid var(--line)", borderRadius: "var(--r-sm)", fontSize: 13, flex: 1, minWidth: 150 }}
                     />
                     <input
                       value={grantPw}
                       onChange={(e) => setGrantPw(e.target.value)}
-                      placeholder={t("Пароль (≥8)", "Сырсөз (≥8)")}
-                      style={{ height: 34, padding: "0 10px", border: "1px solid var(--line)", borderRadius: "var(--r-sm)", fontSize: 13, width: 130, fontFamily: "var(--font-mono)" }}
+                      placeholder={t("Пароль, от 8 символов", "Сырсөз, 8 белгиден")}
+                      style={{ height: 34, padding: "0 10px", border: "1px solid var(--line)", borderRadius: "var(--r-sm)", fontSize: 13, width: 150, fontFamily: "var(--font-mono)" }}
                     />
                     <button type="button" className="btn btn--ghost" style={{ padding: "6px 10px", fontSize: 12 }} onClick={genGrantPw}>
-                      {t("Сгенерировать", "Жаратуу")}
+                      {t("Новый пароль", "Жаңы сырсөз")}
                     </button>
                     <button
                       type="button"
@@ -1129,11 +1086,11 @@ export const AddChildModal = ({
                       onClick={grantAccess}
                       disabled={createParentAcct.isPending || updFamily.isPending}
                     >
-                      {createParentAcct.isPending ? t("Создаю…", "Түзүлүүдө…") : t("Создать логин", "Логин түзүү")}
+                      {createParentAcct.isPending ? t("Создаём…", "Түзүлүүдө…") : t("Создать вход", "Кирүүнү түзүү")}
                     </button>
                     <div style={{ fontSize: 11.5, color: "var(--muted)", width: "100%" }}>
-                      {t("Логин — телефон отца или матери из полей выше. Пароль передайте родителю лично.",
-                         "Логин — жогорудагы телефон. Сырсөздү жеке бериңиз.")}
+                      {t("Логином станет телефон отца или матери. Пароль передайте родителю лично.",
+                         "Логин — атасынын же энесинин телефону. Сырсөздү ата-энеге жеке бериңиз.")}
                     </div>
                   </div>
                 )}
@@ -1143,50 +1100,41 @@ export const AddChildModal = ({
         </>
       )}
 
-      <div className="divider-soft" />
+      <Field label={t("Ответственный менеджер", "Жооптуу менеджер")}>
+        <select value={managerId} onChange={(e) => setManagerId(e.target.value)} disabled={busy}>
+          <option value="">{t("— не назначен —", "— дайындалган эмес —")}</option>
+          {managers.map((m) => (
+            <option key={m.id} value={m.id}>
+              {m.full_name}{m.phone ? ` · ${m.phone}` : ""}
+            </option>
+          ))}
+        </select>
+      </Field>
 
-      <Field label={t("ФИО ребёнка", "Бала ФИО")}>
+      {(isEdit ? !!familyId : mode === "new") && (
+        <Field label={t("Комментарий к семье", "Үй-бүлөгө комментарий")} hint={t("Его видят менеджеры и тренеры", "Муну менеджерлер жана тренерлер көрөт")}>
+          <textarea rows={2} value={familyComment} onChange={(e) => setFamilyComment(e.target.value)} disabled={busy} />
+        </Field>
+      )}
+
+      <div className="form-sec">{t("Ребёнок", "Бала")}</div>
+      <Field label={t("ФИО ребёнка", "Баланын аты-жөнү")}>
         <input value={fullName} onChange={(e) => setFullName(e.target.value)} disabled={busy} required />
       </Field>
       <div className="grid-2">
-        <Field label={t("Дата рождения", "Туулган күн")}>
+        <Field label={t("Дата рождения", "Туулган күнү")}>
           <input type="date" value={birth} onChange={(e) => setBirth(e.target.value)} disabled={busy} required />
         </Field>
-        <Field label={t("Номер карты (опц.)", "Карта №")}>
-          <input value={card} onChange={(e) => setCard(e.target.value)} disabled={busy} placeholder="U-0005" />
+        <Field label={t("Номер карты", "Карта номери")} hint={t("Необязательно", "Милдеттүү эмес")}>
+          <input value={card} onChange={(e) => setCard(e.target.value)} disabled={busy} />
         </Field>
       </div>
-
       <Field label={t("Источник клиента", "Кардардын булагы")}>
         <select value={source} onChange={(e) => setSource(e.target.value as ClientSource | "")} disabled={busy}>
           <option value="">{t("— не указан —", "— көрсөтүлгөн эмес —")}</option>
           <option value="target">{t("Таргет (Instagram)", "Таргет (Instagram)")}</option>
           <option value="referral">{t("Рекомендация", "Сунуштама")}</option>
           <option value="other">{t("Другое", "Башка")}</option>
-        </select>
-      </Field>
-
-      <Field label={t("Ссылка AmoCRM (опц.)", "AmoCRM шилтемеси (опц.)")}>
-        <input
-          value={amoUrl}
-          onChange={(e) => setAmoUrl(e.target.value)}
-          disabled={busy}
-          placeholder="https://mashrapov.amocrm.ru/leads/detail/…"
-        />
-      </Field>
-
-      <Field label={t("Ответственный менеджер", "Жооптуу менеджер")}>
-        <select
-          value={managerId}
-          onChange={(e) => setManagerId(e.target.value)}
-          disabled={busy}
-        >
-          <option value="">— {t("без менеджера", "менеджерсиз")} —</option>
-          {managers.map((m) => (
-            <option key={m.id} value={m.id}>
-              {m.full_name}{m.phone ? ` · ${m.phone}` : ""}
-            </option>
-          ))}
         </select>
       </Field>
 
@@ -1199,7 +1147,7 @@ export const AddChildModal = ({
           </button>
         )}
         <button className="btn" onClick={onClose} disabled={busy}>{t("Отмена", "Жокко чыгаруу")}</button>
-        <button className="btn btn--primary" onClick={submit} disabled={busy || !fullName || !birth}>
+        <button className="btn btn--primary" onClick={submit} disabled={busy || !fullName.trim() || !birth}>
           {busy ? t("Сохраняем…", "Сакталууда…") : t("Сохранить", "Сактоо")}
         </button>
       </div>
@@ -1672,7 +1620,7 @@ export const AddCoachModal = ({
                 placeholder="••••••••"
               />
               <button type="button" className="btn" onClick={generatePassword} disabled={busy}>
-                <Icon name="sparkle" size={14} /> {t("Сгенерировать", "Жаратуу")}
+                <Icon name="sparkle" size={14} /> {t("Придумать пароль", "Сырсөз ойлоп табуу")}
               </button>
             </div>
           </Field>

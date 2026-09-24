@@ -18,7 +18,7 @@ import {
 import {
   useAddProgressNote, useCreateFreeze, useExtendCard, useCancelCard, useCloseCard, useAddCardLessons, useEndFreeze,
   useRemoveCardLessons, useRestoreCardLessons,
-  useAddEnrollment, useRemoveEnrollment, useAddChildComment, useDeleteChildComment,
+  useAddEnrollment, useRemoveEnrollment, useAddChildComment,
   useMarkAttendance,
 } from "../shared/api/mutations";
 import { useAuth } from "../shared/auth/AuthProvider";
@@ -34,6 +34,40 @@ import { freezeOutcome, type CardType, type AttendanceStatus, type PaymentMethod
 
 type Role = "admin" | "coach" | "parent";
 type TabId = "subs" | "att" | "pay" | "deposit" | "freezes" | "notes" | "comments" | "group" | "pt";
+
+const STATUS_LABEL: Record<string, { ru: string; ky: string }> = {
+  active: { ru: "активен", ky: "активдүү" },
+  frozen: { ru: "заморожен", ky: "тындырылган" },
+  expired: { ru: "абонемент истёк", ky: "абонемент бүттү" },
+  debtor: { ru: "должник", ky: "карызкор" },
+  archived: { ru: "в архиве", ky: "архивде" },
+};
+
+const CARD_TYPE_LABEL: Record<string, { ru: string; ky: string }> = {
+  monthly: { ru: "Месячный", ky: "Айлык" },
+  quarterly: { ru: "3 месяца", ky: "3 ай" },
+  half_year: { ru: "6 месяцев", ky: "6 ай" },
+  nine_month: { ru: "9 месяцев", ky: "9 ай" },
+  annual: { ru: "12 месяцев", ky: "12 ай" },
+  personal: { ru: "Персональный", ky: "Жеке" },
+  single: { ru: "Разовое занятие", ky: "Бир жолку сабак" },
+  trial: { ru: "Пробная тренировка", ky: "Сыноо машыгуусу" },
+};
+
+const CARD_STATUS_LABEL: Record<string, { ru: string; ky: string }> = {
+  active: { ru: "активен", ky: "активдүү" },
+  ending: { ru: "заканчивается", ky: "бүтүп жатат" },
+  frozen: { ru: "заморожен", ky: "тындырылган" },
+  expired: { ru: "истёк", ky: "бүттү" },
+  debt: { ru: "долг", ky: "карыз" },
+  archived: { ru: "в архиве", ky: "архивде" },
+};
+
+const SOURCE_LABEL: Record<"target" | "referral" | "other", { ru: string; ky: string }> = {
+  target: { ru: "таргет (Instagram)", ky: "таргет (Instagram)" },
+  referral: { ru: "рекомендация", ky: "сунуштама" },
+  other: { ru: "другое", ky: "башка" },
+};
 
 const ageFromDob = (dob: string): number => {
   const d = new Date(dob); const now = new Date();
@@ -58,9 +92,16 @@ export const ChildDrawer = ({
   const { data: primaryCoach } = useChildPrimaryCoach(childId);
   // Полная карточка: учётка родителя и активные группы прямо в шапке.
   const { data: parentAccount } = useProfile((child?.family as any)?.parent_user_id ?? null);
-  const activeGroupNames = ((child as any)?.enrollments ?? [])
-    .filter((e: any) => e.archived_at == null && e.group?.name)
+  const activeEnrollments = ((child as any)?.enrollments ?? []).filter((e: any) => e.archived_at == null);
+  const activeGroupNames = activeEnrollments
+    .filter((e: any) => e.group?.name)
     .map((e: any) => e.group.name as string);
+  // Дисциплины (ТЗ §3.2) — секции активных групп, без повторов.
+  const activeSectionNames = Array.from(new Set<string>(
+    activeEnrollments
+      .map((e: any) => e.group?.section?.[lang === "ru" ? "name_ru" : "name_ky"] as string | undefined)
+      .filter(Boolean) as string[],
+  ));
 
   const tabs: { id: TabId; ru: string; ky: string; allow: Role[] }[] = [
     { id: "subs",     ru: "Абонементы", ky: "Абонементтер", allow: ["admin", "coach", "parent"] },
@@ -94,19 +135,7 @@ export const ChildDrawer = ({
           <div style={{ flex: 1, minWidth: 0 }}>
             <div className="child-hero__name">{child.full_name}</div>
             <div className="child-hero__meta">
-              {ageFromDob(child.birth_date)} {t("лет", "жаш")} · {child.card_number ?? "—"} · <span className={`pill pill--${child.status}`}>{child.status}</span>
-              {(child as any).amo_url && (
-                <a
-                  href={(child as any).amo_url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="btn"
-                  style={{ marginLeft: 8, padding: "2px 10px", fontSize: 11.5, height: 24, display: "inline-flex", alignItems: "center", gap: 4, verticalAlign: "middle" }}
-                  title={t("Открыть сделку в AmoCRM", "AmoCRM сделкасын ачуу")}
-                >
-                  <Icon name="card" size={11} /> AmoCRM
-                </a>
-              )}
+              {ageFromDob(child.birth_date)} {t("лет", "жаш")} ({fmtD(child.birth_date)}) · {t("карта", "карта")} {child.card_number ?? "—"} · <span className={`pill pill--${child.status}`}>{STATUS_LABEL[child.status]?.[lang] ?? child.status}</span>
             </div>
             {child.family && (
               <div className="child-hero__family">
@@ -138,19 +167,25 @@ export const ChildDrawer = ({
                 )}
               </div>
             )}
-            {(child.family?.address || child.family?.father_passport || child.family?.mother_passport) && role === "admin" && (
-              <div className="child-hero__family" style={{ marginTop: 6, fontSize: 12 }}>
-                {child.family.address && (
-                  <span>🏠 <b>{child.family.address}</b></span>
-                )}
-                {child.family.father_passport && (
-                  <span>📄 {t("Отец", "Атасы")}: <code style={{ fontFamily: "var(--font-mono)", fontSize: 11 }}>{child.family.father_passport}</code></span>
-                )}
-                {child.family.mother_passport && (
-                  <span>📄 {t("Мать", "Энеси")}: <code style={{ fontFamily: "var(--font-mono)", fontSize: 11 }}>{child.family.mother_passport}</code></span>
-                )}
-              </div>
-            )}
+            <div className="child-hero__family" style={{ marginTop: 6 }}>
+              <span>
+                🗓 {t("В академии с", "Академияда")}: <b>{fmtD(child.created_at)}</b>
+              </span>
+              <span>
+                📣 {t("Источник", "Булагы")}:{" "}
+                {child.source
+                  ? <b>{SOURCE_LABEL[child.source][lang]}</b>
+                  : <span style={{ color: "var(--muted)" }}>{t("не указан", "көрсөтүлгөн эмес")}</span>}
+              </span>
+            </div>
+            <div className="child-hero__family" style={{ marginTop: 6 }}>
+              <span>
+                🥊 {t("Дисциплины", "Багыттар")}:{" "}
+                {activeSectionNames.length > 0
+                  ? <b>{activeSectionNames.join(", ")}</b>
+                  : <span style={{ color: "var(--muted)" }}>{t("пока нет", "азырынча жок")}</span>}
+              </span>
+            </div>
             <div className="child-hero__family" style={{ marginTop: 6 }}>
               <span>
                 👥 {t("Группы", "Топтор")}:{" "}
@@ -160,7 +195,7 @@ export const ChildDrawer = ({
               </span>
               {role === "admin" && (
                 <span>
-                  👤 {t("Учётка родителя", "Ата-эне аккаунту")}:{" "}
+                  👤 {t("Вход родителя в приложение", "Ата-эненин тиркемеге кирүүсү")}:{" "}
                   {parentAccount ? (
                     <>
                       <b>{parentAccount.full_name}</b>
@@ -172,7 +207,7 @@ export const ChildDrawer = ({
                       )}
                     </>
                   ) : (
-                    <span style={{ color: "var(--muted)" }}>{t("не создана", "түзүлгөн эмес")}</span>
+                    <span style={{ color: "var(--muted)" }}>{t("ещё не выдан", "азырынча берилген эмес")}</span>
                   )}
                 </span>
               )}
@@ -205,6 +240,11 @@ export const ChildDrawer = ({
                 )}
               </span>
             </div>
+            {child.family?.comment && role !== "parent" && (
+              <div className="child-hero__family" style={{ marginTop: 6 }}>
+                <span>💬 {t("Комментарий к семье", "Үй-бүлөгө комментарий")}: <b style={{ fontWeight: 500 }}>{child.family.comment}</b></span>
+              </div>
+            )}
           </div>
           {role === "admin" && (
             <button className="btn" style={{ height: 32 }} onClick={() => setEditOpen(true)}>
@@ -297,14 +337,13 @@ const SubsTab = ({ childId, lang }: { childId: string; lang: Lang }) => {
   const { user } = useAuth();
   // Cards CRUD on the child drawer is allowed for office roles that sell cards.
   const isAdminLike = can(user?.role, "sell_cards");
-  const { data: balance } = useCardBalance(childId);
+  // По ТЗ §3.2 активных абонементов может быть несколько — по одному на секцию.
+  const { data: allBalances = [] } = useCardBalancesForChild(childId);
+  const activeBalances = allBalances.filter((b) => b.status === "active" || b.status === "ending");
   const { data: myCards = [] } = useCardsForChild(childId);
   const debts = useChildCardDebts(childId);
   const debtOf = (cardId: string) => debts.data.find((d) => d.card_id === cardId)?.debt ?? 0;
   const [payCard, setPayCard] = useState<{ id: string; debt: number; type: string } | null>(null);
-  const totalLessons = balance?.total_lessons ?? 0;
-  const remaining = balance?.remaining ?? 0;
-  const pct = totalLessons ? (remaining / totalLessons) * 100 : 0;
 
   const extend = useExtendCard();
   const cancelCard = useCancelCard();
@@ -379,20 +418,30 @@ const SubsTab = ({ childId, lang }: { childId: string; lang: Lang }) => {
         </div>
       )}
 
-      {balance && (
-        <div className="balance-card">
-          <div className="balance-card__head">
-            <div>
-              <div className="balance-card__lbl">{t("Текущий абонемент", "Учурдагы абонемент")}</div>
-              <div className="balance-card__val">{remaining}<small>{t("из", "ичинен")} {totalLessons}</small></div>
+      {activeBalances.map((b) => {
+        const total = b.total_lessons ?? 0;
+        const left = b.remaining ?? 0;
+        const pct = total ? (left / total) * 100 : 0;
+        const sec = (myCards.find((c) => c.id === b.club_card_id) as any)?.section as { name_ru?: string; name_ky?: string } | null | undefined;
+        return (
+          <div className="balance-card" key={b.club_card_id} style={{ marginBottom: 10 }}>
+            <div className="balance-card__head">
+              <div>
+                <div className="balance-card__lbl">
+                  {CARD_TYPE_LABEL[b.type]?.[lang] ?? b.type}
+                  {sec && ` · ${lang === "ru" ? sec.name_ru : sec.name_ky}`}
+                  {` · ${fmtD(b.start_date)} → ${fmtD(b.end_date)}`}
+                </div>
+                <div className="balance-card__val">{left}<small>{t("из", "ичинен")} {total}</small></div>
+              </div>
+              <div style={{ textAlign: "right", fontSize: 11, color: "var(--muted)" }}>
+                {t("Заморозок", "Тындыруу")}: <b style={{ color: "var(--ink)" }}>{b.approved_freezes}</b>
+              </div>
             </div>
-            <div style={{ textAlign: "right", fontSize: 11, color: "var(--muted)" }}>
-              {t("Заморозок", "Тындыруу")}: <b style={{ color: "var(--ink)" }}>{balance.approved_freezes}</b>
-            </div>
+            <div className="kid-hero__bar"><div className="kid-hero__bar-fill" style={{ width: `${pct}%` }} /></div>
           </div>
-          <div className="kid-hero__bar"><div className="kid-hero__bar-fill" style={{ width: `${pct}%` }} /></div>
-        </div>
-      )}
+        );
+      })}
 
       {/* Пустое состояние: ни одной активной карты — призываем продать */}
       {isAdminLike && !hasActive && !expiredCard && myCards.length === 0 && (
@@ -479,11 +528,12 @@ const SubsTab = ({ childId, lang }: { childId: string; lang: Lang }) => {
       ) : (
         <div className="table-scroll">
           <table className="admin-table" style={{ marginTop: 8 }}>
-            <thead><tr><th>{t("Тип", "Түрү")}</th><th>{t("Период", "Мезгил")}</th><th className="num">{t("Цена", "Баасы")}</th><th>{t("Статус", "Абалы")}</th>{isAdminLike && <th></th>}</tr></thead>
+            <thead><tr><th>{t("Абонемент", "Абонемент")}</th><th>{t("Секция", "Секция")}</th><th>{t("Период", "Мезгил")}</th><th className="num">{t("Цена", "Баасы")}</th><th>{t("Статус", "Абалы")}</th>{isAdminLike && <th></th>}</tr></thead>
             <tbody>
               {myCards.map((c) => (
                 <tr key={c.id} style={{ cursor: "default" }} onClick={(e) => e.stopPropagation()}>
-                  <td>{c.type}{c.total_lessons ? ` · ${c.total_lessons}` : ""}</td>
+                  <td>{CARD_TYPE_LABEL[c.type]?.[lang] ?? c.type}{c.total_lessons ? ` · ${c.total_lessons} ${t("зан.", "сабак")}` : ""}</td>
+                  <td style={{ fontSize: 12 }}>{(() => { const sec = (c as any).section as { name_ru?: string; name_ky?: string } | null; return sec ? (lang === "ru" ? sec.name_ru : sec.name_ky) : "—"; })()}</td>
                   <td style={{ color: "var(--muted)", fontSize: 12 }}>{fmtD(c.start_date)} → {fmtD(c.end_date)}</td>
                   <td className="num">
                     {formatCurrency(Number(c.price_paid))}
@@ -493,7 +543,7 @@ const SubsTab = ({ childId, lang }: { childId: string; lang: Lang }) => {
                       </div>
                     )}
                   </td>
-                  <td><span className={`pill pill--${c.status}`}>{c.status}</span></td>
+                  <td><span className={`pill pill--${c.status}`}>{CARD_STATUS_LABEL[c.status]?.[lang] ?? c.status}</span></td>
                   {isAdminLike && (
                     <td style={{ textAlign: "right", width: 1 }}>
                       {debtOf(c.id) > 0 && can(user?.role, "receive_payment") && (
@@ -831,7 +881,22 @@ const lessonPlaceOf = (l: any, lang: Lang): string => {
 const AttTab = ({ childId, lang }: { childId: string; lang: Lang }) => {
   const t = (ru: string, ky: string) => (lang === "ru" ? ru : ky);
   // Год истории: офис просил полную историю посещений, 90 дней мало.
-  const { data: att = [] } = useAttendanceForChild(childId, 365);
+  const { data: attAll = [] } = useAttendanceForChild(childId, 365);
+  // История посещений по каждому абонементу (ТЗ §3.2): посещение относится к
+  // абонементу, если совпадает секция и дата попадает в срок абонемента.
+  const { data: childCards = [] } = useCardsForChild(childId);
+  const [cardFilter, setCardFilter] = useState<string>("all");
+  const selectedCard = childCards.find((c) => c.id === cardFilter);
+  const inSelectedCard = (date?: string | null, sectionId?: string | null) => {
+    if (!selectedCard) return true;
+    if (!date || date < selectedCard.start_date || date > selectedCard.end_date) return false;
+    return !selectedCard.section_id || !sectionId || selectedCard.section_id === sectionId;
+  };
+  const att = useMemo(
+    () => attAll.filter((a) => inSelectedCard(a.lesson?.date, (a.lesson?.group as any)?.section_id)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [attAll, selectedCard?.id],
+  );
   // Отметка прямо из списка (просьба офиса 2026-09-10): пропущенные без
   // отметки — «был / не был», уже отмеченные — переключение одним кликом.
   const canMark = usePerm("manage_schedule");
@@ -885,8 +950,10 @@ const AttTab = ({ childId, lang }: { childId: string; lang: Lang }) => {
   const attendedLessonIds = useMemo(() => new Set(att.map((a) => a.lesson_id)), [att]);
   const missedLessons = useMemo(
     () => (cardLessons as any[])
-      .filter((l) => l.date < todayStr && l.status !== "cancelled" && l.status !== "force_majeure" && !attendedLessonIds.has(l.id)),
-    [cardLessons, attendedLessonIds, todayStr],
+      .filter((l) => l.date < todayStr && l.status !== "cancelled" && l.status !== "force_majeure" && !attendedLessonIds.has(l.id))
+      .filter((l) => inSelectedCard(l.date, l.group?.section_id ?? l.section_id)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [cardLessons, attendedLessonIds, todayStr, selectedCard?.id],
   );
   const missed = missedLessons.length;
 
@@ -948,6 +1015,23 @@ const AttTab = ({ childId, lang }: { childId: string; lang: Lang }) => {
 
   return (
     <>
+      {childCards.length > 1 && (
+        <div style={{ marginBottom: 10 }}>
+          <select value={cardFilter} onChange={(e) => setCardFilter(e.target.value)} style={{ height: 34, padding: "0 10px", border: "1px solid var(--line)", borderRadius: "var(--r-sm)", fontSize: 13 }}>
+            <option value="all">{t("Все абонементы", "Бардык абонементтер")}</option>
+            {childCards.map((c) => {
+              const sec = (c as any).section as { name_ru?: string; name_ky?: string } | null;
+              return (
+                <option key={c.id} value={c.id}>
+                  {CARD_TYPE_LABEL[c.type]?.[lang] ?? c.type}
+                  {sec ? ` · ${lang === "ru" ? sec.name_ru : sec.name_ky}` : ""}
+                  {` · ${fmtD(c.start_date)} → ${fmtD(c.end_date)}`}
+                </option>
+              );
+            })}
+          </select>
+        </div>
+      )}
       <div className="summary-pill" style={{ marginBottom: 12 }}>
         <div style={pillBtn("present")} onClick={() => toggle("present")} title={t("Показать только «был»", "«Болду» гана")}>
           <div className="summary-pill__val" style={{ color: "var(--green)" }}>{present}</div><div className="summary-pill__lbl">{t("Был", "Болду")}</div>
@@ -1071,17 +1155,24 @@ const PayTab = ({ childId, lang }: { childId: string; lang: Lang }) => {
       ) : (
         <div className="table-scroll">
           <table className="admin-table">
-            <thead><tr><th>{t("Дата", "Күн")}</th><th>{t("Метод", "Метод")}</th><th>{t("Кто принял", "Ким кабыл алды")}</th><th>{t("Комментарий", "Комментарий")}</th><th className="num">{t("Сумма", "Сумма")}</th></tr></thead>
+            <thead><tr><th>{t("Дата", "Күн")}</th><th>{t("Абонемент", "Абонемент")}</th><th>{t("Способ оплаты", "Төлөм ыкмасы")}</th><th>{t("Менеджер", "Менеджер")}</th><th>{t("Комментарий", "Комментарий")}</th><th className="num">{t("Сумма", "Сумма")}</th></tr></thead>
             <tbody>
-              {my.map((p) => (
+              {my.map((p) => {
+                const card = (p as any).card as { type?: string; section?: { name_ru?: string; name_ky?: string } | null } | null;
+                return (
                 <tr key={p.id}>
                   <td>{new Date(p.paid_at).toLocaleDateString(lang === "ru" ? "ru-RU" : "ky-KG")}</td>
+                  <td style={{ fontSize: 12 }}>
+                    {card?.type ? (CARD_TYPE_LABEL[card.type]?.[lang] ?? card.type) : "—"}
+                    {card?.section && <span style={{ color: "var(--muted)" }}> · {lang === "ru" ? card.section.name_ru : card.section.name_ky}</span>}
+                  </td>
                   <td style={{ color: "var(--muted)" }}>{p.method === "cash" ? t("Наличные", "Накта") : p.method === "terminal" ? t("Терминал", "Терминал") : p.method}</td>
                   <td style={{ fontSize: 12 }}>{p.receiver?.full_name ?? "—"}</td>
                   <td style={{ color: "var(--muted)", fontSize: 12 }}>{p.comment ?? "—"}</td>
                   <td className="num">{formatCurrency(Number(p.amount))}</td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -1803,7 +1894,7 @@ const CommentsTab = ({ childId, lang, viewerRole }: { childId: string; lang: Lan
   const t = (ru: string, ky: string) => (lang === "ru" ? ru : ky);
   const { data: comments = [], isLoading } = useChildComments(childId);
   const add = useAddChildComment();
-  const del = useDeleteChildComment();
+  // Удаление комментариев запрещено (ТЗ §2.2) — только добавление.
   const [text, setText] = useState("");
   const isCoachViewer = viewerRole === "coach";
 
@@ -1837,18 +1928,6 @@ const CommentsTab = ({ childId, lang, viewerRole }: { childId: string; lang: Lan
                   {c.author?.full_name ?? "—"} ·{" "}
                   {new Date(c.created_at).toLocaleDateString(lang === "ru" ? "ru-RU" : "ky-KG", { day: "numeric", month: "short", year: "numeric" })}
                 </span>
-                <button
-                  className="btn btn--ghost"
-                  style={{ padding: "4px 8px", fontSize: 11, color: "var(--red-600)" }}
-                  onClick={() => {
-                    if (confirm(t("Удалить комментарий?", "Комментарийди өчүрөсүзбү?"))) {
-                      del.mutate({ id: c.id, child_id: childId });
-                    }
-                  }}
-                  disabled={del.isPending}
-                >
-                  {t("Удалить", "Өчүрүү")}
-                </button>
               </div>
             </div>
           ))}
@@ -1868,7 +1947,7 @@ const CommentsTab = ({ childId, lang, viewerRole }: { childId: string; lang: Lan
         label={isCoachViewer ? t("Новый комментарий тренера", "Тренердин жаңы комментарийи") : t("Новый комментарий", "Жаңы комментарий")}
         hint={isCoachViewer
           ? t("Виден менеджерам и вам. Родитель не видит — для него есть «Прогресс».", "Менеджерлерге жана сизге көрүнөт. Ата-эне көрбөйт.")
-          : t("Болезни, особенности, договорённости. Виден только сотрудникам, родитель не видит.", "Кызматкерлерге гана көрүнөт.")}
+          : t("Болезни, особенности, договорённости. Комментарий видят все сотрудники, родитель — нет.", "Оорулар, өзгөчөлүктөр, макулдашуулар. Комментарийди бардык кызматкерлер көрөт, ата-эне көрбөйт.")}
       >
         <textarea
           rows={3}
@@ -1890,18 +1969,14 @@ const CommentsTab = ({ childId, lang, viewerRole }: { childId: string; lang: Lan
         <div className="empty"><div className="empty__title">{t("Загрузка…", "Жүктөлүүдө…")}</div></div>
       ) : (
         <>
-          {/* Менеджерский поток — только офис-ролям. */}
-          {!isCoachViewer && (
-            <>
-              {sectionTitle(
-                t("Комментарии менеджеров", "Менеджерлердин комментарийлери"),
-                t("Видят только сотрудники офиса", "Офис кызматкерлерине гана"),
-              )}
-              {officeComments.length === 0
-                ? <div style={{ fontSize: 12.5, color: "var(--muted)", padding: "4px 0 8px" }}>{t("Пока нет", "Азырынча жок")}</div>
-                : renderList(officeComments)}
-            </>
+          {/* Комментарии администрации — видны всем сотрудникам (ТЗ §3.2). */}
+          {sectionTitle(
+            t("Комментарии администрации", "Администрациянын комментарийлери"),
+            t("Видят все сотрудники: офис и тренеры ребёнка", "Бардык кызматкерлер көрөт: офис жана баланын тренерлери"),
           )}
+          {officeComments.length === 0
+            ? <div style={{ fontSize: 12.5, color: "var(--muted)", padding: "4px 0 8px" }}>{t("Пока нет", "Азырынча жок")}</div>
+            : renderList(officeComments)}
           {sectionTitle(
             t("Комментарии тренера", "Тренердин комментарийлери"),
             isCoachViewer

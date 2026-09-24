@@ -16,7 +16,22 @@ if (!isSupabaseConfigured) {
   );
 }
 
-export const supabase = createClient(url || "http://127.0.0.1:54321", anonKey || "demo-anon-key", {
+// Демо-режим: вместо сети отвечаем «пустой базой», чтобы экраны показывали
+// «нет данных», а не ошибки соединения. Одиночная запись → null, список → [].
+const demoFetch: typeof fetch = async (input, init) => {
+  const headers = new Headers(init?.headers);
+  const accept = headers.get("Accept") ?? "";
+  const reqUrl = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
+  const isObject = accept.includes("vnd.pgrst.object");
+  const body = init?.method === "HEAD" ? null : isObject ? "null" : "[]";
+  return new Response(body, {
+    status: reqUrl.includes("/auth/v1/") ? 401 : 200,
+    headers: { "Content-Type": "application/json", "Content-Range": "*/0" },
+  });
+};
+
+export const supabase = createClient(url || "http://demo.invalid", anonKey || "demo-anon-key", {
+  global: isSupabaseConfigured ? undefined : { fetch: demoFetch },
   auth: {
     persistSession: isSupabaseConfigured,
     autoRefreshToken: isSupabaseConfigured,

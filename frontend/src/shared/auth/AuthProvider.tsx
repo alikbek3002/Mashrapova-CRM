@@ -27,8 +27,16 @@ type AuthState = {
   signOut: () => Promise<void>;
   /** Демо-режим (нет ключей Supabase): вход по роли без пароля. */
   demoMode: boolean;
-  signInDemo: (role: AppRole) => void;
+  /** Демо-вход тестовым аккаунтом. false — логин/пароль не подошли. */
+  signInDemo: (login: string, password: string, remember: boolean) => boolean;
 };
+
+/** Тестовые аккаунты демо-режима (без базы). Телефон в E.164. */
+export const DEMO_ACCOUNTS: { phone: string; password: string; role: AppRole }[] = [
+  { phone: "+996700000000", password: "123456", role: "director" },
+  { phone: "+996700000001", password: "123456", role: "coach" },
+  { phone: "+996700000002", password: "123456", role: "parent" },
+];
 
 const DEMO_KEY = "uq_demo_role";
 
@@ -52,7 +60,7 @@ const makeDemoUser = (role: AppRole): AppUser => ({
 
 const readDemoUser = (): AppUser | null => {
   try {
-    const r = localStorage.getItem(DEMO_KEY) as AppRole | null;
+    const r = (localStorage.getItem(DEMO_KEY) ?? sessionStorage.getItem(DEMO_KEY)) as AppRole | null;
     return r && r in DEMO_NAMES ? makeDemoUser(r) : null;
   } catch {
     return null;
@@ -122,14 +130,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     };
   }, []);
 
-  const signInDemo = (role: AppRole) => {
-    try { localStorage.setItem(DEMO_KEY, role); } catch {}
-    setUser(makeDemoUser(role));
+  const signInDemo = (login: string, password: string, remember: boolean) => {
+    const digits = login.replace(/\D/g, "");
+    const acc = DEMO_ACCOUNTS.find(
+      (a) => a.password === password && digits.length >= 9 && a.phone.endsWith(digits.slice(-9)),
+    );
+    if (!acc) return false;
+    try { (remember ? localStorage : sessionStorage).setItem(DEMO_KEY, acc.role); } catch {}
+    setUser(makeDemoUser(acc.role));
+    return true;
   };
 
   const signOut = async () => {
     if (!isSupabaseConfigured) {
-      try { localStorage.removeItem(DEMO_KEY); } catch {}
+      try { localStorage.removeItem(DEMO_KEY); sessionStorage.removeItem(DEMO_KEY); } catch {}
       setUser(null);
       return;
     }

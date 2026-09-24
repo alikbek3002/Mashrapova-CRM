@@ -32,10 +32,26 @@ export const KidsPage = ({ lang }: { lang: Lang }) => {
     return groups.filter((g: any) => g.section_id === sectionId);
   }, [groups, sectionId]);
 
+  // Поиск по ТЗ §3.1: ФИО ученика, ФИО родителя, телефон, номер карты / ID.
   const rows = useMemo(() => {
     const qq = q.trim().toLowerCase();
+    const qDigits = qq.replace(/\D/g, "");
+    // Телефон сравниваем по последним 9 цифрам — «+996 555…», «0555…» и «555…» совпадут.
+    const qPhone = qDigits.length >= 3 ? qDigits.slice(-9) : "";
+    const phoneMatch = (ph?: string | null) => !!ph && !!qPhone && ph.replace(/\D/g, "").includes(qPhone);
     return kids.filter((k) => {
-      if (qq && !k.full_name.toLowerCase().includes(qq)) return false;
+      if (qq) {
+        const f = k.family;
+        const hit =
+          k.full_name.toLowerCase().includes(qq) ||
+          (f?.father_name ?? "").toLowerCase().includes(qq) ||
+          (f?.mother_name ?? "").toLowerCase().includes(qq) ||
+          phoneMatch(f?.father_phone) ||
+          phoneMatch(f?.mother_phone) ||
+          (k.card_number ?? "").toLowerCase().includes(qq) ||
+          k.id.toLowerCase().startsWith(qq);
+        if (!hit) return false;
+      }
       const active = (k.enrollments ?? []).filter((e) => e.archived_at == null);
       if (noGroupOnly && active.length > 0) return false;
       if (sectionId !== "all" && !active.some((e) => e.group?.section_id === sectionId)) return false;
@@ -73,7 +89,7 @@ export const KidsPage = ({ lang }: { lang: Lang }) => {
 
       <div className="card">
         <div className="toolbar" style={{ flexWrap: "wrap", gap: 8 }}>
-          <SearchBox value={q} onChange={setQ} placeholder={t("Поиск по имени…", "Аты боюнча издөө…")} />
+          <SearchBox value={q} onChange={setQ} placeholder={t("Имя ребёнка или родителя, телефон, номер карты…", "Баланын же ата-эненин аты, телефон, карта номери…")} />
           <select
             value={sectionId}
             onChange={(e) => { setSectionId(e.target.value); setGroupId("all"); }}
