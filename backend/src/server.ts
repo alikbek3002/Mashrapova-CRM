@@ -7,6 +7,7 @@ import multipart from "@fastify/multipart";
 
 import { env, isOriginAllowed, corsOriginList } from "./lib/env.js";
 import { ensureLessonHorizon } from "./lib/lesson-generator.js";
+import { dispatchOutbound } from "./lib/outbound.js";
 import { initSentry, Sentry } from "./lib/sentry.js";
 import { healthRoute } from "./routes/health.js";
 import { cardsRoutes } from "./routes/v1/cards.js";
@@ -104,6 +105,24 @@ const runLifecycle = async () => {
     if (remErr) app.log.warn({ err: remErr }, "pt_reminders_tick_failed");
   } catch (e) {
     app.log.warn({ err: e }, "pt_lifecycle_tick_threw");
+  }
+  // ТЗ §4.5 и §8.3: события по сроку абонемента и нормативы воронки.
+  // Идемпотентны, дубли не создают.
+  try {
+    const { error: noticeErr } = await supabaseAdmin.rpc("refresh_card_notices");
+    if (noticeErr) app.log.warn({ err: noticeErr }, "card_notices_tick_failed");
+    const { error: slaErr } = await supabaseAdmin.rpc("refresh_lead_sla");
+    if (slaErr) app.log.warn({ err: slaErr }, "lead_sla_tick_failed");
+  } catch (e) {
+    app.log.warn({ err: e }, "notices_tick_threw");
+  }
+  // ТЗ §9: разбор очереди исходящих. Пока SMS_PROVIDER=noop сообщения
+  // помечаются пропущенными — очередь не растёт бесконечно, и по ней
+  // видно, сколько SMS ушло бы с подключённым провайдером.
+  try {
+    await dispatchOutbound(app.log);
+  } catch (e) {
+    app.log.warn({ err: e }, "outbound_dispatch_tick_threw");
   }
   // Горизонт занятий: по каждой активной группе занятия существуют от
   // сегодня до max(+30 дней, конец самого дальнего окна записи).
