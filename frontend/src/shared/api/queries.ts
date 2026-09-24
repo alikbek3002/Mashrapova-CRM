@@ -1909,6 +1909,98 @@ export const useClientsAtRisk = (limit = 50) =>
     },
   });
 
+// ======================================================================
+// Отчёты §11.2 и §11.3. Считает SQL: собирать посещаемость на клиенте —
+// значит выгружать таблицу attendance целиком (нынешний
+// useAttendanceBySection упирается в limit 5000 и врёт на больших
+// периодах).
+// ======================================================================
+export type SalesBySection = {
+  section_id: string;
+  name_ru: string;
+  name_ky: string;
+  cards_sold: number;
+  revenue: number;
+  avg_check: number;
+};
+
+export const useSalesBySection = (from: string, to: string) =>
+  useQuery({
+    queryKey: ["sales_by_section", from, to],
+    queryFn: async (): Promise<SalesBySection[]> => {
+      const { data, error } = await supabase.rpc("sales_by_section", { p_from: from, p_to: to });
+      if (error) throw error;
+      return (data ?? []) as SalesBySection[];
+    },
+  });
+
+export type AttendanceByGroup = {
+  group_id: string;
+  group_name: string;
+  section_name: string;
+  coach_name: string | null;
+  lessons_held: number;
+  visits: number;
+  misses: number;
+  attendance_pct: number | null;
+};
+
+export const useAttendanceByGroup = (from: string, to: string) =>
+  useQuery({
+    queryKey: ["attendance_by_group", from, to],
+    queryFn: async (): Promise<AttendanceByGroup[]> => {
+      const { data, error } = await supabase.rpc("attendance_by_group", { p_from: from, p_to: to });
+      if (error) throw error;
+      return (data ?? []) as AttendanceByGroup[];
+    },
+  });
+
+export type AttendanceByChild = {
+  child_id: string;
+  full_name: string;
+  visits: number;
+  misses: number;
+  last_visit: string | null;
+  per_week: number;
+  attendance_pct: number | null;
+};
+
+export const useAttendanceByChild = (from: string, to: string) =>
+  useQuery({
+    queryKey: ["attendance_by_child", from, to],
+    queryFn: async (): Promise<AttendanceByChild[]> => {
+      const { data, error } = await supabase.rpc("attendance_by_child", { p_from: from, p_to: to });
+      if (error) throw error;
+      return (data ?? []) as AttendanceByChild[];
+    },
+  });
+
+export type PayrollDetailRow = {
+  lesson_id: string;
+  lesson_date: string;
+  group_id: string;
+  group_name: string;
+  section_name: string;
+  visits: number;
+  amount: number;
+  rate_source: string;
+};
+
+// ТЗ §11.4: детализация начисления по занятиям и группам. Грузится
+// только по клику на тренера — таблица занятий за месяц большая.
+export const usePayrollDetail = (coachId: string | null, from: string, to: string) =>
+  useQuery({
+    queryKey: ["payroll_detail", coachId, from, to],
+    enabled: !!coachId,
+    queryFn: async (): Promise<PayrollDetailRow[]> => {
+      const { data, error } = await supabase.rpc("payroll_detail", {
+        p_coach: coachId, p_from: from, p_to: to,
+      });
+      if (error) throw error;
+      return (data ?? []) as PayrollDetailRow[];
+    },
+  });
+
 export const useStats = () =>
   useQuery({
     queryKey: ["stats"],
