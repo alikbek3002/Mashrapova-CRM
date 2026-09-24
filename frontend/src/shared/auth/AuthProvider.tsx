@@ -13,6 +13,8 @@ export type AppRole =
   | "parent";
 
 export type AppUser = {
+  /** ТЗ §12.3: роль обязывает пройти второй фактор (директор, управляющий). */
+  mfa_required?: boolean;
   id: string;
   email: string | null;
   role: AppRole;
@@ -75,7 +77,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const loadProfile = async (uid: string) => {
       const { data, error } = await supabase
         .from("profiles")
-        .select("id, email, role, organization_id, full_name")
+        // mfa_required нужен экрану второго фактора (ТЗ §12.3): по нему
+        // решается, обязателен ли он для этой роли.
+        .select("id, email, role, organization_id, full_name, mfa_required")
         .eq("id", uid)
         .maybeSingle();
       if (cancelled) return;

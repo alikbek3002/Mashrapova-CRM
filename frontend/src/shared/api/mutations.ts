@@ -311,6 +311,24 @@ export const useUpdateCoachRate = () => {
   });
 };
 
+// ТЗ §12.3: сброс второго фактора сотруднику. Доступно только директору
+// (проверяет бэкенд). Нужен, потому что политика mfa_required требует
+// aal2 — с потерянным телефоном сотрудник иначе заперт навсегда.
+export const useResetMfa = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (userId: string) =>
+      apiPost<{ ok: boolean; removed: number }>(`/v1/staff/${userId}/reset-mfa`, {}),
+    onSuccess: (r) => {
+      qc.invalidateQueries({ queryKey: ["users"] });
+      toast.ok(Number(r?.removed ?? 0) > 0
+        ? "Второй фактор сброшен — сотрудник настроит его заново при входе"
+        : "У сотрудника не было настроенного второго фактора");
+    },
+    onError: (e: Error) => toast.err("Ошибка: " + e.message),
+  });
+};
+
 // Перезаписывает набор секций тренера (delete-all + insert).
 export const useSetCoachSections = () => {
   const qc = useQueryClient();

@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import type { Lang } from "../data";
 import { PageHeader, EmptyState } from "./common";
 import { useOrganization, useUsers, useAuditLog, useOrgSettings } from "../shared/api/queries";
-import { useUpdateOrgSettings } from "../shared/api/mutations";
+import { useUpdateOrgSettings, useResetMfa } from "../shared/api/mutations";
 import { supabase } from "../shared/api/supabase";
 import { usePerm } from "../shared/auth/rbac";
 
@@ -214,6 +214,7 @@ const DiscountsTab = ({ lang }: { lang: Lang }) => {
 const UsersTab = ({ lang }: { lang: Lang }) => {
   const t = (ru: string, ky: string) => (lang === "ru" ? ru : ky);
   const { data: users = [], isLoading, refetch } = useUsers();
+  const resetMfa = useResetMfa();
 
   const toggleActive = async (id: string, current: boolean) => {
     await supabase.from("profiles").update({ is_active: !current }).eq("id", id);
@@ -230,6 +231,7 @@ const UsersTab = ({ lang }: { lang: Lang }) => {
             <th>{t("Email", "Email")}</th>
             <th>{t("Роль", "Роль")}</th>
             <th>{t("Активен", "Активдүү")}</th>
+            <th>{t("2FA", "2FA")}</th>
             <th></th>
           </tr>
         </thead>
@@ -242,10 +244,37 @@ const UsersTab = ({ lang }: { lang: Lang }) => {
               <td>
                 {u.is_active ? <span className="pill pill--active">{t("Да", "Ооба")}</span> : <span className="pill pill--archived">{t("Нет", "Жок")}</span>}
               </td>
+              <td>
+                {/* ТЗ §12.3: второй фактор обязателен директору и управляющему */}
+                {(u as { mfa_required?: boolean }).mfa_required
+                  ? <span className="pill pill--active">{t("обязателен", "милдеттүү")}</span>
+                  : <span style={{ color: "var(--muted-2)", fontSize: 12 }}>—</span>}
+              </td>
               <td style={{ textAlign: "right" }}>
-                <button className="btn btn--ghost" style={{ padding: "6px 10px", fontSize: 12 }} onClick={() => toggleActive(u.id, u.is_active)}>
-                  {u.is_active ? t("Деактивировать", "Деактивдештирүү") : t("Активировать", "Активдештирүү")}
-                </button>
+                <div style={{ display: "flex", gap: 4, justifyContent: "flex-end" }}>
+                  {/* Потерянный телефон иначе означает необратимую блокировку:
+                      политика mfa_required требует aal2, а пройти его нечем. */}
+                  {(u as { mfa_required?: boolean }).mfa_required && (
+                    <button
+                      className="btn btn--ghost"
+                      style={{ padding: "6px 10px", fontSize: 12 }}
+                      title={t("Сбросить второй фактор — сотрудник настроит его заново при входе",
+                               "Экинчи факторду тазалоо")}
+                      disabled={resetMfa.isPending}
+                      onClick={() => {
+                        if (confirm(t(
+                          `Сбросить второй фактор у «${u.full_name}»? При следующем входе система попросит настроить его заново.`,
+                          `«${u.full_name}» үчүн экинчи факторду тазалайбызбы?`,
+                        ))) resetMfa.mutate(u.id);
+                      }}
+                    >
+                      {t("Сбросить 2FA", "2FA тазалоо")}
+                    </button>
+                  )}
+                  <button className="btn btn--ghost" style={{ padding: "6px 10px", fontSize: 12 }} onClick={() => toggleActive(u.id, u.is_active)}>
+                    {u.is_active ? t("Деактивировать", "Деактивдештирүү") : t("Активировать", "Активдештирүү")}
+                  </button>
+                </div>
               </td>
             </tr>
           ))}

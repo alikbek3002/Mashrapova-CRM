@@ -7,6 +7,7 @@ import { I18N, BrandLogo } from "./data";
 import type { Lang } from "./data";
 import { AuthProvider, useAuth } from "./shared/auth/AuthProvider";
 import { Login } from "./shared/auth/Login";
+import { MfaGate } from "./shared/auth/MfaGate";
 import { ToastHost } from "./shared/ui/toast";
 
 // Code-splitting по роли: каждый persona-экран — отдельный чанк. Тренер/родитель
@@ -194,6 +195,9 @@ const Shell = () => {
     user.role === "cashier";
 
   return (
+    // ТЗ §12.3: между входом и приложением — второй фактор. Директора и
+    // управляющего он не пускает дальше, пока тот не настроен.
+    <MfaGate lang={lang}>
     <div className="cards-bordered">
       <div className={`app-chrome ${isPwaRole ? "app-chrome--pwa" : ""}`}>
         <div className="app-chrome__inner">
@@ -247,6 +251,7 @@ const Shell = () => {
         {user.role === "parent" && <ParentScreen lang={lang} />}
       </Suspense>
     </div>
+    </MfaGate>
   );
 };
 
