@@ -123,13 +123,17 @@ export const payrollRoutes = async (app: FastifyInstance) => {
   // Live payroll: на каждого тренера актуальная ставка-факт за текущий
   // месяц (по present-отметкам) + прогноз до конца месяца (по будущим
   // scheduled занятиям и активным картам). Используется в дашборде
-  // зарплат и виджете тренера. Кассир тоже видит.
+  // зарплат. Доступ — от старшего менеджера (ТЗ §2.2).
   app.get(
     "/v1/payroll/live",
     {
       preHandler: [
         authenticate,
-        requireRole("director", "fitness_director", "senior_manager", "manager", "cashier"),
+        // ТЗ §2.2: финансовые отчёты — от старшего менеджера и выше.
+        // Менеджер и ресепшен видели живые зарплаты тренеров, хотя по
+        // матрице у них «Финансовые отчёты ❌». Зеркалит фильтр во
+        // view v_coach_live_payroll (20260926000011).
+        requireRole("director", "fitness_director", "senior_manager"),
       ],
     },
     async (req, reply) => {

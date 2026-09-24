@@ -134,13 +134,20 @@ export const RBAC: Record<AppRole, Permission[]> = {
     "view_pt", "sell_pt",
   ],
 
-  // Cashier — read-only on clients + receive payment. Видит live-зарплаты
-  // тренеров (просмотр без правок).
+  // Ресепшен / кассир — ТЗ §2.1: «приём оплаты, расписание, базовая
+  // работа с клиентами». По матрице §2.2 у него ❌ на продажи,
+  // редактирование клиентов и финансовые отчёты.
+  //
+  // Убрано при сверке с матрицей:
+  //   view_payroll — зарплаты тренеров это финансовые данные (§2.2
+  //     «Финансовые отчёты ❌»), а ресепшен видел их живьём;
+  //   sell_pt — продажа персональных тренировок это продажа (§2.2
+  //     «Продажи ❌»). Противоречило и самому набору: sell_cards у
+  //     ресепшена не было.
   cashier: [
     ...ALL_OFFICE,
     "receive_payment", "correct_payments",
-    "view_payroll",
-    "view_pt", "sell_pt",
+    "view_pt",
   ],
 
   // Coach — own schedule + see own payroll. Заморозки у тренера НЕТ
@@ -172,3 +179,67 @@ export const usePerm = (perm: Permission): boolean => {
   const { user } = useAuth();
   return can(user?.role, perm);
 };
+
+// =====================================================================
+// Матрица прав доступа ТЗ §2.2 — в коде, а не только в документе
+//
+// Таблица из ТЗ перенесена сюда буквально, строка в строку. Смысл не в
+// том, чтобы продублировать RBAC, а в том, чтобы расхождение с ТЗ было
+// видно сразу, а не находилось сверкой вручную через полгода. Проверка
+// гоняется только в dev — в проде это мёртвый код, который выкинет
+// сборщик.
+//
+// Колонки: директор, управляющий, ст. менеджер, менеджер, ресепшен.
+// =====================================================================
+const TZ_ROLES = ["director", "fitness_director", "senior_manager", "manager", "cashier"] as const;
+
+const TZ_MATRIX: Array<{ row: string; perm: Permission; allow: readonly boolean[] }> = [
+  { row: "Просмотр клиентов",        perm: "view_kids",             allow: [true,  true,  true,  true,  true]  },
+  { row: "Редактирование клиентов",  perm: "edit_kids",             allow: [true,  true,  true,  true,  false] },
+  { row: "Продажи",                  perm: "sell_cards",            allow: [true,  true,  true,  true,  false] },
+  { row: "Возврат с удержанием 30%", perm: "refund_with_30pct",     allow: [true,  true,  true,  true,  false] },
+  { row: "Возврат без удержания",    perm: "cancel_30pct",          allow: [true,  true,  true,  false, false] },
+  { row: "Ставки тренеров",          perm: "manage_coach_rates",    allow: [true,  true,  false, false, false] },
+  { row: "Утверждение зарплат",      perm: "approve_payroll",       allow: [true,  true,  false, false, false] },
+  { row: "Финансовые отчёты",        perm: "view_finance_reports",  allow: [true,  true,  true,  false, false] },
+  { row: "Управление расписанием",   perm: "manage_schedule",       allow: [true,  true,  true,  false, false] },
+  { row: "Настройки системы",        perm: "system_settings",       allow: [true,  false, false, false, false] },
+];
+
+/**
+ * Строки, где отклонение от матрицы сделано осознанно и согласовано.
+ * Каждая — с причиной: без неё исключение через полгода не отличить от
+ * забытой ошибки.
+ */
+const TZ_EXCEPTIONS: Record<string, string> = {
+  "Управление расписанием/manager":
+    "Противоречие внутри ТЗ: матрица §2.2 запрещает, а §5.3 прямо говорит " +
+    "«менеджер вносит изменение и указывает причину» про отмену и перенос. " +
+    "Оставлено как есть до ответа Академии (вопрос 3 в плане адаптации). " +
+    "В базе can_manage_schedule() менеджера НЕ пускает — расписание он правит " +
+    "через бэкенд, который ходит под service_role.",
+};
+
+export const auditRbacAgainstTz = (): string[] => {
+  const problems: string[] = [];
+  for (const { row, perm, allow } of TZ_MATRIX) {
+    TZ_ROLES.forEach((role, i) => {
+      const actual = RBAC[role].includes(perm);
+      const expected = allow[i]!;
+      if (actual === expected) return;
+      if (TZ_EXCEPTIONS[`${row}/${role}`]) return;
+      problems.push(
+        `ТЗ §2.2 «${row}» для роли ${role}: ожидается ${expected ? "✅" : "❌"}, ` +
+        `в RBAC ${actual ? "✅" : "❌"}`,
+      );
+    });
+  }
+  return problems;
+};
+
+if (import.meta.env.DEV) {
+  const problems = auditRbacAgainstTz();
+  if (problems.length > 0) {
+    console.warn("[rbac] расхождения с матрицей ТЗ §2.2:\n" + problems.join("\n"));
+  }
+}

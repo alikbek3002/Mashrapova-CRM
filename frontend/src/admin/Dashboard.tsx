@@ -175,7 +175,8 @@ export const DashboardPage = ({ lang }: { lang: Lang }) => {
       </div>
 
       <div className="dash-grid">
-        <CoachPayrollCard lang={lang} />
+        {/* ТЗ §2.2: зарплаты — финансовые данные, от старшего менеджера */}
+        {canSeeFinance && <CoachPayrollCard lang={lang} />}
         <AttendanceCard lang={lang} t={t} />
       </div>
 
@@ -441,6 +442,8 @@ const KidsBySectionCard = ({ lang }: { lang: Lang }) => {
 // Coach payroll — сколько каждый тренер уже заработал в этом месяце (live)
 // =============================================================
 const CoachPayrollCard = ({ lang }: { lang: Lang }) => {
+  // Карточка рендерится только при праве view_finance_reports (ТЗ §2.2);
+  // запрос у остальных даже не уходит — эндпоинт им ответит 403.
   const { data = [], isLoading } = useLivePayroll();
   const tt = (ru: string, ky: string) => (lang === "ru" ? ru : ky);
   // Сначала те, кто заработал сегодня, затем по месяцу.
