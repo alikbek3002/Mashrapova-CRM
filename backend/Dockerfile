@@ -1,4 +1,4 @@
-# Multi-stage сборка бэкенда (Fastify). Прод-запуск на Hetzner через docker compose.
+# Multi-stage сборка бэкенда (Fastify).
 FROM node:22-alpine AS build
 WORKDIR /app
 COPY package.json package-lock.json ./

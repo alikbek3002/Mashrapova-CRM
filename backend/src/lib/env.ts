@@ -26,12 +26,6 @@ const schema = z.object({
   MINIO_SECRET_KEY: z.string().optional(),
   MINIO_BUCKET: z.string().optional(),               // имя bucket (например "avatars")
   MINIO_PUBLIC_URL: z.string().optional(),           // публичный префикс. По умолчанию = MINIO_ENDPOINT
-
-  // Турникеты Hikvision: секрет для приёма событий на /v1/hik/*.
-  // Не задан — роуты отвечают 503 (интеграция выключена).
-  HIK_INGEST_SECRET: z.string().min(16).optional(),
-  // Внутренний адрес ISUP-сервиса (docker-сеть) — команды двери и заливка лиц.
-  ISUP_API_URL: z.string().default("http://isup:8080"),
 });
 
 const parsed = schema.safeParse(process.env);

@@ -3,22 +3,9 @@ import type { CSSProperties, ReactElement } from "react";
 export type Lang = "ru" | "ky";
 export type Role = "admin" | "coach" | "parent";
 
-// 4 направления (категории) с лендинга uniqumsport.kg
-export type DirectionId = "lfk" | "gym" | "mart" | "dev";
+// Направления (sections.category): единоборства и фитнес-зона
+export type DirectionId = "mart" | "fit";
 
-// 11 реальных секций
-export type SectionId =
-  | "lfk_spine"
-  | "lfk_posture"
-  | "lfk_pelvic"
-  | "gym_sport"
-  | "gym_acro"
-  | "gym_aero"
-  | "gym_aest"
-  | "mart_judo"
-  | "mart_tkd"
-  | "mart_box"
-  | "dev";
 
 export type AttStatus = "present" | "absent" | "excused" | "late" | "makeup";
 export type LeadStage = "new" | "trial" | "waiting";
@@ -30,35 +17,20 @@ export const I18N = {
     roles: {
       admin: "Администрация",
       director: "Директор",
-      fitness_director: "Фитнес-директор",
+      fitness_director: "Управляющий",
       senior_manager: "Старший менеджер",
       manager: "Менеджер",
-      cashier: "Кассир",
+      cashier: "Ресепшен",
       coach: "Тренер",
       parent: "Родитель",
     },
     directions: {
-      lfk: "ЛФК",
-      gym: "Гимнастика",
       mart: "Единоборства",
-      dev: "Развивающая гимнастика",
-    },
-    sections: {
-      lfk_spine: "Здоровая спина и стопы",
-      lfk_posture: "Коррекция осанки",
-      lfk_pelvic: "Коррекция таза, вальгуса, плоскостопия",
-      gym_sport: "Спортивная гимнастика",
-      gym_acro: "Акробатика",
-      gym_aero: "Аэробная гимнастика",
-      gym_aest: "Эстетическая гимнастика",
-      mart_judo: "Дзюдо",
-      mart_tkd: "Тхэквондо ITF",
-      mart_box: "Бокс",
-      dev: "Развивающая гимнастика",
+      fit: "Фитнес-зона",
     },
     admin: {
       title: "Дашборд",
-      subtitle: "Uniqum Sport, Бишкек · сегодня",
+      subtitle: "Академия Машрапова, Ош · сегодня",
       today: "Сегодня",
       newLesson: "Новое занятие",
       nav: {
@@ -148,35 +120,20 @@ export const I18N = {
     roles: {
       admin: "Администрация",
       director: "Директор",
-      fitness_director: "Фитнес-директор",
+      fitness_director: "Башкаруучу",
       senior_manager: "Башкы менеджер",
       manager: "Менеджер",
-      cashier: "Кассир",
+      cashier: "Ресепшен",
       coach: "Тренер",
       parent: "Ата-эне",
     },
     directions: {
-      lfk: "ДДТ",
-      gym: "Гимнастика",
       mart: "Күрөш спорттору",
-      dev: "Өнүктүрүүчү гимнастика",
-    },
-    sections: {
-      lfk_spine: "Дени соо омуртка жана таман",
-      lfk_posture: "Дене сөөктү түздөө",
-      lfk_pelvic: "Таз, вальгус жана жалпак таманды түздөө",
-      gym_sport: "Спорттук гимнастика",
-      gym_acro: "Акробатика",
-      gym_aero: "Аэробдук гимнастика",
-      gym_aest: "Эстетикалык гимнастика",
-      mart_judo: "Дзюдо",
-      mart_tkd: "Тхэквондо ITF",
-      mart_box: "Бокс",
-      dev: "Өнүктүрүүчү гимнастика",
+      fit: "Фитнес-зона",
     },
     admin: {
       title: "Башкы бет",
-      subtitle: "Uniqum Sport, Бишкек · бүгүн",
+      subtitle: "Машрапов академиясы, Ош · бүгүн",
       today: "Бүгүн",
       newLesson: "Жаңы сабак",
       nav: {
@@ -264,366 +221,6 @@ export const I18N = {
   },
 };
 
-export type Direction = { id: DirectionId; color: string; tint: string; dot: string };
-export const DIRECTIONS: Direction[] = [
-  { id: "lfk",  color: "dir-lfk",  tint: "tint-lfk",  dot: "d-lfk"  },
-  { id: "gym",  color: "dir-gym",  tint: "tint-gym",  dot: "d-gym"  },
-  { id: "mart", color: "dir-mart", tint: "tint-mart", dot: "d-mart" },
-  { id: "dev",  color: "dir-dev",  tint: "tint-dev",  dot: "d-dev"  },
-];
-
-export type Section = { id: SectionId; direction: DirectionId; color: string; tint: string; dot: string };
-export const SECTIONS: Section[] = [
-  { id: "lfk_spine",   direction: "lfk",  color: "sec-lfk-spine",   tint: "tint-lfk-spine",   dot: "s-lfk-spine"   },
-  { id: "lfk_posture", direction: "lfk",  color: "sec-lfk-posture", tint: "tint-lfk-posture", dot: "s-lfk-posture" },
-  { id: "lfk_pelvic",  direction: "lfk",  color: "sec-lfk-pelvic",  tint: "tint-lfk-pelvic",  dot: "s-lfk-pelvic"  },
-  { id: "gym_sport",   direction: "gym",  color: "sec-gym-sport",   tint: "tint-gym-sport",   dot: "s-gym-sport"   },
-  { id: "gym_acro",    direction: "gym",  color: "sec-gym-acro",    tint: "tint-gym-acro",    dot: "s-gym-acro"    },
-  { id: "gym_aero",    direction: "gym",  color: "sec-gym-aero",    tint: "tint-gym-aero",    dot: "s-gym-aero"    },
-  { id: "gym_aest",    direction: "gym",  color: "sec-gym-aest",    tint: "tint-gym-aest",    dot: "s-gym-aest"    },
-  { id: "mart_judo",   direction: "mart", color: "sec-mart-judo",   tint: "tint-mart-judo",   dot: "s-mart-judo"   },
-  { id: "mart_tkd",    direction: "mart", color: "sec-mart-tkd",    tint: "tint-mart-tkd",    dot: "s-mart-tkd"    },
-  { id: "mart_box",    direction: "mart", color: "sec-mart-box",    tint: "tint-mart-box",    dot: "s-mart-box"    },
-  { id: "dev",         direction: "dev",  color: "sec-dev",         tint: "tint-dev",         dot: "s-dev"         },
-];
-
-export type Kid = {
-  id: string;
-  name: Bilingual;
-  age: number;
-  sec: SectionId;
-  lessonsLeft: number;
-  total: number;
-  coach: string;
-};
-
-export const KIDS: Kid[] = [
-  { id: "k1",  name: { ru: "Алина Жумабекова",   ky: "Алина Жумабекова" },  age: 7,  sec: "gym_aero", lessonsLeft: 6,  total: 8,  coach: "Юлия" },
-  { id: "k2",  name: { ru: "Тимур Осмонов",       ky: "Тимур Осмонов" },     age: 9,  sec: "gym_sport", lessonsLeft: 3,  total: 8,  coach: "Тимур Бакир" },
-  { id: "k3",  name: { ru: "София Абдыкадыр",     ky: "София Абдыкадыр" },   age: 6,  sec: "gym_aero", lessonsLeft: 2,  total: 8,  coach: "Виталина" },
-  { id: "k4",  name: { ru: "Мирлан Кенжебаев",    ky: "Мирлан Кенжебаев" },  age: 8,  sec: "gym_acro", lessonsLeft: 11, total: 24, coach: "Жанна" },
-  { id: "k5",  name: { ru: "Ева Темирова",        ky: "Ева Темирова" },      age: 7,  sec: "gym_aero", lessonsLeft: 1,  total: 8,  coach: "Палина" },
-  { id: "k6",  name: { ru: "Искендер Бейшеналы",  ky: "Искендер Бейшеналы" },age: 10, sec: "mart_judo", lessonsLeft: 7,  total: 8,  coach: "Борис" },
-  { id: "k7",  name: { ru: "Амина Сулайман",      ky: "Амина Сулайман" },    age: 7,  sec: "gym_aest", lessonsLeft: 5,  total: 8,  coach: "Светлана" },
-  { id: "k8",  name: { ru: "Давид Калыков",       ky: "Давид Калыков" },     age: 8,  sec: "gym_sport", lessonsLeft: 4,  total: 8,  coach: "Тимур Бакир" },
-  { id: "k9",  name: { ru: "Камила Орозбекова",   ky: "Камила Орозбекова" }, age: 6,  sec: "gym_aero", lessonsLeft: 8,  total: 8,  coach: "Юлия" },
-  { id: "k10", name: { ru: "Максим Жакыпов",      ky: "Максим Жакыпов" },    age: 9,  sec: "gym_acro", lessonsLeft: 2,  total: 8,  coach: "Палина" },
-  { id: "k11", name: { ru: "Айлин Нурланова",     ky: "Айлин Нурланова" },   age: 7,  sec: "gym_aero", lessonsLeft: 4,  total: 8,  coach: "Юлия" },
-  { id: "k12", name: { ru: "Эмир Токтосунов",     ky: "Эмир Токтосунов" },   age: 8,  sec: "gym_acro", lessonsLeft: 9,  total: 24, coach: "Жанна" },
-];
-
-export type CoachLesson = {
-  id: string;
-  title: Bilingual;
-  sub: Bilingual;
-  time: string;
-  when: Bilingual;
-  enrolled: number;
-  present: number | null;
-  state: "pending" | "done";
-  sec: SectionId;
-  kidIds: string[];
-};
-
-export type CoachGroup = {
-  id: string;
-  name: Bilingual;
-  sec: SectionId;
-  kids: string[];
-  schedule: Bilingual;
-};
-
-export const ME_COACH = {
-  name: { ru: "Юлия Исакова", ky: "Юлия Исакова" } as Bilingual,
-  short: "ЮИ",
-  section: "gym_aero" as SectionId,
-  groups: [
-    {
-      id: "g1",
-      name: { ru: "Ритмическая · 6–7 лет", ky: "Ритмикалык · 6–7 жаш" },
-      sec: "gym_aero" as SectionId,
-      kids: ["k1", "k9", "k11", "k5"],
-      schedule: { ru: "Пн / Ср / Пт · 16:00", ky: "Дш / Ша / Жм · 16:00" },
-    },
-    {
-      id: "g2",
-      name: { ru: "Ритмическая · 8–9 лет", ky: "Ритмикалык · 8–9 жаш" },
-      sec: "gym_aero" as SectionId,
-      kids: ["k3"],
-      schedule: { ru: "Пн / Ср / Пт · 17:30", ky: "Дш / Ша / Жм · 17:30" },
-    },
-  ] as CoachGroup[],
-  todayLessons: [
-    { id: "l1", title: { ru: "Группа «Звёздочки»", ky: "«Жылдызчалар»" }, sub: { ru: "Ритмическая · Зал 2", ky: "Ритмикалык · 2-зал" }, time: "16:00", when: { ru: "сегодня", ky: "бүгүн" }, enrolled: 8, present: null, state: "pending", sec: "gym_aero", kidIds: ["k1", "k9", "k11", "k5"] },
-    { id: "l2", title: { ru: "Группа «Грация»", ky: "«Грация»" }, sub: { ru: "Ритмическая · Зал 2", ky: "Ритмикалык · 2-зал" }, time: "17:30", when: { ru: "сегодня", ky: "бүгүн" }, enrolled: 6, present: null, state: "pending", sec: "gym_aero", kidIds: ["k3"] },
-    { id: "l3", title: { ru: "Индивидуальная · Ева Т.", ky: "Жеке · Ева Т." }, sub: { ru: "Мини-группа", ky: "Мини-топ" }, time: "19:00", when: { ru: "сегодня", ky: "бүгүн" }, enrolled: 1, present: null, state: "pending", sec: "gym_aero", kidIds: ["k5"] },
-  ] as CoachLesson[],
-};
-
-export type ParentKid = Kid & { short: string; color: string };
-
-export const ME_PARENT = {
-  name: { ru: "Айгуль", ky: "Айгүл" } as Bilingual,
-  kids: [
-    { ...KIDS[0], short: "АЖ", color: "linear-gradient(135deg, oklch(0.85 0.17 90), oklch(0.63 0.22 25))" },
-    { ...KIDS[3], short: "МК", color: "linear-gradient(135deg, oklch(0.56 0.17 252), oklch(0.72 0.16 160))" },
-  ] as ParentKid[],
-  upcomingLessons: [
-    { id: "ul1", kid: "k1", title: { ru: "Ритмическая", ky: "Ритмикалык" }, sub: { ru: "Тренер Юлия · Зал 2", ky: "Тренер Юлия · 2-зал" }, wd: { ru: "СР", ky: "ША" }, d: 29, time: "16:00–17:30" },
-    { id: "ul2", kid: "k1", title: { ru: "Ритмическая", ky: "Ритмикалык" }, sub: { ru: "Тренер Юлия · Зал 2", ky: "Тренер Юлия · 2-зал" }, wd: { ru: "ПТ", ky: "ЖМ" }, d: 1,  time: "16:00–17:30" },
-    { id: "ul3", kid: "k1", title: { ru: "Открытый урок", ky: "Ачык сабак" }, sub: { ru: "Для родителей · Зал 1", ky: "Ата-энелер · 1-зал" }, wd: { ru: "СБ", ky: "ИШ" }, d: 2,  time: "11:00–12:00" },
-  ],
-  achievements: [
-    {
-      id: "a1",
-      title: { ru: "Мост с ноги — выполнен!", ky: "Көпүрө бутунан — аткарылды!" },
-      by: { ru: "Тренер Юлия · 22 апреля", ky: "Тренер Юлия · 22 апрель" },
-      medal: "gold" as const,
-    },
-    {
-      id: "a2",
-      title: { ru: "Шпагат поперечный — 80%", ky: "Тик шпагат — 80%" },
-      by: { ru: "Тренер Юлия · 15 апреля", ky: "Тренер Юлия · 15 апрель" },
-      medal: "silver" as const,
-    },
-    {
-      id: "a3",
-      title: { ru: "Первое выступление на отчётном концерте", ky: "Отчёттук концертте биринчи чыгуу" },
-      by: { ru: "Тренер Юлия · 10 апреля", ky: "Тренер Юлия · 10 апрель" },
-      medal: "bronze" as const,
-    },
-  ],
-  coachNote: {
-    ru: "Алина делает большие успехи в растяжке. На этой неделе попробуем колесо с разбега — принесите, пожалуйста, гетры.",
-    ky: "Алина созулууда чоң ийгиликтерге жетишти. Бул жумада чуркап келип дөңгөлөккө аракет кылабыз — гольф алып келсеңиз.",
-  } as Bilingual,
-  payments: [
-    { id: "p1", title: { ru: "Апрель · Ритмическая, 8 занятий", ky: "Апрель · Ритмикалык, 8 сабак" }, date: "02.04.2026", amt: "4 500 с" },
-    { id: "p2", title: { ru: "Март · Ритмическая, 8 занятий", ky: "Март · Ритмикалык, 8 сабак" }, date: "03.03.2026", amt: "4 500 с" },
-    { id: "p3", title: { ru: "Февраль · Ритмическая, 8 занятий", ky: "Февраль · Ритмикалык, 8 сабак" }, date: "05.02.2026", amt: "4 500 с" },
-  ],
-  attendance: {
-    month: { ru: "Апрель 2026", ky: "Апрель 2026" } as Bilingual,
-    days: {
-      1: 1, 3: 1, 6: 1, 8: 1, 10: 1, 13: 2, 15: 3, 17: 1, 20: 1, 22: 1, 24: 4, 27: 5, 29: 0,
-    } as Record<number, number>,
-  },
-};
-
-export type CallItem = {
-  id: string;
-  kidName: Bilingual;
-  parent: Bilingual;
-  phone: string;
-  daysLeft: number;
-  sec: SectionId;
-  done: boolean;
-};
-
-export const CALL_LIST: CallItem[] = [
-  { id: "c1", kidName: { ru: "Ева Темирова",      ky: "Ева Темирова" },      parent: { ru: "Айдай Темирова",    ky: "Айдай Темирова" },    phone: "+996 550 44 ·· 12", daysLeft: 1, sec: "gym_aero", done: true },
-  { id: "c2", kidName: { ru: "София Абдыкадыр",   ky: "София Абдыкадыр" },   parent: { ru: "Асель Абдыкадыр",   ky: "Асель Абдыкадыр" },   phone: "+996 700 22 ·· 45", daysLeft: 2, sec: "gym_aero", done: false },
-  { id: "c3", kidName: { ru: "Максим Жакыпов",     ky: "Максим Жакыпов" },    parent: { ru: "Бектур Жакыпов",    ky: "Бектур Жакыпов" },    phone: "+996 555 19 ·· 80", daysLeft: 3, sec: "gym_acro", done: false },
-  { id: "c4", kidName: { ru: "Тимур Осмонов",      ky: "Тимур Осмонов" },     parent: { ru: "Нурсултан Осмонов", ky: "Нурсултан Осмонов" }, phone: "+996 707 33 ·· 02", daysLeft: 4, sec: "gym_sport", done: false },
-  { id: "c5", kidName: { ru: "Давид Калыков",      ky: "Давид Калыков" },     parent: { ru: "Айсулуу Калыкова",  ky: "Айсулуу Калыкова" },  phone: "+996 500 71 ·· 91", daysLeft: 5, sec: "gym_sport", done: false },
-];
-
-export type Lead = {
-  id: string;
-  kidName: Bilingual;
-  source: string;
-  stage: LeadStage;
-  age: string;
-};
-
-export const LEADS: Lead[] = [
-  { id: "ld1", kidName: { ru: "Асель Маматова, 5 л.",    ky: "Асель Маматова, 5 ж." },   source: "Instagram",   stage: "new",     age: "12 мин" },
-  { id: "ld2", kidName: { ru: "Ислам Тагаев, 7 л.",       ky: "Ислам Тагаев, 7 ж." },      source: "WhatsApp",    stage: "trial",   age: "1 ч"   },
-  { id: "ld3", kidName: { ru: "Милана Уразова, 6 л.",     ky: "Милана Уразова, 6 ж." },    source: "Сарафан",     stage: "waiting", age: "3 ч"   },
-  { id: "ld4", kidName: { ru: "Тамерлан Касымов, 9 л.",   ky: "Тамерлан Касымов, 9 ж." },  source: "Google Ads",  stage: "new",     age: "6 ч"   },
-];
-
-export type Debtor = {
-  id: string;
-  kidName: Bilingual;
-  sum: string;
-  daysLate: number;
-  sec: SectionId;
-};
-
-export const DEBTORS: Debtor[] = [
-  { id: "d1", kidName: { ru: "Мирлан Кенжебаев",  ky: "Мирлан Кенжебаев" },  sum: "3 200 с",  daysLate: 12, sec: "gym_acro" },
-  { id: "d2", kidName: { ru: "Амина Сулайман",    ky: "Амина Сулайман" },    sum: "4 500 с",  daysLate: 8,  sec: "gym_aest" },
-  { id: "d3", kidName: { ru: "Искендер Бейшеналы",ky: "Искендер Бейшеналы" },sum: "6 000 с",  daysLate: 5,  sec: "mart_judo" },
-];
-
-// ============================================================
-// Parents — for the "Родители" admin page
-// ============================================================
-export type Parent = {
-  id: string;
-  name: Bilingual;
-  phone: string;
-  email: string;
-  kids: string[]; // kid ids
-};
-
-export const PARENTS: Parent[] = [
-  { id: "pr1", name: { ru: "Айдай Темирова",    ky: "Айдай Темирова" },    phone: "+996 550 44 12 12", email: "aiday.t@gmail.com",     kids: ["k5"] },
-  { id: "pr2", name: { ru: "Асель Абдыкадыр",   ky: "Асель Абдыкадыр" },   phone: "+996 700 22 45 45", email: "asel.abd@mail.ru",      kids: ["k3"] },
-  { id: "pr3", name: { ru: "Бектур Жакыпов",    ky: "Бектур Жакыпов" },    phone: "+996 555 19 80 80", email: "bektur.j@gmail.com",    kids: ["k10"] },
-  { id: "pr4", name: { ru: "Нурсултан Осмонов", ky: "Нурсултан Осмонов" }, phone: "+996 707 33 02 02", email: "n.osmonov@gmail.com",   kids: ["k2"] },
-  { id: "pr5", name: { ru: "Айсулуу Калыкова",  ky: "Айсулуу Калыкова" },  phone: "+996 500 71 91 91", email: "a.kalykova@mail.ru",    kids: ["k8"] },
-  { id: "pr6", name: { ru: "Айгуль Жумабекова", ky: "Айгүл Жумабекова" },  phone: "+996 555 12 34 56", email: "aigul.j@gmail.com",     kids: ["k1", "k4"] },
-  { id: "pr7", name: { ru: "Чолпон Бейшеналы",  ky: "Чолпон Бейшеналы" },  phone: "+996 770 55 01 23", email: "cholpon.b@mail.ru",     kids: ["k6"] },
-  { id: "pr8", name: { ru: "Бермет Сулайман",   ky: "Бермет Сулайман" },   phone: "+996 501 09 77 88", email: "bermet.s@gmail.com",    kids: ["k7"] },
-  { id: "pr9", name: { ru: "Элида Орозбекова",  ky: "Элида Орозбекова" },  phone: "+996 700 81 11 22", email: "elida.o@mail.ru",       kids: ["k9"] },
-  { id: "pr10", name: { ru: "Гулназ Нурланова", ky: "Гүлназ Нурланова" },  phone: "+996 555 60 30 40", email: "gulnaz.n@gmail.com",    kids: ["k11"] },
-  { id: "pr11", name: { ru: "Санжар Токтосунов",ky: "Санжар Токтосунов" }, phone: "+996 707 45 67 89", email: "sanjar.t@gmail.com",    kids: ["k12"] },
-];
-
-// ============================================================
-// Subscription cards — one per kid
-// ============================================================
-export type CardStatus = "active" | "expiring" | "expired" | "frozen";
-
-export type SubCard = {
-  id: string;
-  kidId: string;
-  sec: SectionId;
-  purchased: string; // date
-  validUntil: string; // date
-  status: CardStatus;
-  price: number; // KGS
-};
-
-export const CARDS: SubCard[] = [
-  { id: "sc1",  kidId: "k1",  sec: "gym_aero", purchased: "01.04.2026", validUntil: "30.04.2026", status: "active",   price: 4500 },
-  { id: "sc2",  kidId: "k2",  sec: "gym_sport", purchased: "26.03.2026", validUntil: "26.04.2026", status: "expiring", price: 5000 },
-  { id: "sc3",  kidId: "k3",  sec: "gym_aero", purchased: "27.03.2026", validUntil: "25.04.2026", status: "expiring", price: 4500 },
-  { id: "sc4",  kidId: "k4",  sec: "gym_acro", purchased: "03.04.2026", validUntil: "03.05.2026", status: "active",   price: 5500 },
-  { id: "sc5",  kidId: "k5",  sec: "gym_aero", purchased: "25.03.2026", validUntil: "24.04.2026", status: "expiring", price: 4500 },
-  { id: "sc6",  kidId: "k6",  sec: "mart_judo", purchased: "10.04.2026", validUntil: "10.05.2026", status: "active",   price: 5000 },
-  { id: "sc7",  kidId: "k7",  sec: "gym_aest", purchased: "05.04.2026", validUntil: "05.05.2026", status: "active",   price: 4800 },
-  { id: "sc8",  kidId: "k8",  sec: "gym_sport", purchased: "15.03.2026", validUntil: "15.04.2026", status: "expired",  price: 5000 },
-  { id: "sc9",  kidId: "k9",  sec: "gym_aero", purchased: "08.04.2026", validUntil: "08.05.2026", status: "active",   price: 4500 },
-  { id: "sc10", kidId: "k10", sec: "gym_acro", purchased: "02.04.2026", validUntil: "02.05.2026", status: "active",   price: 5200 },
-  { id: "sc11", kidId: "k11", sec: "gym_aero", purchased: "14.04.2026", validUntil: "14.05.2026", status: "active",   price: 4500 },
-  { id: "sc12", kidId: "k12", sec: "gym_acro", purchased: "06.04.2026", validUntil: "06.05.2026", status: "frozen",   price: 5500 },
-];
-
-// ============================================================
-// Freezes
-// ============================================================
-export type Freeze = {
-  id: string;
-  kidId: string;
-  sec: SectionId;
-  from: string;
-  until: string;
-  reason: Bilingual;
-};
-
-export const FREEZES: Freeze[] = [
-  { id: "fz1", kidId: "k12", sec: "gym_acro", from: "14.04.2026", until: "28.04.2026", reason: { ru: "Болезнь", ky: "Ооруп калды" } },
-  { id: "fz2", kidId: "k7",  sec: "gym_aest", from: "10.04.2026", until: "24.04.2026", reason: { ru: "Отъезд", ky: "Барбай турат" } },
-  { id: "fz3", kidId: "k4",  sec: "gym_acro", from: "18.04.2026", until: "02.05.2026", reason: { ru: "Травма колена", ky: "Тизе жаракат" } },
-  { id: "fz4", kidId: "k2",  sec: "gym_sport", from: "20.04.2026", until: "04.05.2026", reason: { ru: "Семейные", ky: "Үй-бүлөлүк" } },
-  { id: "fz5", kidId: "k6",  sec: "mart_judo", from: "22.04.2026", until: "06.05.2026", reason: { ru: "Болезнь", ky: "Ооруп калды" } },
-  { id: "fz6", kidId: "k9",  sec: "gym_aero", from: "15.04.2026", until: "22.04.2026", reason: { ru: "Болезнь", ky: "Ооруп калды" } },
-  { id: "fz7", kidId: "k10", sec: "gym_acro", from: "19.04.2026", until: "03.05.2026", reason: { ru: "Соревнования в Алматы", ky: "Алматыда мелдеш" } },
-];
-
-// ============================================================
-// Payments (расширенная история платежей)
-// ============================================================
-export type PayMethod = "cash" | "card" | "mbank" | "optima";
-export type PayStatus = "paid" | "pending" | "refund";
-
-export type PaymentRow = {
-  id: string;
-  date: string;
-  kidId: string;
-  sec: SectionId;
-  period: Bilingual;
-  amount: number;
-  method: PayMethod;
-  status: PayStatus;
-};
-
-export const PAYMENTS: PaymentRow[] = [
-  { id: "py1",  date: "22.04.2026", kidId: "k1",  sec: "gym_aero", period: { ru: "Апрель · 8 занятий", ky: "Апрель · 8 сабак" },    amount: 4500, method: "mbank",  status: "paid" },
-  { id: "py2",  date: "21.04.2026", kidId: "k6",  sec: "mart_judo", period: { ru: "Апрель · 8 занятий", ky: "Апрель · 8 сабак" },    amount: 5000, method: "card",   status: "paid" },
-  { id: "py3",  date: "21.04.2026", kidId: "k10", sec: "gym_acro", period: { ru: "Апрель · 8 занятий", ky: "Апрель · 8 сабак" },    amount: 5200, method: "cash",   status: "paid" },
-  { id: "py4",  date: "20.04.2026", kidId: "k11", sec: "gym_aero", period: { ru: "Апрель · 8 занятий", ky: "Апрель · 8 сабак" },    amount: 4500, method: "optima", status: "paid" },
-  { id: "py5",  date: "20.04.2026", kidId: "k7",  sec: "gym_aest", period: { ru: "Апрель · 8 занятий", ky: "Апрель · 8 сабак" },    amount: 4800, method: "mbank",  status: "paid" },
-  { id: "py6",  date: "18.04.2026", kidId: "k4",  sec: "gym_acro", period: { ru: "Апрель · 24 занятий", ky: "Апрель · 24 сабак" },  amount: 5500, method: "card",   status: "paid" },
-  { id: "py7",  date: "16.04.2026", kidId: "k9",  sec: "gym_aero", period: { ru: "Апрель · 8 занятий", ky: "Апрель · 8 сабак" },    amount: 4500, method: "cash",   status: "paid" },
-  { id: "py8",  date: "14.04.2026", kidId: "k1",  sec: "gym_aero", period: { ru: "Открытый урок", ky: "Ачык сабак" },               amount: 500,  method: "mbank",  status: "pending" },
-  { id: "py9",  date: "12.04.2026", kidId: "k3",  sec: "gym_aero", period: { ru: "Март · 8 занятий", ky: "Март · 8 сабак" },        amount: 4500, method: "card",   status: "refund" },
-  { id: "py10", date: "10.04.2026", kidId: "k12", sec: "gym_acro", period: { ru: "Апрель · 24 занятий", ky: "Апрель · 24 сабак" },  amount: 5500, method: "mbank",  status: "paid" },
-  { id: "py11", date: "08.04.2026", kidId: "k2",  sec: "gym_sport", period: { ru: "Апрель · 8 занятий", ky: "Апрель · 8 сабак" },    amount: 5000, method: "card",   status: "paid" },
-  { id: "py12", date: "05.04.2026", kidId: "k5",  sec: "gym_aero", period: { ru: "Апрель · 8 занятий", ky: "Апрель · 8 сабак" },    amount: 4500, method: "cash",   status: "paid" },
-];
-
-// ============================================================
-// Coaches
-// ============================================================
-export type CoachRow = {
-  id: string;
-  name: Bilingual;
-  short: string;
-  sec: SectionId;
-  groups: number;
-  kids: number;
-  avg: number;
-  exp: number; // years
-};
-
-export const COACHES: CoachRow[] = [
-  { id: "co1", name: { ru: "Юлия Исакова",     ky: "Юлия Исакова" },     short: "ЮИ", sec: "gym_aero", groups: 3, kids: 24, avg: 92, exp: 8 },
-  { id: "co2", name: { ru: "Тимур Бакиров",    ky: "Тимур Бакиров" },    short: "ТБ", sec: "gym_sport", groups: 2, kids: 18, avg: 89, exp: 12 },
-  { id: "co3", name: { ru: "Жанна Асанова",    ky: "Жанна Асанова" },    short: "ЖА", sec: "gym_acro", groups: 2, kids: 16, avg: 81, exp: 6 },
-  { id: "co4", name: { ru: "Светлана Беккулова", ky: "Светлана Беккулова" }, short: "СБ", sec: "gym_aest", groups: 2, kids: 14, avg: 90, exp: 5 },
-  { id: "co5", name: { ru: "Палина Ким",       ky: "Палина Ким" },       short: "ПК", sec: "gym_acro", groups: 2, kids: 12, avg: 76, exp: 4 },
-  { id: "co6", name: { ru: "Борис Семёнов",    ky: "Борис Семёнов" },    short: "БС", sec: "mart_judo", groups: 3, kids: 22, avg: 84, exp: 10 },
-  { id: "co7", name: { ru: "Виталина Орлова",  ky: "Виталина Орлова" },  short: "ВО", sec: "gym_aero", groups: 1, kids: 8,  avg: 88, exp: 3 },
-];
-
-export type CalEvent = {
-  id: string;
-  day: number;
-  start: number;
-  dur: number;
-  title: string;
-  sub: string;
-  sec: SectionId;
-};
-
-export const CAL_EVENTS: CalEvent[] = [
-  { id: "e1", day: 0, start: 1, dur: 1.5, title: "СГ · Тимур", sub: "Группа 1 · 12 детей", sec: "gym_sport" },
-  { id: "e2", day: 0, start: 3, dur: 1.5, title: "РГ · Юлия", sub: "Звёздочки · 8 детей", sec: "gym_aero" },
-  { id: "e3", day: 1, start: 1, dur: 1, title: "АГ · Жанна", sub: "Группа 3", sec: "gym_acro" },
-  { id: "e4", day: 1, start: 2.5, dur: 1.5, title: "ЭГ · Светлана", sub: "10 детей", sec: "gym_aest" },
-  { id: "e5", day: 2, start: 1, dur: 1.5, title: "СГ · Тимур", sub: "Группа 1", sec: "gym_sport" },
-  { id: "e6", day: 2, start: 3, dur: 1.5, title: "РГ · Юлия", sub: "Звёздочки", sec: "gym_aero" },
-  { id: "e7", day: 2, start: 5, dur: 1, title: "КА · Палина", sub: "Группа 2", sec: "gym_acro" },
-  { id: "e8", day: 3, start: 1.5, dur: 1, title: "ЕБ · Борис", sub: "Группа 1", sec: "mart_judo" },
-  { id: "e9", day: 3, start: 3, dur: 1.5, title: "АГ · Жанна", sub: "Группа 3", sec: "gym_acro" },
-  { id: "e10", day: 4, start: 1, dur: 1.5, title: "СГ · Тимур", sub: "Группа 1", sec: "gym_sport" },
-  { id: "e11", day: 4, start: 3, dur: 1.5, title: "РГ · Юлия", sub: "Звёздочки", sec: "gym_aero" },
-  { id: "e12", day: 4, start: 5, dur: 1, title: "ЕБ · Борис", sub: "Группа 2", sec: "mart_judo" },
-  { id: "e13", day: 5, start: 0.5, dur: 1, title: "Открытый урок", sub: "Все секции", sec: "gym_aest" },
-  { id: "e14", day: 5, start: 2, dur: 1.5, title: "КА · Палина", sub: "Сборная", sec: "gym_acro" },
-];
-
-// Посещаемость по направлениям (4 направления: ЛФК, Гимнастика, Единоборства, Развивающая)
-export const ATTENDANCE_BY_DIR: { id: DirectionId; value: number }[] = [
-  { id: "lfk",  value: 89 },
-  { id: "gym",  value: 87 },
-  { id: "mart", value: 84 },
-  { id: "dev",  value: 92 },
-];
 
 // ============================================================
 // Icons (inline SVG)
@@ -731,8 +328,8 @@ export const Medal = ({ variant = "gold", size = 48 }: MedalProps): ReactElement
   );
 };
 
-export const UniqumLogo = ({ size = 34 }: { size?: number }): ReactElement => (
-  <div className="brand__mark" style={{ height: size }} aria-label="Uniqum Sport">
-    <img src="/uniqum-logo.png" alt="Uniqum Sport" style={{ height: size, width: "auto", display: "block" }} />
+export const BrandLogo = ({ size = 34 }: { size?: number }): ReactElement => (
+  <div className="brand__mark" style={{ height: size }} aria-label="Академия Машрапова">
+    <img src="/brand-logo.png" alt="Академия Машрапова" style={{ height: size, width: "auto", display: "block" }} />
   </div>
 );

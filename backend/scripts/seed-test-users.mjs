@@ -27,13 +27,13 @@ const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
 const ORG_ID = "00000000-0000-0000-0000-000000000001";
 
 const users = [
-  { email: "director@uniqum.test",   password: "director12345",   role: "director",         full_name: "Айбек Директор" },
-  { email: "fitnessdir@uniqum.test", password: "fitnessdir12345", role: "fitness_director", full_name: "Эльдар Фитнес-директор" },
-  { email: "srmanager@uniqum.test",  password: "srmanager12345",  role: "senior_manager",   full_name: "Айгерим Ст.Менеджер" },
-  { email: "manager@uniqum.test",    password: "manager12345",    role: "manager",          full_name: "Нурлан Менеджер" },
-  { email: "cashier@uniqum.test",    password: "cashier12345",    role: "cashier",          full_name: "Бегимай Кассир" },
-  { email: "coach@uniqum.test",      password: "coach12345",      role: "coach",            full_name: "Гульмира Тренер" },
-  { email: "parent@uniqum.test",     password: "parent12345",     role: "parent",           full_name: "Айгуль Родитель" },
+  { email: "director@mashrapov.test",   password: "director12345",   role: "director",         full_name: "Айбек Директор" },
+  { email: "fitnessdir@mashrapov.test", password: "fitnessdir12345", role: "fitness_director", full_name: "Эльдар Управляющий" },
+  { email: "srmanager@mashrapov.test",  password: "srmanager12345",  role: "senior_manager",   full_name: "Айгерим Ст.Менеджер" },
+  { email: "manager@mashrapov.test",    password: "manager12345",    role: "manager",          full_name: "Нурлан Менеджер" },
+  { email: "cashier@mashrapov.test",    password: "cashier12345",    role: "cashier",          full_name: "Бегимай Ресепшен" },
+  { email: "coach@mashrapov.test",      password: "coach12345",      role: "coach",            full_name: "Гульмира Тренер" },
+  { email: "parent@mashrapov.test",     password: "parent12345",     role: "parent",           full_name: "Айгуль Родитель" },
 ];
 
 const upsertUser = async (u) => {
@@ -59,20 +59,20 @@ const upsertUser = async (u) => {
 };
 
 const main = async () => {
-  // Pre-step: legacy admin@uniqum.test got migrated to role=director by
-  // 20260510000001. Rename its email to director@uniqum.test so the new
+  // Pre-step: legacy admin@mashrapov.test got migrated to role=director by
+  // 20260510000001. Rename its email to director@mashrapov.test so the new
   // seed below doesn't create a duplicate director account. Idempotent.
   console.log("=== Reconciling legacy admin → director ===");
   const { data: list0 } = await supabase.auth.admin.listUsers({ page: 1, perPage: 200 });
-  const legacyAdmin = list0?.users.find((x) => x.email === "admin@uniqum.test");
-  const newDirector = list0?.users.find((x) => x.email === "director@uniqum.test");
+  const legacyAdmin = list0?.users.find((x) => x.email === "admin@mashrapov.test");
+  const newDirector = list0?.users.find((x) => x.email === "director@mashrapov.test");
   if (legacyAdmin && !newDirector) {
     await supabase.auth.admin.updateUserById(legacyAdmin.id, {
-      email: "director@uniqum.test",
+      email: "director@mashrapov.test",
       email_confirm: true,
     });
-    await supabase.from("profiles").update({ email: "director@uniqum.test" }).eq("id", legacyAdmin.id);
-    console.log("  renamed admin@uniqum.test → director@uniqum.test");
+    await supabase.from("profiles").update({ email: "director@mashrapov.test" }).eq("id", legacyAdmin.id);
+    console.log("  renamed admin@mashrapov.test → director@mashrapov.test");
   } else if (legacyAdmin && newDirector) {
     console.log("  WARN: both admin@ and director@ exist — leaving alone, please clean up manually");
   }

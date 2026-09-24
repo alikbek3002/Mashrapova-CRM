@@ -3,7 +3,7 @@ import { z } from "zod";
 export const cardSellSchema = z
   .object({
     child_id: z.string().uuid(),
-    type: z.enum(["monthly", "quarterly", "nine_month", "personal", "single", "trial"]),
+    type: z.enum(["monthly", "quarterly", "half_year", "annual", "nine_month", "personal", "single", "trial"]),
     total_lessons: z.number().int().nullable().optional(),
     // Тариф из каталога card_plans (null — цена/срок введены вручную).
     plan_id: z.string().uuid().nullable().optional(),

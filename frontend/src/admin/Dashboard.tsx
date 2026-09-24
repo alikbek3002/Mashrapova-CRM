@@ -38,7 +38,7 @@ export const DashboardPage = ({ lang }: { lang: Lang }) => {
     <>
       <PageHeader
         title={t.title}
-        subtitle={`Uniqum Sport, Бишкек · ${new Date().toLocaleDateString(lang === "ru" ? "ru-RU" : "ky-KG")}`}
+        subtitle={`Академия Машрапова, Ош · ${new Date().toLocaleDateString(lang === "ru" ? "ru-RU" : "ky-KG")}`}
         actions={
           <Gate perm="sell_cards">
             <button className="btn btn--primary" onClick={() => setSellOpen(true)}>

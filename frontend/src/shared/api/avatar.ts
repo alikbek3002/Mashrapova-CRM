@@ -22,8 +22,7 @@ export const resolveAvatarUrl = (raw: string | null | undefined): string | null 
 };
 
 // Ключ в хранилище → прокси-URL. Так лежат children.photo_path
-// (children/<id>/<uuid>.ext) и фото для турникета (faces/<id>.jpg —
-// одно и то же фото, см. POST /v1/hik/.../enroll).
+// (children/<id>/<uuid>.ext).
 // Абсолютные URL (на случай старых данных) — как есть.
 export const resolveStorageUrl = (raw: string | null | undefined): string | null => {
   if (!raw) return null;

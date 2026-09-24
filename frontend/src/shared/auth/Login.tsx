@@ -1,13 +1,16 @@
 import { useState, type FormEvent } from "react";
 import { supabase } from "../api/supabase";
-import { UniqumLogo, Icon } from "../../data";
+import { BrandLogo, Icon, I18N } from "../../data";
 import type { Lang } from "../../data";
 import { normalizeE164KG, phoneToPseudoEmail } from "./normalizePhone";
+import { useAuth, type AppRole } from "./AuthProvider";
+
+const DEMO_ROLES: AppRole[] = ["director", "manager", "cashier", "coach", "parent"];
 
 const T = {
   ru: {
     welcome: "Добро пожаловать",
-    sub: "Uniqum Sport ERP",
+    sub: "Академия Машрапова · ERP",
     phone: "Телефон",
     email: "Email",
     password: "Пароль",
@@ -21,10 +24,12 @@ const T = {
     byEmail: "По email",
     phonePlaceholder: "+996 700 12 34 56",
     phoneInvalid: "Введите телефон в формате +996 700 12 34 56",
+    demoTitle: "Демо-режим: база не подключена",
+    demoHint: "Нет ключей Supabase (frontend/.env). Выберите роль, чтобы посмотреть интерфейс — данных не будет.",
   },
   ky: {
     welcome: "Кош келиңиз",
-    sub: "Uniqum Sport ERP",
+    sub: "Академия Машрапова · ERP",
     phone: "Телефон",
     email: "Email",
     password: "Сырсөз",
@@ -38,6 +43,8 @@ const T = {
     byEmail: "Email менен",
     phonePlaceholder: "+996 700 12 34 56",
     phoneInvalid: "+996 700 12 34 56 форматында жазыңыз",
+    demoTitle: "Демо-режим: база туташтырылган эмес",
+    demoHint: "Supabase ачкычтары жок (frontend/.env). Интерфейсти көрүү үчүн ролду тандаңыз — маалымат болбойт.",
   },
 } as const;
 
@@ -45,6 +52,7 @@ type Mode = "phone" | "email";
 
 export const Login = ({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }) => {
   const t = T[lang];
+  const { demoMode, signInDemo } = useAuth();
   const [mode, setMode] = useState<Mode>("phone");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
@@ -67,7 +75,7 @@ export const Login = ({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => voi
           setBusy(false);
           return;
         }
-        // Также попробуем настоящий email-формат `phone@uniqum.test` для родителей,
+        // Также попробуем настоящий email-формат `phone@mashrapov.test` для родителей,
         // которых ранее создавали с настоящими email. Сначала пробуем pseudo,
         // если не сработало — пробуем «прямой» E.164 (см. fallback ниже).
       } else {
@@ -120,9 +128,31 @@ export const Login = ({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => voi
         ))}
       </div>
 
+      {demoMode ? (
+        <div className="login-card">
+          <div className="login-card__brand">
+            <BrandLogo size={56} />
+            <div>
+              <div className="login-card__title">{t.welcome}</div>
+              <div className="login-card__sub">{t.sub}</div>
+            </div>
+          </div>
+          <div className="login-error" style={{ marginBottom: 12 }}>
+            <b>{t.demoTitle}</b>
+            <div style={{ marginTop: 4 }}>{t.demoHint}</div>
+          </div>
+          <div style={{ display: "grid", gap: 8 }}>
+            {DEMO_ROLES.map((r) => (
+              <button key={r} type="button" className="login-submit" onClick={() => signInDemo(r)}>
+                {(I18N[lang].roles as Record<string, string>)[r] ?? r}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : (
       <form className="login-card" onSubmit={submit}>
         <div className="login-card__brand">
-          <UniqumLogo size={56} />
+          <BrandLogo size={56} />
           <div>
             <div className="login-card__title">{t.welcome}</div>
             <div className="login-card__sub">{t.sub}</div>
@@ -176,7 +206,7 @@ export const Login = ({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => voi
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               disabled={busy}
-              placeholder="you@uniqum.test"
+              placeholder="you@mashrapov.test"
             />
           </label>
         )}
@@ -212,6 +242,7 @@ export const Login = ({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => voi
           {busy ? t.loading : t.enter}
         </button>
       </form>
+      )}
     </div>
   );
 };

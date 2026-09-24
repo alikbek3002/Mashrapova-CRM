@@ -10,7 +10,7 @@ import { ChildAvatar } from "./ChildAvatar";
 // locked — отметка есть, но она вне окна абонемента (история): показываем,
 // менять не даём.
 export type TabelCell = { lesson_id: string; status: string | null; locked?: boolean };
-// photo_path — то же фото, что уходит на турникет (children.photo_path):
+// photo_path — фото ребёнка (children.photo_path):
 // в журнале лицо узнаётся быстрее, чем фамилия.
 export type TabelKid = { id: string; full_name: string; photo_path?: string | null };
 // Что видно прямо в колонке с фамилией: кто ведёт ребёнка и до какого

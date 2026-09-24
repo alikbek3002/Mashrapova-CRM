@@ -67,7 +67,7 @@ export const ParentScreen = ({ lang }: { lang: Lang }) => {
 
   return (
     <Shell
-      brand={{ title: lang === "ru" ? "Родитель" : "Ата-эне", subtitle: "Uniqum Sport" }}
+      brand={{ title: lang === "ru" ? "Родитель" : "Ата-эне", subtitle: "Академия Машрапова" }}
       user={{ name: user.full_name, subtitle: t.hello, avatar: initialsOf(user.full_name) }}
       tabs={tabs}
       active={tab}

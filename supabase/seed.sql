@@ -1,33 +1,31 @@
 -- =====================================================================
--- Seed data — minimal smoke set for dev environment
+-- Seed data — dev-набор для Академии Машрапова (Ош).
 -- DO NOT run on production.
 --
--- Note: на prod секции вставляются миграцией 20260514000007 (через
--- cross join по существующим organizations). Здесь, на свежей dev-БД,
--- организация только что создаётся, поэтому секции добавляем сразу
--- идемпотентно (where not exists) — повторный seed не дублирует.
+-- Секции и тарифы — по ТЗ (docs/ТЗ_Академия_Машрапова.md §1.3, §4.1, §4.2).
+-- Идемпотентно (where not exists): повторный seed не дублирует.
 -- =====================================================================
 
 -- Organization
 insert into organizations (id, name) values
-  ('00000000-0000-0000-0000-000000000001', 'Uniqum Sport (dev)');
+  ('00000000-0000-0000-0000-000000000001', 'Академия Машрапова (dev)')
+on conflict (id) do nothing;
 
--- Реальные 11 секций по 4 направлениям (с лендинга uniqumsport.kg).
--- Цен здесь нет: стоимость задаётся на абонементе при продаже (20260807000001).
+insert into org_settings (organization_id)
+values ('00000000-0000-0000-0000-000000000001')
+on conflict (organization_id) do nothing;
+
+-- 6 дисциплин единоборств + фитнес-зона.
 insert into sections (organization_id, name_ru, name_ky, category, color)
 select '00000000-0000-0000-0000-000000000001'::uuid, v.name_ru, v.name_ky, v.category, v.color
 from (values
-  ('Здоровая спина и стопы',                  'Дени соо омуртка жана таман',              'therapy'::section_category,       '#10b981'),
-  ('Коррекция осанки',                        'Дене сөөктү түздөө',                        'therapy'::section_category,       '#14b8a6'),
-  ('Коррекция таза, вальгуса, плоскостопия',  'Таз, вальгус жана жалпак таманды түздөө',   'therapy'::section_category,       '#34d399'),
-  ('Спортивная гимнастика',                   'Спорттук гимнастика',                       'gymnastics'::section_category,    '#2563eb'),
-  ('Акробатика',                              'Акробатика',                                'gymnastics'::section_category,    '#0ea5e9'),
-  ('Аэробная гимнастика',                     'Аэробдук гимнастика',                       'gymnastics'::section_category,    '#a855f7'),
-  ('Эстетическая гимнастика',                 'Эстетикалык гимнастика',                    'gymnastics'::section_category,    '#ec4899'),
-  ('Дзюдо',                                   'Дзюдо',                                     'martial_arts'::section_category,  '#ef4444'),
-  ('Тхэквондо ITF',                           'Тхэквондо ITF',                             'martial_arts'::section_category,  '#f97316'),
-  ('Бокс',                                    'Бокс',                                      'martial_arts'::section_category,  '#dc2626'),
-  ('Развивающая гимнастика',                  'Өнүктүрүүчү гимнастика',                    'developmental'::section_category, '#fbbf24')
+  ('Бокс',            'Бокс',             'martial_arts'::section_category, '#dc2626'),
+  ('ММА',             'ММА',              'martial_arts'::section_category, '#7c3aed'),
+  ('Вольная борьба',  'Эркин күрөш',      'martial_arts'::section_category, '#2563eb'),
+  ('Дзюдо',           'Дзюдо',            'martial_arts'::section_category, '#0891b2'),
+  ('Кикбоксинг',      'Кикбоксинг',       'martial_arts'::section_category, '#ea580c'),
+  ('Таэквондо',       'Таэквондо',        'martial_arts'::section_category, '#16a34a'),
+  ('Фитнес-зона',     'Фитнес-зона',      'fitness'::section_category,      '#475569')
 ) as v(name_ru, name_ky, category, color)
 where not exists (
   select 1 from sections s
@@ -36,16 +34,26 @@ where not exists (
     and s.deleted_at is null
 );
 
--- Каталог тарифов (20260807000003): при продаже менеджер выбирает тариф,
--- поля карты заполняются из него. Цены — дев-заглушки.
+-- Каталог тарифов (ТЗ §4.1 — единоборства, §4.2 — фитнес-зона).
+-- Кол-во занятий в ТЗ не указано: «через день» ≈ 12 тренировок в месяц,
+-- «каждый день» ≈ 26. Цены разовой/пробной «по секции» — заглушка 500 сом,
+-- уточнить у Академии. Скидка 2-го ребёнка (−500) — org_settings, не тариф.
 insert into card_plans (organization_id, name_ru, name_ky, type, duration_days, lessons_count, price, freeze_quota, sort_order)
 select '00000000-0000-0000-0000-000000000001'::uuid, v.name_ru, v.name_ky, v.type, v.duration_days, v.lessons_count, v.price, v.freeze_quota, v.sort_order
 from (values
-  ('Пробное занятие',        'Сыноо сабагы',    'trial'::card_type,      30,   1,   500::numeric, 0, 10),
-  ('Разовое занятие',        'Бир жолку сабак', 'single'::card_type,     30,   1,   500::numeric, 0, 20),
-  ('1 месяц · 12 занятий',   '1 ай · 12 сабак', 'monthly'::card_type,    30,  12,  5000::numeric, 0, 30),
-  ('3 месяца · 36 занятий',  '3 ай · 36 сабак', 'quarterly'::card_type,  90,  36, 13500::numeric, 3, 40),
-  ('9 месяцев · 108 занятий','9 ай · 108 сабак','nine_month'::card_type, 270, 108, 36000::numeric, 9, 50)
+  -- Единоборства
+  ('Пробная тренировка',               'Сыноо машыгуу',               'trial'::card_type,     30,   1,   500::numeric, 0, 10),
+  ('Разовое занятие',                  'Бир жолку сабак',             'single'::card_type,    30,   1,   500::numeric, 0, 20),
+  ('Детский · 1 месяц (через день)',   'Балдар · 1 ай (күн аралап)',  'monthly'::card_type,   30,  12,  2500::numeric, 0, 30),
+  ('Взрослый · 1 месяц (через день)',  'Чоңдор · 1 ай (күн аралап)',  'monthly'::card_type,   30,  12,  2800::numeric, 0, 40),
+  ('Пакет 3 месяца (−15%)',            '3 айлык пакет (−15%)',        'quarterly'::card_type, 90,  36,  6375::numeric, 1, 50),
+  ('Пакет 6 месяцев (−20%)',           '6 айлык пакет (−20%)',        'half_year'::card_type, 180, 72, 12000::numeric, 2, 60),
+  ('Пакет 12 месяцев (−40%)',          '12 айлык пакет (−40%)',       'annual'::card_type,    360, 144, 18000::numeric, 3, 70),
+  -- Фитнес-зона
+  ('Фитнес · каждый день',             'Фитнес · күн сайын',          'monthly'::card_type,   30,  26,  3000::numeric, 0, 110),
+  ('Фитнес · через день',              'Фитнес · күн аралап',         'monthly'::card_type,   30,  12,  2500::numeric, 0, 120),
+  ('Фитнес · комбо для ученика',       'Фитнес · окуучу үчүн комбо',  'monthly'::card_type,   30,  26,  1500::numeric, 0, 130),
+  ('Фитнес · разовое посещение',       'Фитнес · бир жолку',          'single'::card_type,    30,   1,   400::numeric, 0, 140)
 ) as v(name_ru, name_ky, type, duration_days, lessons_count, price, freeze_quota, sort_order)
 where not exists (
   select 1 from card_plans p
@@ -54,5 +62,4 @@ where not exists (
 );
 
 -- Note: profiles seed requires auth.users entries first.
--- Use Supabase dashboard or `supabase auth signup` to create test users,
--- then insert matching profiles rows manually with their IDs.
+-- Test users: node backend/scripts/seed-test-users.mjs (…@mashrapov.test).

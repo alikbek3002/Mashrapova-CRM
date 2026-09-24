@@ -442,7 +442,7 @@ export const usePtCompleteSession = () => {
       attendance: { lesson_id: string; status: "attended" | "missed"; charge?: boolean }[];
       actual_coach_id?: string | null;
       substitution_comment?: string | null;
-      source?: "coach" | "admin" | "turnstile";
+      source?: "coach" | "admin";
     }) => {
       const { session_id, ...body } = input;
       return apiPost<{ ok: boolean }>(`/v1/pt/sessions/${session_id}/complete`, body);

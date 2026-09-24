@@ -27,10 +27,6 @@ import { payrollRoutes } from "./routes/v1/payroll.js";
 import { refundsRoutes } from "./routes/v1/refunds.js";
 import { depositsRoutes } from "./routes/v1/deposits.js";
 import { ptRoutes } from "./routes/v1/pt.js";
-import { runFaceSync } from "./lib/hik-face-sync.js";
-import { runAccessWindowSync } from "./lib/hik-access-windows.js";
-import { runAutoExit } from "./lib/hik-presence.js";
-import { hikRoutes } from "./routes/v1/hik.js";
 
 initSentry();
 
@@ -125,20 +121,6 @@ const runLifecycle = async () => {
 if (env.SCHEDULER_ENABLED) {
   setTimeout(runLifecycle, 30_000);
   setInterval(runLifecycle, LIFECYCLE_INTERVAL_MS);
-  // Турникеты: единая база лиц на всех терминалах (см. lib/hik-face-sync.ts)
-  if (env.HIK_INGEST_SECRET) {
-    const faceSync = () => runFaceSync(app.log).catch((e) => app.log.warn({ err: e }, "hik_face_sync_tick_threw"));
-    setTimeout(faceSync, 60_000);
-    setInterval(faceSync, 3 * 60_000);
-    // Проходная по расписанию: окна доступа на терминалах (lib/hik-access-windows.ts)
-    const windowSync = () => runAccessWindowSync(app.log).catch((e) => app.log.warn({ err: e }, "hik_access_window_tick_threw"));
-    setTimeout(windowSync, 45_000);
-    setInterval(windowSync, 60_000);
-    // Авто-выход детей без прохода на выход (lib/hik-presence.ts)
-    const autoExit = () => runAutoExit(app.log).catch((e) => app.log.warn({ err: e }, "hik_auto_exit_tick_threw"));
-    setTimeout(autoExit, 90_000);
-    setInterval(autoExit, 5 * 60_000);
-  }
 } else {
   app.log.warn("scheduler_disabled (SCHEDULER_ENABLED=false) — lifecycle/reminders не запускаются на этом инстансе");
 }
@@ -146,7 +128,6 @@ await app.register(payrollRoutes);
 await app.register(refundsRoutes);
 await app.register(depositsRoutes);
 await app.register(ptRoutes);
-await app.register(hikRoutes);
 
 // Sentry error capture
 app.setErrorHandler((err, req, reply) => {

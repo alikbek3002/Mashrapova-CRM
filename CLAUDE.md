@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-ERP/CRM system for a children's sports complex. Multi-role PWA with three personas: **Admin** (desktop), **Coach** (PWA), **Parent** (PWA). Fully bilingual: Russian (ru) and Kyrgyz (ky).
+ERP for «Академия Машрапова», a martial arts gym in Osh (boxing, MMA, freestyle wrestling, judo, kickboxing, taekwondo + fitness zone). The engine is forked from Uniqum Sport ERP and is being adapted. Spec: `docs/ТЗ_Академия_Машрапова.md`; adaptation plan and status: `docs/План_адаптации_Машрапова.md` (the `docs/ТЗ_00…03` files describe the Uniqum engine and are reference only). Multi-role PWA with three personas: **Admin** (desktop), **Coach** (PWA), **Parent** (PWA). Fully bilingual: Russian (ru) and Kyrgyz (ky). Data is never deleted, only archived (DB trigger `forbid_delete`).
 
 ## Commands
 

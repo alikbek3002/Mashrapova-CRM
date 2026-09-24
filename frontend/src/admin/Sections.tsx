@@ -15,26 +15,17 @@ const DIRECTION_INFO: Record<DirectionId, {
   ageRu: string; ageKy: string;
   color: string;
 }> = {
-  lfk:  { ru: "ЛФК",                    ky: "ДДТ",                       ageRu: "5–17 лет",  ageKy: "5–17 жаш",   color: "#10b981" },
-  gym:  { ru: "Гимнастика",             ky: "Гимнастика",                ageRu: "6–17 лет",  ageKy: "6–17 жаш",   color: "#2563eb" },
-  mart: { ru: "Единоборства",           ky: "Күрөш спорттору",           ageRu: "6–17 лет",  ageKy: "6–17 жаш",   color: "#ef4444" },
-  dev:  { ru: "Развивающая гимнастика", ky: "Өнүктүрүүчү гимнастика",    ageRu: "от 3,5 лет",ageKy: "3,5 жаштан", color: "#fbbf24" },
+  mart: { ru: "Единоборства", ky: "Күрөш спорттору", ageRu: "дети и взрослые", ageKy: "балдар жана чоңдор", color: "#dc2626" },
+  fit:  { ru: "Фитнес-зона",  ky: "Фитнес-зона",     ageRu: "взрослые",        ageKy: "чоңдор",             color: "#2563eb" },
 };
 
-const DIRECTION_ORDER: DirectionId[] = ["lfk", "gym", "mart", "dev"];
+const DIRECTION_ORDER: DirectionId[] = ["mart", "fit"];
 
-// Направление = sections.category (therapy/gymnastics/martial_arts/
-// developmental — 20260514000006, данные починены в 20260807000003).
-// Раньше тут был хардкод-словарь по названиям секций.
-const directionOf = (sec: { category: string }): DirectionId => {
-  switch (sec.category) {
-    case "therapy": return "lfk";
-    case "gymnastics": return "gym";
-    case "martial_arts": return "mart";
-    case "developmental": return "dev";
-    default: return "lfk"; // special (legacy)
-  }
-};
+// Направление = sections.category: martial_arts (бокс, ММА, вольная борьба,
+// дзюдо, кикбоксинг, таэквондо) и fitness (фитнес-зона, 20260925000001).
+// Старые категории движка (gymnastics/therapy/…) считаем единоборствами.
+const directionOf = (sec: { category: string }): DirectionId =>
+  sec.category === "fitness" ? "fit" : "mart";
 
 export const SectionsPage = ({ lang }: { lang: Lang }) => {
   const { data: sections = [], isLoading, error } = useSections();

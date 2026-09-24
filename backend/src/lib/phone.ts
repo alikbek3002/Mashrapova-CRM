@@ -6,7 +6,7 @@
 // Возвращает: "+996700123456"
 // Бросает исключение, если на выходе не получается валидный +996 + 9 цифр.
 
-const PHONE_DOMAIN = "staff.uniqum.local";
+const PHONE_DOMAIN = "staff.mashrapov.local";
 
 export const normalizeE164KG = (raw: string | null | undefined): string => {
   if (!raw) throw new Error("phone_required");

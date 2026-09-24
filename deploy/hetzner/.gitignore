@@ -1,5 +1,0 @@
-# Секреты и артефакты сборки — не коммитим
-secrets.env
-backend.env
-frontend-dist/
-isup.env

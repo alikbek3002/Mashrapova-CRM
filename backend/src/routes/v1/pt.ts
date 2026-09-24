@@ -594,7 +594,7 @@ export const ptRoutes = async (app: FastifyInstance) => {
   );
 
   // =========================================================
-  // ПРОВЕДЕНИЕ (§6) — тренер / админ / турникет
+  // ПРОВЕДЕНИЕ (§6) — тренер / админ
   // =========================================================
   app.post<{ Params: { id: string } }>(
     "/v1/pt/sessions/:id/complete",
@@ -758,7 +758,7 @@ export const ptRoutes = async (app: FastifyInstance) => {
     }
   );
 
-  // время входа/выхода — турникет или администратор (§1, §6)
+  // время входа/выхода — администратор (§1, §6)
   app.post<{ Params: { id: string } }>(
     "/v1/pt/lessons/:id/entry-exit",
     { preHandler: [authenticate, requireRole(...PT_ADMIN)] },
