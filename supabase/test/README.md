@@ -17,6 +17,7 @@ npm install
 npm run db:start    # Postgres на 127.0.0.1:55432
 npm run migrate     # все миграции по порядку
 npm run smoke       # проверка расчётов ТЗ
+npm run tariffs     # сколько тренер получает за ребёнка по каждому тарифу
 npm run db:stop
 ```
 

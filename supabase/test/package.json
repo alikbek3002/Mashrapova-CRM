@@ -6,7 +6,8 @@
     "db:start": "node start-db.mjs",
     "db:stop": "node stop-db.mjs",
     "migrate": "node run-migrations.mjs ../migrations",
-    "smoke": "node smoke.mjs"
+    "smoke": "node smoke.mjs",
+    "tariffs": "node tariffs.mjs"
   },
   "dependencies": {
     "embedded-postgres": "^18.4.0-beta.17",

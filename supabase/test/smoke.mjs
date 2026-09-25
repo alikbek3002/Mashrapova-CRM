@@ -39,6 +39,17 @@ await q(`insert into attendance (lesson_id,child_id,status) values ($1,$2,'prese
 const [pay] = await q(`select compute_coach_payroll($1, current_date-30, current_date) as amt`, [coachP.id]);
 if (!check("2500 / 12 × 40%", pay.amt, "83.33")) fails++;
 
+// Число занятий в месячном абонементе подтверждено владельцем — 12.
+// Фиксируем его и по взрослому тарифу: 2800 / 12 × 40% = 93.33.
+const [kidA] = await q(`insert into children (organization_id,family_id,full_name,birth_date,status)
+  values ($1,$2,'Взрослый Тест','2000-01-01','active') returning id`, [ORG, fam.id]);
+await q(`insert into club_cards (organization_id,child_id,type,total_lessons,freeze_quota,
+  price_paid,discount,start_date,end_date,status,section_id)
+  values ($1,$2,'monthly',12,0,2800,0,current_date-5,current_date+25,'active',$3)`, [ORG, kidA.id, sec.id]);
+await q(`insert into attendance (lesson_id,child_id,status) values ($1,$2,'present')`, [les.id, kidA.id]);
+const [payA] = await q(`select sum(amount) amt from v_payroll_attendance where child_id=$1`, [kidA.id]);
+if (!check("2800 / 12 × 40%", payA.amt, "93.33")) fails++;
+
 console.log("\n── ТЗ §7.3: возврат от уплаченного, а не от цены тарифа ──");
 const [card2] = await q(`insert into club_cards (organization_id,child_id,type,total_lessons,freeze_quota,
   price_paid,discount,start_date,end_date,status)
