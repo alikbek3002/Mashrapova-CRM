@@ -76,6 +76,31 @@ try {
   check("квота 0 блокирует заморозку", /freeze_quota_exceeded/.test(e.message), "true") || fails++;
 }
 
+console.log("\n── ТЗ §3.3: скидка на второго ребёнка 500 сом ──");
+// Подтверждено владельцем: 500 сом. Проверяем не настройку, а сам факт
+// применения при продаже — через ту же RPC, которой пользуется бэкенд.
+const [fam2] = await q(`insert into families (organization_id,father_name,father_phone)
+  values ($1,'Отец Двоих','+996700000009') returning id`, [ORG]);
+const [kid1] = await q(`insert into children (organization_id,family_id,full_name,birth_date,status)
+  values ($1,$2,'Первый Ребёнок','2014-01-01','active') returning id`, [ORG, fam2.id]);
+const [kid2] = await q(`insert into children (organization_id,family_id,full_name,birth_date,status)
+  values ($1,$2,'Второй Ребёнок','2016-01-01','active') returning id`, [ORG, fam2.id]);
+const [setting] = await q(`select sibling_discount_enabled, sibling_discount_amount from org_settings where organization_id=$1`, [ORG]);
+if (!check("настройка скидки", setting.sibling_discount_amount, "500.00")) fails++;
+
+// q уже возвращает rows, поэтому берём первый элемент напрямую.
+const sell = async (childId, reason) => (await q(
+  `select * from sell_card_with_deposit($1,$2,$3,'monthly',12,0,2500,0,
+     current_date, current_date+29, $4, null, 'cash', 0, 2500, gen_random_uuid(),
+     null, null, 100, null, 30, $5)`,
+  [ORG, childId, coachP.id, sec.id, reason]))[0];
+
+const first = await sell(kid1.id, null);
+if (!check("первому ребёнку скидки нет", first.applied_discount, "0.00")) fails++;
+const second = await sell(kid2.id, null);
+if (!check("второму ребёнку −500", second.applied_discount, "500.00")) fails++;
+if (!check("причина проставлена системой", second.discount_reason, "auto_2nd_child")) fails++;
+
 console.log("\n── ТЗ §9: матрица каналов и очередь исходящих ──");
 const [m] = await q(`select count(*) n from notification_matrix where organization_id=$1`, [ORG]);
 if (!check("строк матрицы засеяно", m.n, "24")) fails++;

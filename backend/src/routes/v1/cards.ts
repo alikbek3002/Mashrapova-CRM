@@ -19,7 +19,11 @@ export const cardsRoutes = async (app: FastifyInstance) => {
     {
       preHandler: [
         authenticate,
-        requireRole("director", "fitness_director", "senior_manager", "manager"),
+        // ТЗ §7.1: «продажу совершает менеджер или ресепшен». Решение
+        // владельца — читать по §7.1, а не по строке «Продажи ❌» в
+        // матрице §2.2. Бэкенд и так пускал ресепшен к продаже
+        // персональных тренировок (PT_SELL), теперь наборы согласованы.
+        requireRole("director", "fitness_director", "senior_manager", "manager", "cashier"),
         requireIdempotencyKey,
       ],
     },
