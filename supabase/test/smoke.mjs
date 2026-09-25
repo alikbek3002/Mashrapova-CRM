@@ -68,8 +68,16 @@ await q(`insert into profiles (id,organization_id,role,full_name,is_active) valu
 await q(`update families set parent_user_id=$1 where id=$2`, [pu.id, fam.id]);
 await q(`insert into notifications (recipient_id,type,payload) values ($1,'card_expiring',
   jsonb_build_object('child_id',$2::text,'child_name','Ребёнок Тест','end_date','01.10','days_left',7))`, [pu.id, kid.id]);
-const out = await q(`select channel, body, to_phone from outbound_messages where event_type='card_expiring' order by channel`);
-if (!check("создано исходящих (push+sms)", out.length, "2")) fails++;
+// Ограничиваем выборку ребёнком, созданным в ЭТОМ прогоне: тест можно
+// запускать повторно на той же базе, и записи прошлых прогонов не должны
+// ломать проверку.
+const out = await q(`select channel, body, to_phone from outbound_messages
+  where event_type='card_expiring' and payload->>'child_id' = $1 order by channel`, [kid.id]);
+// Решение по вопросу 7 (миграция 20260926000014): в очередь идёт только
+// SMS. Канал push доставляется самой таблицей notifications — приложение
+// родителя читает её напрямую, дублировать в очереди незачем.
+if (!check("в очереди только SMS", out.length, "1")) fails++;
+if (!check("push в очередь не попал", out.every((r) => r.channel === "sms"), "true")) fails++;
 const sms = out.find((r) => r.channel === "sms");
 if (sms) {
   console.log(`     SMS на ${sms.to_phone}: «${sms.body}»`);
