@@ -146,6 +146,11 @@ export type Section = Timestamps & {
   category: SectionCategory;
   color: string | null;
   is_active: boolean;
+  // ТЗ §5.1 и §4.1: цены этой секции. null — цена берётся из каталога
+  // тарифов (card_plans), см. функцию section_price().
+  trial_price: number | null;
+  single_price: number | null;
+  subscription_price: number | null;
 };
 
 export type Group = Timestamps & {

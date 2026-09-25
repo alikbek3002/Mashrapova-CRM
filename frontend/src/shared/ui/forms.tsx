@@ -1857,6 +1857,10 @@ type SectionInitial = {
   name_ky?: string;
   category?: SectionCategory;
   color?: string | null;
+  // ТЗ §5.1: цены в карточке секции. Пусто — берётся цена тарифа из каталога.
+  trial_price?: number | null;
+  single_price?: number | null;
+  subscription_price?: number | null;
 };
 
 export const AddSectionModal = ({ open, onClose, lang, initial }: { open: boolean; onClose: () => void; lang: Lang; initial?: SectionInitial }) => {
@@ -1869,18 +1873,35 @@ export const AddSectionModal = ({ open, onClose, lang, initial }: { open: boolea
   const [nameKy, setNameKy] = useState(initial?.name_ky ?? "");
   const [category, setCategory] = useState<SectionCategory>(initial?.category ?? "martial_arts");
   const [color, setColor] = useState(initial?.color ?? "#3b82f6");
+  // ТЗ §5.1 и §4.1: цены по секции. Пустая строка = «не задано», тогда
+  // цена берётся из каталога тарифов — это рабочее состояние, а не пробел.
+  const [trialPrice, setTrialPrice] = useState(initial?.trial_price != null ? String(initial.trial_price) : "");
+  const [singlePrice, setSinglePrice] = useState(initial?.single_price != null ? String(initial.single_price) : "");
+  const [subPrice, setSubPrice] = useState(initial?.subscription_price != null ? String(initial.subscription_price) : "");
   const [err, setErr] = useState<string | null>(null);
+
+  // Пустое поле должно сохраняться как NULL, а не как 0: ноль означал бы
+  // «бесплатно», а нам нужно «берём из каталога».
+  const priceOrNull = (v: string): number | null => {
+    const t = v.trim();
+    if (t === "") return null;
+    const n = Number(t);
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  };
 
   const submit = async () => {
     setErr(null);
     try {
       const payload = {
         name_ru: nameRu, name_ky: nameKy || nameRu, category, color,
+        trial_price: priceOrNull(trialPrice),
+        single_price: priceOrNull(singlePrice),
+        subscription_price: priceOrNull(subPrice),
       };
       if (isEdit) await upd.mutateAsync({ id: initial!.id!, ...payload });
       else await add.mutateAsync(payload);
       onClose();
-      if (!isEdit) { setNameRu(""); setNameKy(""); }
+      if (!isEdit) { setNameRu(""); setNameKy(""); setTrialPrice(""); setSinglePrice(""); setSubPrice(""); }
     } catch (e: unknown) { setErr((e as Error).message); }
   };
 
@@ -1913,6 +1934,29 @@ export const AddSectionModal = ({ open, onClose, lang, initial }: { open: boolea
           <input type="color" value={color ?? "#3b82f6"} onChange={(e) => setColor(e.target.value)} style={{ height: 40 }} disabled={busy} />
         </Field>
       </div>
+
+      {/* ТЗ §5.1: «Стоимость абонемента и пробной тренировки» в карточке
+          секции. §4.1 ставит разовому и пробному цену «по секции». */}
+      <div className="form-sec">{t("Цены этой секции", "Бул секциянын баалары")}</div>
+      <div className="grid-2">
+        <Field label={t("Пробная тренировка, сом", "Сыноо машыгуу, сом")}>
+          <input type="number" min={0} value={trialPrice} disabled={busy}
+            onChange={(e) => setTrialPrice(e.target.value)} placeholder={t("из каталога", "каталогдон")} />
+        </Field>
+        <Field label={t("Разовое занятие, сом", "Бир жолку сабак, сом")}>
+          <input type="number" min={0} value={singlePrice} disabled={busy}
+            onChange={(e) => setSinglePrice(e.target.value)} placeholder={t("из каталога", "каталогдон")} />
+        </Field>
+        <Field label={t("Абонемент, сом", "Абонемент, сом")}>
+          <input type="number" min={0} value={subPrice} disabled={busy}
+            onChange={(e) => setSubPrice(e.target.value)} placeholder={t("из каталога", "каталогдон")} />
+        </Field>
+      </div>
+      <div style={{ fontSize: 11, color: "var(--muted)", marginTop: -4, marginBottom: 10, lineHeight: 1.45 }}>
+        {t("Пустое поле — цена берётся из каталога видов абонементов. Заполняйте, только если у этой дисциплины цена своя.",
+           "Бош талаа — баа абонемент түрлөрүнүн каталогунан алынат.")}
+      </div>
+
       {err && <div className="field__error" style={{ marginTop: 8 }}>{err}</div>}
       <div className="modal__foot">
         {isEdit && (
@@ -2527,14 +2571,27 @@ export const SellCardModal = ({
 
   // Выбранный тариф из каталога. При выборе — тип/занятия/цена из тарифа.
   const plan = plans.find((p) => p.id === planId) ?? null;
+  // ТЗ §4.1: у разового занятия и пробной тренировки цена «по секции».
+  // Если у выбранной секции она задана — она главнее каталога. Зеркалит
+  // функцию section_price() в базе.
+  const sectionForSale = sections.find((x) => x.id === sectionId) ?? null;
+  const sectionPriceFor = (planType: CardType): number | null => {
+    if (!sectionForSale) return null;
+    const v = planType === "trial" ? sectionForSale.trial_price
+      : planType === "single" ? sectionForSale.single_price
+      : sectionForSale.subscription_price;
+    return v != null ? Number(v) : null;
+  };
   useEffect(() => {
     if (!plan) return;
     setType(plan.type);
     setTotal(plan.lessons_count != null ? String(plan.lessons_count) : "");
-    setPrice(String(Number(plan.price)));
-    // deps по planId: правки цены менеджером не затираются фоновым refetch.
+    setPrice(String(sectionPriceFor(plan.type) ?? Number(plan.price)));
+    // deps по planId и sectionId: цена пересчитывается и при смене секции,
+    // иначе после выбора другой дисциплины осталась бы цена прежней.
+    // Ручные правки цены менеджером фоновый refetch не затирает.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [planId]);
+  }, [planId, sectionId]);
 
   // Группы фильтруются по выбранной секции.
   const groupsForSection = sectionId

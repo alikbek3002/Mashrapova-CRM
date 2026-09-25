@@ -561,6 +561,10 @@ export const useAddSection = () => {
     mutationFn: async (input: {
       name_ru: string; name_ky: string; category: SectionCategory;
       color?: string | null;
+      // ТЗ §5.1 и §4.1: цены секции. null — берётся цена тарифа из каталога.
+      trial_price?: number | null;
+      single_price?: number | null;
+      subscription_price?: number | null;
     }) => {
       const orgId = await getMyOrgId();
       const { data, error } = await supabase

@@ -13,6 +13,16 @@ const ORG = "00000000-0000-0000-0000-000000000001";
 await q(`insert into organizations (id, name) values ($1,'Академия Машрапова') on conflict do nothing`, [ORG]);
 await q(`insert into org_settings (organization_id) values ($1) on conflict do nothing`, [ORG]);
 
+// Каталог тарифов нужен проверкам цен: на него откатывается section_price(),
+// когда у секции своя цена не задана. Миграции каталог не наполняют — это
+// делает seed.sql, поэтому применяем его, если каталог пуст.
+const [plansCount] = await q(`select count(*)::int n from card_plans where organization_id=$1`, [ORG]);
+if (plansCount.n === 0) {
+  const { readFileSync } = await import("node:fs");
+  await c.query(readFileSync("../seed.sql", "utf8"));
+  console.log("Каталог тарифов засеян из seed.sql");
+}
+
 // subscription_price/trial_price убраны миграцией 20260807000001
 const [sec] = await q(`insert into sections (organization_id,name_ru,name_ky,category)
   values ($1,'Бокс','Бокс','martial_arts') returning id`, [ORG]);
@@ -100,6 +110,28 @@ if (!check("первому ребёнку скидки нет", first.applied_di
 const second = await sell(kid2.id, null);
 if (!check("второму ребёнку −500", second.applied_discount, "500.00")) fails++;
 if (!check("причина проставлена системой", second.discount_reason, "auto_2nd_child")) fails++;
+
+console.log("\n── ТЗ §5.1 и §4.1: цены по секции ──");
+// Пустая цена секции = берём из каталога; заданная — главнее каталога.
+const [pTrial] = await q(`select section_price($1,'trial') p`, [sec.id]);
+if (!check("пустая цена → из каталога", pTrial.p, "500.00")) fails++;
+
+await q(`update sections set trial_price = 700, single_price = 900 where id = $1`, [sec.id]);
+const [pTrial2] = await q(`select section_price($1,'trial') p`, [sec.id]);
+const [pSingle] = await q(`select section_price($1,'single') p`, [sec.id]);
+if (!check("цена секции перебивает каталог (пробная)", pTrial2.p, "700.00")) fails++;
+if (!check("цена секции перебивает каталог (разовое)", pSingle.p, "900.00")) fails++;
+
+// Месячный абонемент по §4.1 клубный: секция его не задаёт — откат на каталог.
+const [pMonthly] = await q(`select section_price($1,'monthly') p`, [sec.id]);
+if (!check("месячный остаётся из каталога", pMonthly.p, "2500.00")) fails++;
+
+// Отрицательную цену база не примет.
+try {
+  await q(`update sections set trial_price = -1 where id = $1`, [sec.id]);
+  console.log("ФЕЙЛ: отрицательная цена прошла"); fails++;
+} catch { check("отрицательная цена отклонена", true, "true"); }
+await q(`update sections set trial_price = null, single_price = null where id = $1`, [sec.id]);
 
 console.log("\n── ТЗ §9: матрица каналов и очередь исходящих ──");
 const [m] = await q(`select count(*) n from notification_matrix where organization_id=$1`, [ORG]);

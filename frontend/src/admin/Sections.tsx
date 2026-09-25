@@ -77,6 +77,10 @@ export const SectionsPage = ({ lang }: { lang: Lang }) => {
             name_ky: editing.name_ky,
             category: editing.category,
             color: editing.color,
+            // ТЗ §5.1: цены этой секции
+            trial_price: editing.trial_price,
+            single_price: editing.single_price,
+            subscription_price: editing.subscription_price,
           }}
         />
       )}
