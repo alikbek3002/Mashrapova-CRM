@@ -32,9 +32,13 @@ export const RefundsPage = ({ lang }: { lang: Lang }) => {
           lang={lang}
           activeCards={cards.map((c) => ({
             id: c.id,
-            // Показываем сумму, которую клиент реально заплатил (со скидкой) —
-            // от неё же backend считает возврат.
-            label: `${c.child?.full_name ?? "?"} · ${c.type} · ${formatCurrency(Math.max(0, Number(c.price_paid) - Number(c.discount ?? 0)))}`,
+            // Показываем цену тарифа — именно она база возврата по ТЗ §7.3.
+            // Если была скидка, показываем и уплаченное: возврат не может
+            // превысить его (предохранитель в refunds.ts).
+            label: `${c.child?.full_name ?? "?"} · ${c.type} · ${formatCurrency(Number(c.price_paid))}`
+              + (Number(c.discount ?? 0) > 0
+                  ? ` (оплачено ${formatCurrency(Math.max(0, Number(c.price_paid) - Number(c.discount ?? 0)))})`
+                  : ""),
           }))}
         />
       )}

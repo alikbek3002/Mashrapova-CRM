@@ -50,11 +50,20 @@ await q(`insert into attendance (lesson_id,child_id,status) values ($1,$2,'prese
 const [payA] = await q(`select sum(amount) amt from v_payroll_attendance where child_id=$1`, [kidA.id]);
 if (!check("2800 / 12 × 40%", payA.amt, "93.33")) fails++;
 
-console.log("\n── ТЗ §7.3: возврат от уплаченного, а не от цены тарифа ──");
+console.log("\n── ТЗ §7.3: база возврата — цена тарифа, но не больше уплаченного ──");
+// Решение владельца: считаем «как в ТЗ», то есть от цены тарифа. Проверяем
+// случай, где буква формулы даёт больше уплаченного: тариф 2 500, скидки
+// 2-го ребёнка 500 и «приведи друга» 300 — клиент заплатил 1 700, а
+// формула с удержанием 30% даёт 1 750. Предохранитель в refunds.ts режет
+// возврат до уплаченного; здесь проверяем сами числа.
 const [card2] = await q(`insert into club_cards (organization_id,child_id,type,total_lessons,freeze_quota,
   price_paid,discount,start_date,end_date,status)
-  values ($1,$2,'monthly',12,0,2500,500,current_date,current_date+30,'active') returning id, price_paid-discount as net`, [ORG, kid.id]);
-if (!check("чистая цена при скидке 500", card2.net, "2000.00")) fails++;
+  values ($1,$2,'monthly',12,0,2500,800,current_date,current_date+30,'active')
+  returning price_paid as tariff, price_paid-discount as paid,
+            round(price_paid * 0.7, 2) as by_formula`, [ORG, kid.id]);
+if (!check("база по ТЗ = цена тарифа", card2.tariff, "2500.00")) fails++;
+if (!check("клиент заплатил", card2.paid, "1700.00")) fails++;
+if (!check("формула даёт больше уплаченного", Number(card2.by_formula) > Number(card2.paid), "true")) fails++;
 
 console.log("\n── ТЗ §4.3: лимит заморозок по типу абонемента ──");
 // freeze_quota = 0 у месячного (§4.1 «Заморозка: Нет»)
