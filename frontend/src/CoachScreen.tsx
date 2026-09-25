@@ -502,6 +502,8 @@ const CoachLessonView = ({ lang, t, lessonId, back }: { lang: Lang; t: CoachT; l
 };
 
 const CoachTabel = ({ lang, t, coachId }: { lang: Lang; t: CoachT; coachId: string }) => {
+  // Для шапки карточки ребёнка (ФИО, семья, комментарий) — как на вкладке «Сегодня».
+  const { data: tabelKids = [] } = useChildren();
   const tt = (ru: string, ky: string) => (lang === "ru" ? ru : ky);
 
   // Период — текущий месяц по умолчанию, со стрелками вперёд/назад.
@@ -817,6 +819,7 @@ const CoachTabel = ({ lang, t, coachId }: { lang: Lang; t: CoachT; coachId: stri
       {openKidId && (
         <ChildDrawer
           childId={openKidId}
+          child={tabelKids.find((k) => k.id === openKidId)}
           open={!!openKidId}
           onClose={() => setOpenKidId(null)}
           lang={lang}

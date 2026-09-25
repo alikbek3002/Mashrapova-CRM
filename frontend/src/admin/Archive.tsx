@@ -232,9 +232,7 @@ const FamiliesTable = ({ lang, table }: { lang: Lang; table: ArchivableTable }) 
           mother_name: active.mother_name,
           mother_phone: active.mother_phone,
           comment: (active as any).comment,
-          address: (active as any).address,
-          father_passport: (active as any).father_passport,
-          mother_passport: (active as any).mother_passport,
+          responsible_manager_id: (active as any).responsible_manager_id ?? null,
         } : undefined}
       />
     </>

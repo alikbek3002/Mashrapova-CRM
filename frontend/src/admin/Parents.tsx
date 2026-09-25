@@ -51,6 +51,7 @@ export const ParentsPage = ({ lang }: { lang: Lang }) => {
             mother_phone: editing.mother_phone,
             comment: editing.comment,
             parent_user_id: editing.parent_user_id,
+            responsible_manager_id: editing.responsible_manager_id ?? null,
           }}
         />
       )}

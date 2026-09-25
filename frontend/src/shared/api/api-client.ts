@@ -1,7 +1,9 @@
 // Wrapper for protected backend mutations (Railway).
 // Adds the Supabase JWT and an Idempotency-Key automatically.
 
-import { supabase, apiUrl } from "./supabase";
+import { supabase, apiUrl, isSupabaseConfigured } from "./supabase";
+
+const DEMO_ERROR = "Демо-режим: сервер не подключён";
 
 export const newKey = (): string => {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
@@ -16,7 +18,7 @@ export const newKey = (): string => {
 export const apiGet = async <T>(path: string): Promise<T> => {
   const { data: sessionData } = await supabase.auth.getSession();
   const token = sessionData.session?.access_token;
-  if (!token) throw new Error("not_authenticated");
+  if (!token) throw new Error(isSupabaseConfigured ? "not_authenticated" : DEMO_ERROR);
 
   const res = await fetch(`${apiUrl}${path}`, {
     method: "GET",
@@ -41,7 +43,7 @@ export const apiPost = async <T>(
 ): Promise<T> => {
   const { data: sessionData } = await supabase.auth.getSession();
   const token = sessionData.session?.access_token;
-  if (!token) throw new Error("not_authenticated");
+  if (!token) throw new Error(isSupabaseConfigured ? "not_authenticated" : DEMO_ERROR);
 
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -67,7 +69,7 @@ export const apiPost = async <T>(
 export const apiPatch = async <T>(path: string, body: unknown): Promise<T> => {
   const { data: sessionData } = await supabase.auth.getSession();
   const token = sessionData.session?.access_token;
-  if (!token) throw new Error("not_authenticated");
+  if (!token) throw new Error(isSupabaseConfigured ? "not_authenticated" : DEMO_ERROR);
 
   const res = await fetch(`${apiUrl}${path}`, {
     method: "PATCH",
@@ -88,7 +90,7 @@ export const apiPatch = async <T>(path: string, body: unknown): Promise<T> => {
 export const apiPut = async <T>(path: string, body: unknown): Promise<T> => {
   const { data: sessionData } = await supabase.auth.getSession();
   const token = sessionData.session?.access_token;
-  if (!token) throw new Error("not_authenticated");
+  if (!token) throw new Error(isSupabaseConfigured ? "not_authenticated" : DEMO_ERROR);
 
   const res = await fetch(`${apiUrl}${path}`, {
     method: "PUT",
@@ -109,7 +111,7 @@ export const apiPut = async <T>(path: string, body: unknown): Promise<T> => {
 export const apiDelete = async <T>(path: string): Promise<T> => {
   const { data: sessionData } = await supabase.auth.getSession();
   const token = sessionData.session?.access_token;
-  if (!token) throw new Error("not_authenticated");
+  if (!token) throw new Error(isSupabaseConfigured ? "not_authenticated" : DEMO_ERROR);
 
   const res = await fetch(`${apiUrl}${path}`, {
     method: "DELETE",

@@ -213,17 +213,14 @@ const Shell = () => {
     <div className="cards-bordered">
       <div className={`app-chrome ${isPwaRole ? "app-chrome--pwa" : ""}`}>
         <div className="app-chrome__inner">
-          <div className="brand">
-            <BrandLogo size={36} />
+          <div className="crm-logo">
+            <img className="crm-logo__img" src="/logo.png" alt="Академия Машрапова" />
+            MASHRAPOVA
           </div>
 
           <div className="user-chip">
             <div className="user-chip__avatar">
-              <img
-                src="/icon-192.png"
-                alt="Академия Машрапова"
-                style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "inherit" }}
-              />
+              {user.full_name.split(/\s+/).map((w) => w[0]).slice(0, 2).join("").toUpperCase()}
             </div>
             <div className="user-chip__meta">
               <div className="user-chip__name">{user.full_name}</div>
