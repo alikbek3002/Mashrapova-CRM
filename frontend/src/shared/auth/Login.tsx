@@ -1,9 +1,9 @@
 import { useState, type FormEvent } from "react";
 import { supabase } from "../api/supabase";
-import { Icon } from "../../data";
+import { Icon, I18N } from "../../data";
 import type { Lang } from "../../data";
 import { phoneToPseudoEmail } from "./normalizePhone";
-import { useAuth } from "./AuthProvider";
+import { useAuth, DEMO_ACCOUNTS } from "./AuthProvider";
 
 const T = {
   ru: {
@@ -40,7 +40,6 @@ const T = {
     regUnavailable: "Регистрация пока не подключена — аккаунт выдаёт администратор академии.",
     demoTitle: "Демо-режим: база не подключена",
     demoAccounts: "Тестовые аккаунты (пароль 123456):",
-    demoRoles: ["Директор", "Тренер", "Родитель"],
   },
   ky: {
     city: "Ош · Кыргызстан",
@@ -76,7 +75,6 @@ const T = {
     regUnavailable: "Катталуу азырынча туташтырыла элек — аккаунтту академиянын администратору берет.",
     demoTitle: "Демо-режим: база туташтырылган эмес",
     demoAccounts: "Тесттик аккаунттар (сырсөз 123456):",
-    demoRoles: ["Директор", "Тренер", "Ата-эне"],
   },
 } as const;
 
@@ -85,7 +83,8 @@ type Mode = "login" | "register";
 // Фото — Unsplash (бесплатная лицензия). Заменить на фото зала, когда будут.
 const HERO_PHOTO = "https://images.unsplash.com/photo-1591117207239-788bf8de6c3b?w=1600&q=75&auto=format&fit=crop";
 
-const DEMO_PHONES = ["+996 700 00 00 00", "+996 700 00 00 01", "+996 700 00 00 02"];
+// +996700000000 → «+996 700 00 00 00»
+const fmtDemoPhone = (e164: string) => e164.replace(/^\+996(\d{3})(\d{2})(\d{2})(\d{2})$/, "+996 $1 $2 $3 $4");
 
 export const Login = ({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }) => {
   const t = T[lang];
@@ -151,7 +150,7 @@ export const Login = ({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => voi
         <div className="auth__photo" style={{ backgroundImage: `url(${HERO_PHOTO})` }} />
         <div className="auth__shade" />
         <div className="auth__logo">
-          <span className="auth__logo-mark" />
+          <img className="auth__logo-img" src="/logo.png" alt="Академия Машрапова" />
           MASHRAPOVA
         </div>
         <div className="auth__hero-body">
@@ -199,15 +198,15 @@ export const Login = ({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => voi
                 <div className="auth__demo">
                   <b>{t.demoTitle}</b>
                   <div>{t.demoAccounts}</div>
-                  {DEMO_PHONES.map((p, i) => (
+                  {DEMO_ACCOUNTS.map((a) => (
                     <button
-                      key={p}
+                      key={a.phone}
                       type="button"
                       className="auth__demo-acc"
-                      onClick={() => { setLogin(p); setPassword("123456"); setErr(null); }}
+                      onClick={() => { setLogin(fmtDemoPhone(a.phone)); setPassword(a.password); setErr(null); }}
                     >
-                      <span>{t.demoRoles[i]}</span>
-                      <code>{p}</code>
+                      <span>{(I18N[lang].roles as Record<string, string>)[a.role] ?? a.role}</span>
+                      <code>{fmtDemoPhone(a.phone)}</code>
                     </button>
                   ))}
                 </div>

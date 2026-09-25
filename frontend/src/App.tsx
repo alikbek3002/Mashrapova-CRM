@@ -198,7 +198,7 @@ const Shell = () => {
       <div className={`app-chrome ${isPwaRole ? "app-chrome--pwa" : ""}`}>
         <div className="app-chrome__inner">
           <div className="crm-logo">
-            <span className="crm-logo__mark" />
+            <img className="crm-logo__img" src="/logo.png" alt="Академия Машрапова" />
             MASHRAPOVA
           </div>
 

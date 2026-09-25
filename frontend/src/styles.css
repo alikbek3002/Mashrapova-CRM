@@ -4095,10 +4095,11 @@ button.journal-mark:not(:disabled):active { transform: scale(0.92); }
   font-family: "Oswald", sans-serif; font-weight: 700; font-size: 19px; letter-spacing: .08em;
   color: #fff; white-space: nowrap;
 }
-.crm-logo__mark { width: 16px; height: 20px; background: #E0140C; transform: skewX(-14deg); }
+.crm-logo__img { width: 40px; height: 40px; display: block; }
 @media (max-width: 640px) {
   .app-chrome__inner { gap: 10px; padding-left: 12px; padding-right: 12px; }
   .crm-logo { font-size: 0; gap: 0; }
+  .crm-logo__img { width: 36px; height: 36px; }
   .user-chip { min-width: 0; }
   .user-chip__meta { display: none; }
 }
@@ -4186,10 +4187,10 @@ button.journal-mark:not(:disabled):active { transform: scale(0.92); }
     linear-gradient(135deg, rgba(224,20,12,0) 45%, rgba(224,20,12,.45) 100%);
 }
 .auth__logo {
-  display: inline-flex; align-items: center; gap: 10px;
+  display: inline-flex; align-items: center; gap: 14px;
   font-family: "Oswald", sans-serif; font-weight: 700; font-size: 20px; letter-spacing: .08em;
 }
-.auth__logo-mark { width: 18px; height: 22px; background: var(--auth-red); transform: skewX(-14deg); }
+.auth__logo-img { width: 56px; height: 56px; display: block; }
 .auth__kicker {
   display: inline-flex; align-items: center; gap: 10px;
   font-family: "JetBrains Mono", monospace; font-size: 12px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;

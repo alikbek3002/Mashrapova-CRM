@@ -34,6 +34,8 @@ type AuthState = {
 /** Тестовые аккаунты демо-режима (без базы). Телефон в E.164. */
 export const DEMO_ACCOUNTS: { phone: string; password: string; role: AppRole }[] = [
   { phone: "+996700000000", password: "123456", role: "director" },
+  { phone: "+996700000003", password: "123456", role: "senior_manager" },
+  { phone: "+996700000004", password: "123456", role: "manager" },
   { phone: "+996700000001", password: "123456", role: "coach" },
   { phone: "+996700000002", password: "123456", role: "parent" },
 ];
