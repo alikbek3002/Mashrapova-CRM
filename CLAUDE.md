@@ -64,6 +64,10 @@ graphify update .                         # incremental, after code edits
 graphify label . --backend=claude-cli     # refresh community names after a big refactor
 ```
 
+The graph is also exposed over MCP (`.mcp.json`, server `graphify`): `query_graph`, `get_node`,
+`get_neighbors`, `get_community`, `god_nodes`, `graph_stats`, `shortest_path`. Prefer those tools
+over shelling out to the CLI when they are connected.
+
 Two things specific to this repo when querying the graph:
 - **Query with symbol names, not Russian prose.** Node labels are code identifiers, so
   `graphify query "compute_coach_payroll v_payroll_attendance"` anchors correctly while

@@ -81,7 +81,15 @@ graphify label . --backend=claude-cli     # освежить названия с
 
 `graphify-out/` в репозиторий не коммитится — пересобирается за ~15 секунд.
 Что не индексируется, задано в [.graphifyignore](.graphifyignore).
-Правила для Claude Code — в [CLAUDE.md](CLAUDE.md), хуки — в `.claude/settings.json`.
+
+Хуки git (`graphify hook install`) пересобирают граф сами на `git commit` и `git checkout`; после
+`git pull` нужен `graphify update .` вручную.
+
+Для Claude Code настроено три вещи: правила в [CLAUDE.md](CLAUDE.md), PreToolUse-хуки в
+`.claude/settings.json` и MCP-сервер в [.mcp.json](.mcp.json) — он даёт графу инструменты
+`query_graph`, `get_node`, `get_neighbors`, `get_community`, `god_nodes`, `graph_stats`,
+`shortest_path` вместо вызовов CLI. Проектный MCP-сервер Claude Code просит подтвердить при первом
+запуске сессии.
 
 ## Миграции и проверка расчётов
 
