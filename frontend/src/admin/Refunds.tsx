@@ -6,6 +6,8 @@ import { useRefunds, useCards } from "../shared/api/queries";
 import { useCreateRefund } from "../shared/api/mutations";
 import { Modal, Field } from "../shared/ui/Modal";
 import { usePerm } from "../shared/auth/rbac";
+import { SkeletonRows } from "../shared/ui/Skeleton";
+import { Select } from "../shared/ui/Select";
 
 export const RefundsPage = ({ lang }: { lang: Lang }) => {
   const t = (ru: string, ky: string) => (lang === "ru" ? ru : ky);
@@ -41,7 +43,7 @@ export const RefundsPage = ({ lang }: { lang: Lang }) => {
         {error ? (
           <EmptyState title={t("Ошибка", "Ката")} hint={(error as Error).message} />
         ) : isLoading ? (
-          <EmptyState title={t("Загрузка…", "Жүктөлүүдө…")} />
+          <SkeletonRows />
         ) : refunds.length === 0 ? (
           <EmptyState title={t("Возвратов пока нет", "Кайтаруулар жок")} />
         ) : (
@@ -111,10 +113,10 @@ const CreateRefundModal = ({
   return (
     <Modal open={open} onClose={onClose} title={t("Новый возврат", "Жаңы кайтаруу")} width={560}>
       <Field label={t("Абонемент", "Абонемент")}>
-        <select value={card} onChange={(e) => setCard(e.target.value)}>
+        <Select value={card} onChange={(e) => setCard(e.target.value)}>
           <option value="">{t("— выберите —", "— тандаңыз —")}</option>
           {activeCards.map((c) => (<option key={c.id} value={c.id}>{c.label}</option>))}
-        </select>
+        </Select>
       </Field>
       <Field label={t("Тип возврата", "Түрү")} hint={t("Сумма к возврату считается автоматически: остаток / всего × цена − удержание (если есть).", "")}>
         <div style={{ display: "flex", gap: 16, marginTop: 4 }}>

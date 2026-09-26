@@ -4,6 +4,7 @@ import { Icon, I18N } from "../../data";
 import type { Lang } from "../../data";
 import { phoneToPseudoEmail } from "./normalizePhone";
 import { useAuth, DEMO_ACCOUNTS } from "./AuthProvider";
+import { Select } from "../ui/Select";
 
 const T = {
   ru: {
@@ -286,9 +287,9 @@ export const Login = ({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => voi
                 </label>
                 <label className="auth__field">
                   {t.role}
-                  <select className="auth__input">
+                  <Select className="auth__input">
                     {t.roles.map((r) => <option key={r}>{r}</option>)}
-                  </select>
+                  </Select>
                 </label>
                 <label className="auth__field">
                   {t.password}

@@ -22,6 +22,10 @@ import {
   usePtAddCoachComment,
   type PtSessionFull,
 } from "./shared/api/pt";
+import { DateInput } from "./shared/ui/DateInput";
+import { SkeletonRows } from "./shared/ui/Skeleton";
+import { Select } from "./shared/ui/Select";
+import { TimeInput } from "./shared/ui/TimeInput";
 
 type CoachT = (typeof I18N)["ru"]["coach"];
 
@@ -611,7 +615,7 @@ const CoachTabel = ({ lang, t, coachId }: { lang: Lang; t: CoachT; coachId: stri
   if (isLoading) return (
     <>
       {journalHead}
-      <div className="empty"><div className="empty__title">{tt("Загрузка…", "Жүктөлүүдө…")}</div></div>
+      <SkeletonRows rows={4} />
     </>
   );
 
@@ -882,7 +886,7 @@ const CoachGroupRosterSheet = ({
             </div>
           </div>
           {isLoading ? (
-            <div className="empty"><div className="empty__title">{tt("Загрузка…", "Жүктөлүүдө…")}</div></div>
+            <SkeletonRows rows={4} />
           ) : error ? (
             <div className="empty">
               <div className="empty__title">{tt("Не удалось загрузить список", "Тизме жүктөлгөн жок")}</div>
@@ -1470,13 +1474,13 @@ const CoachPtSessionModal = ({
             {session.lessons.map((l) => (
               <div key={l.id} style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6 }}>
                 <span style={{ flex: 1, fontSize: 14 }}>{l.child?.full_name}</span>
-                <select
+                <Select
                   value={marks[l.id]}
                   onChange={(e) => setMarks((m) => ({ ...m, [l.id]: e.target.value as "attended" | "missed" }))}
                 >
                   <option value="attended">{tt("✓ Пришёл", "✓ Келди")}</option>
                   <option value="missed">{tt("Неявка (списать)", "Келген жок")}</option>
-                </select>
+                </Select>
               </div>
             ))}
             <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
@@ -1505,8 +1509,8 @@ const CoachPtSessionModal = ({
           <>
             {mode === "reschedule" && (
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 8 }}>
-                <input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} />
-                <input type="time" value={newTime} onChange={(e) => setNewTime(e.target.value)} />
+                <DateInput value={newDate} onChange={(e) => setNewDate(e.target.value)} />
+                <TimeInput value={newTime} onChange={(e) => setNewTime(e.target.value)} />
               </div>
             )}
             <textarea

@@ -15,6 +15,9 @@ import { useChangeGroupCoach, useMarkAttendance, useClearAttendance } from "../s
 import { usePerm } from "../shared/auth/rbac";
 import type { AttendanceStatus } from "../shared/types/database";
 import { ChildDrawer } from "./ChildDrawer";
+import { DateInput } from "../shared/ui/DateInput";
+import { SkeletonRows } from "../shared/ui/Skeleton";
+import { Select } from "../shared/ui/Select";
 
 type Cell = { lesson_id: string; status: string | null };
 
@@ -162,7 +165,7 @@ export const GroupTabelModal = ({
             {tt("Смена тренера группы", "Топтун машыктыруучусун алмаштыруу")}
           </div>
           <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-            <select
+            <Select
               value={newCoachId}
               onChange={(e) => setNewCoachId(e.target.value)}
               style={{ height: 36, padding: "0 10px", border: "1px solid var(--line)", borderRadius: "var(--r-sm)", background: "#fff", fontSize: 13 }}
@@ -171,9 +174,8 @@ export const GroupTabelModal = ({
               {coaches.filter((c: any) => c.id !== currentGroup?.coach_id).map((c: any) => (
                 <option key={c.id} value={c.id}>{c.full_name}</option>
               ))}
-            </select>
-            <input
-              type="date"
+            </Select>
+            <DateInput
               value={coachFrom}
               onChange={(e) => setCoachFrom(e.target.value)}
               style={{ height: 36, padding: "0 10px", border: "1px solid var(--line)", borderRadius: "var(--r-sm)", background: "#fff", fontSize: 13 }}
@@ -200,7 +202,7 @@ export const GroupTabelModal = ({
       )}
 
       {isLoading ? (
-        <div className="empty"><div className="empty__title">{tt("Загрузка…", "Жүктөлүүдө…")}</div></div>
+        <SkeletonRows rows={4} />
       ) : error ? (
         // Ошибка загрузки — НЕ «нет учеников»: иначе любая проблема с
         // доступом/сетью выглядит как пустая группа и вводит в заблуждение.

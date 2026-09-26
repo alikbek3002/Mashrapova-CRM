@@ -40,6 +40,10 @@ import {
 } from "../shared/api/pt";
 import { usePerm } from "../shared/auth/rbac";
 import type { PtPackageStatus, PtSessionStatus, PtVisitStatus } from "../shared/types/database";
+import { DateInput } from "../shared/ui/DateInput";
+import { SkeletonRows } from "../shared/ui/Skeleton";
+import { Select } from "../shared/ui/Select";
+import { TimeInput } from "../shared/ui/TimeInput";
 
 // ============================================================
 // Словари статусов
@@ -177,9 +181,9 @@ const PeriodPicker = ({
       <button className="btn" style={{ padding: "5px 10px", fontSize: 12 }} onClick={() => setRange("month")}>
         {t("Месяц", "Ай")}
       </button>
-      <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+      <DateInput value={from} onChange={(e) => setFrom(e.target.value)} />
       <span style={{ color: "var(--muted)" }}>—</span>
-      <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+      <DateInput value={to} onChange={(e) => setTo(e.target.value)} />
     </div>
   );
 };
@@ -204,7 +208,7 @@ const ServicesTab = ({ lang, canManage }: { lang: Lang; canManage: boolean }) =>
         </div>
       )}
       {isLoading ? (
-        <EmptyState title={t("Загрузка…", "Жүктөлүүдө…")} />
+        <SkeletonRows />
       ) : services.length === 0 ? (
         <EmptyState
           title={t("Услуг пока нет", "Кызматтар жок")}
@@ -405,20 +409,20 @@ const ServiceModal = ({
           <input value={name} onChange={(e) => setName(e.target.value)} disabled={busy} />
         </Field>
         <Field label={t("Вид спорта (секция)", "Спорт түрү")}>
-          <select value={sectionId} onChange={(e) => setSectionId(e.target.value)} disabled={busy}>
+          <Select value={sectionId} onChange={(e) => setSectionId(e.target.value)} disabled={busy}>
             <option value="">{t("— не указан —", "— жок —")}</option>
             {sections.map((s) => (
               <option key={s.id} value={s.id}>
                 {lang === "ru" ? s.name_ru : s.name_ky}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
         <Field label={t("Тип услуги", "Кызмат түрү")}>
-          <select value={type} onChange={(e) => setType(e.target.value as "personal" | "mini_group")} disabled={busy}>
+          <Select value={type} onChange={(e) => setType(e.target.value as "personal" | "mini_group")} disabled={busy}>
             <option value="personal">{t("Персональная тренировка", "Жеке машыгуу")}</option>
             <option value="mini_group">{t("Мини-группа", "Мини-топ")}</option>
-          </select>
+          </Select>
         </Field>
         {type === "mini_group" && (
           <Field label={t("Человек в группе", "Топтогу адам саны")}>
@@ -490,7 +494,7 @@ const ServiceModal = ({
         </div>
         {rates.map((r, i) => (
           <div key={i} style={{ display: "flex", gap: 8, marginBottom: 6 }}>
-            <select
+            <Select
               value={r.coach_id}
               onChange={(e) => setRatesState((x) => x.map((y, j) => (j === i ? { ...y, coach_id: e.target.value } : y)))}
               disabled={busy}
@@ -502,7 +506,7 @@ const ServiceModal = ({
                   {c.full_name}
                 </option>
               ))}
-            </select>
+            </Select>
             <input
               type="number"
               placeholder={t("Цена", "Баасы")}
@@ -565,14 +569,14 @@ const PackagesTab = ({ lang, canSell, canManage }: { lang: Lang; canSell: boolea
     <>
       <div className="toolbar" style={{ marginBottom: 8 }}>
         <SearchBox value={q} onChange={setQ} placeholder={t("Поиск по клиенту…", "Кардар боюнча…")} />
-        <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as "all" | PtPackageStatus)}>
+        <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value as "all" | PtPackageStatus)}>
           <option value="all">{t("Все статусы", "Бардык абалдар")}</option>
           {(Object.keys(PKG_STATUS) as PtPackageStatus[]).map((s) => (
             <option key={s} value={s}>
               {PKG_STATUS[s][lang]}
             </option>
           ))}
-        </select>
+        </Select>
         {canSell && (
           <button className="btn btn--primary" onClick={() => setSellOpen(true)}>
             <Icon name="plus" size={14} /> {t("Продать пакет", "Пакет сатуу")}
@@ -582,7 +586,7 @@ const PackagesTab = ({ lang, canSell, canManage }: { lang: Lang; canSell: boolea
       {error ? (
         <EmptyState title={t("Ошибка", "Ката")} hint={(error as Error).message} />
       ) : isLoading ? (
-        <EmptyState title={t("Загрузка…", "Жүктөлүүдө…")} />
+        <SkeletonRows />
       ) : rows.length === 0 ? (
         <EmptyState title={t("Пакетов нет", "Пакеттер жок")} />
       ) : (
@@ -729,30 +733,30 @@ const SellModal = ({ open, onClose, lang }: { open: boolean; onClose: () => void
       )}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         <Field label={t("Услуга", "Кызмат")}>
-          <select value={serviceId} onChange={(e) => setServiceId(e.target.value)}>
+          <Select value={serviceId} onChange={(e) => setServiceId(e.target.value)}>
             <option value="">{t("— выбрать —", "— тандоо —")}</option>
             {services.map((s) => (
               <option key={s.id} value={s.id}>
                 {s.name} · {formatCurrency(Number(s.price))}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
         <Field label={t("Тренер", "Тренер")}>
-          <select value={coachId} onChange={(e) => setCoachId(e.target.value)}>
+          <Select value={coachId} onChange={(e) => setCoachId(e.target.value)}>
             <option value="">{t("— выбрать —", "— тандоо —")}</option>
             {coaches.map((c: { id: string; full_name: string }) => (
               <option key={c.id} value={c.id}>
                 {c.full_name}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
         <Field label={t("Способ оплаты", "Төлөм ыкмасы")}>
-          <select value={method} onChange={(e) => setMethod(e.target.value as "cash" | "terminal")}>
+          <Select value={method} onChange={(e) => setMethod(e.target.value as "cash" | "terminal")}>
             <option value="cash">{t("Наличные", "Накталай")}</option>
             <option value="terminal">{t("Терминал", "Терминал")}</option>
-          </select>
+          </Select>
         </Field>
         {isMini && (
           <Field label={t("Название мини-группы", "Мини-топтун аты")}>
@@ -768,14 +772,14 @@ const SellModal = ({ open, onClose, lang }: { open: boolean; onClose: () => void
       {items.map((it, i) => (
         <div key={i} style={{ border: "1px solid var(--line)", borderRadius: 8, padding: 10, marginTop: 8 }}>
           <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 8 }}>
-            <select value={it.child_id} onChange={(e) => setItem(i, { child_id: e.target.value })}>
+            <Select value={it.child_id} onChange={(e) => setItem(i, { child_id: e.target.value })}>
               <option value="">{t("— клиент —", "— кардар —")}</option>
               {kids.map((k: { id: string; full_name: string }) => (
                 <option key={k.id} value={k.id}>
                   {k.full_name}
                 </option>
               ))}
-            </select>
+            </Select>
             <input type="number" placeholder={`${t("Цена", "Баасы")} (${basePrice})`} value={it.price} onChange={(e) => setItem(i, { price: e.target.value })} />
             <input type="number" placeholder={t("Оплата", "Төлөм")} value={it.pay_cash} onChange={(e) => setItem(i, { pay_cash: e.target.value })} />
             <input type="number" placeholder={t("С депозита", "Депозиттен")} value={it.pay_deposit} onChange={(e) => setItem(i, { pay_deposit: e.target.value })} />
@@ -938,10 +942,10 @@ const PackageActionsModal = ({
             <input type="number" value={useDeposit} onChange={(e) => setUseDeposit(e.target.value)} />
           </Field>
           <Field label={t("Способ", "Ыкма")}>
-            <select value={method} onChange={(e) => setMethod(e.target.value as "cash" | "terminal")}>
+            <Select value={method} onChange={(e) => setMethod(e.target.value as "cash" | "terminal")}>
               <option value="cash">{t("Наличные", "Накталай")}</option>
               <option value="terminal">{t("Терминал", "Терминал")}</option>
-            </select>
+            </Select>
           </Field>
           <div className="modal__foot">
             <button className="btn" onClick={() => setMode("menu")}>{t("Назад", "Артка")}</button>
@@ -990,7 +994,7 @@ const PackageActionsModal = ({
       {mode === "extend" && (
         <>
           <Field label={t("Новая дата окончания", "Жаңы аяктоо күнү")}>
-            <input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} />
+            <DateInput value={newDate} onChange={(e) => setNewDate(e.target.value)} />
           </Field>
           <div className="modal__foot">
             <button className="btn" onClick={() => setMode("menu")}>{t("Назад", "Артка")}</button>
@@ -1008,13 +1012,13 @@ const PackageActionsModal = ({
       {mode === "coach" && (
         <>
           <Field label={t("Новый тренер", "Жаңы тренер")}>
-            <select value={newCoach} onChange={(e) => setNewCoach(e.target.value)}>
+            <Select value={newCoach} onChange={(e) => setNewCoach(e.target.value)}>
               {coaches.map((c: { id: string; full_name: string }) => (
                 <option key={c.id} value={c.id}>
                   {c.full_name}
                 </option>
               ))}
-            </select>
+            </Select>
           </Field>
           <div className="modal__foot">
             <button className="btn" onClick={() => setMode("menu")}>{t("Назад", "Артка")}</button>
@@ -1032,10 +1036,10 @@ const PackageActionsModal = ({
       {mode === "refund" && (
         <>
           <Field label={t("Тип возврата", "Кайтаруу түрү")}>
-            <select value={refundKind} onChange={(e) => setRefundKind(e.target.value as "partial" | "full")}>
+            <Select value={refundKind} onChange={(e) => setRefundKind(e.target.value as "partial" | "full")}>
               <option value="full">{t("Полный", "Толук")}</option>
               <option value="partial">{t("Частичный", "Жарым-жартылай")}</option>
-            </select>
+            </Select>
           </Field>
           <Field label={`${t("Сумма возврата", "Сумма")} (${t("доступно", "мүмкүн")} ${formatCurrency(Number(pkg.paid) - Number(pkg.refund_amount))})`}>
             <input type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
@@ -1093,14 +1097,14 @@ const SessionsTab = ({ lang, canManage }: { lang: Lang; canManage: boolean }) =>
     <>
       <div className="toolbar" style={{ marginBottom: 8, flexWrap: "wrap", gap: 8 }}>
         <PeriodPicker from={from} to={to} setFrom={setFrom} setTo={setTo} lang={lang} />
-        <select value={coachFilter} onChange={(e) => setCoachFilter(e.target.value)}>
+        <Select value={coachFilter} onChange={(e) => setCoachFilter(e.target.value)}>
           <option value="">{t("Все тренеры", "Бардык тренерлер")}</option>
           {coaches.map((c: { id: string; full_name: string }) => (
             <option key={c.id} value={c.id}>
               {c.full_name}
             </option>
           ))}
-        </select>
+        </Select>
         {canManage && (
           <button className="btn btn--primary" onClick={() => setBookOpen(true)}>
             <Icon name="plus" size={14} /> {t("Записать", "Жазуу")}
@@ -1108,7 +1112,7 @@ const SessionsTab = ({ lang, canManage }: { lang: Lang; canManage: boolean }) =>
         )}
       </div>
       {isLoading ? (
-        <EmptyState title={t("Загрузка…", "Жүктөлүүдө…")} />
+        <SkeletonRows />
       ) : sessions.length === 0 ? (
         <EmptyState title={t("Записей нет", "Жазуулар жок")} />
       ) : (
@@ -1241,7 +1245,7 @@ export const BookModal = ({
       )}
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         <Field label={t("Услуга", "Кызмат")}>
-          <select
+          <Select
             value={serviceId}
             onChange={(e) => {
               setServiceId(e.target.value);
@@ -1254,23 +1258,23 @@ export const BookModal = ({
                 {s.name}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
         <Field label={t("Тренер", "Тренер")}>
-          <select value={coachId} onChange={(e) => setCoachId(e.target.value)} disabled={!!fixedCoachId}>
+          <Select value={coachId} onChange={(e) => setCoachId(e.target.value)} disabled={!!fixedCoachId}>
             <option value="">{t("— выбрать —", "— тандоо —")}</option>
             {coaches.map((c: { id: string; full_name: string }) => (
               <option key={c.id} value={c.id}>
                 {c.full_name}
               </option>
             ))}
-          </select>
+          </Select>
         </Field>
         <Field label={t("Дата", "Күнү")}>
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+          <DateInput value={date} onChange={(e) => setDate(e.target.value)} />
         </Field>
         <Field label={t("Время", "Убакыт")}>
-          <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+          <TimeInput value={time} onChange={(e) => setTime(e.target.value)} />
         </Field>
       </div>
 
@@ -1467,13 +1471,13 @@ export const SessionDetailModal = ({
           {session.lessons.map((l) => (
             <div key={l.id} style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6 }}>
               <span style={{ flex: 1 }}>{l.child?.full_name}</span>
-              <select
+              <Select
                 value={marks[l.id]}
                 onChange={(e) => setMarks((m) => ({ ...m, [l.id]: e.target.value as "attended" | "missed" }))}
               >
                 <option value="attended">{t("✓ Присутствовал", "✓ Катышты")}</option>
                 <option value="missed">{t("Неявка (списать)", "Келген жок (алынат)")}</option>
-              </select>
+              </Select>
             </div>
           ))}
           <div className="modal__foot">
@@ -1530,10 +1534,10 @@ export const SessionDetailModal = ({
         <>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <Field label={t("Новая дата", "Жаңы күн")}>
-              <input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} />
+              <DateInput value={newDate} onChange={(e) => setNewDate(e.target.value)} />
             </Field>
             <Field label={t("Новое время", "Жаңы убакыт")}>
-              <input type="time" value={newTime} onChange={(e) => setNewTime(e.target.value)} />
+              <TimeInput value={newTime} onChange={(e) => setNewTime(e.target.value)} />
             </Field>
           </div>
           <Field label={t("Причина переноса (обязательно)", "Себеби (милдеттүү)")}>
@@ -1558,10 +1562,10 @@ export const SessionDetailModal = ({
         <>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
             <Field label={t("Дата", "Күнү")}>
-              <input type="date" value={newDate} onChange={(e) => setNewDate(e.target.value)} />
+              <DateInput value={newDate} onChange={(e) => setNewDate(e.target.value)} />
             </Field>
             <Field label={t("Время", "Убакыт")}>
-              <input type="time" value={newTime} onChange={(e) => setNewTime(e.target.value)} />
+              <TimeInput value={newTime} onChange={(e) => setNewTime(e.target.value)} />
             </Field>
           </div>
           <div className="modal__foot">
@@ -1580,7 +1584,7 @@ export const SessionDetailModal = ({
       {mode === "substitute" && (
         <>
           <Field label={t("Тренер, который фактически провёл / проведёт", "Иш жүзүндө өткөргөн тренер")}>
-            <select value={subCoach} onChange={(e) => setSubCoach(e.target.value)}>
+            <Select value={subCoach} onChange={(e) => setSubCoach(e.target.value)}>
               <option value="">{t("— выбрать —", "— тандоо —")}</option>
               {coaches
                 .filter((c: { id: string }) => c.id !== session.coach_id)
@@ -1589,7 +1593,7 @@ export const SessionDetailModal = ({
                     {c.full_name}
                   </option>
                 ))}
-            </select>
+            </Select>
           </Field>
           <Field label={t("Комментарий", "Комментарий")}>
             <textarea rows={2} value={subComment} onChange={(e) => setSubComment(e.target.value)} />
@@ -1656,22 +1660,22 @@ const JournalTab = ({ lang }: { lang: Lang }) => {
     <>
       <div className="toolbar" style={{ marginBottom: 8, flexWrap: "wrap", gap: 8 }}>
         <PeriodPicker from={from} to={to} setFrom={setFrom} setTo={setTo} lang={lang} />
-        <select value={coachFilter} onChange={(e) => setCoachFilter(e.target.value)}>
+        <Select value={coachFilter} onChange={(e) => setCoachFilter(e.target.value)}>
           <option value="">{t("Все тренеры", "Бардык тренерлер")}</option>
           {coaches.map((c: { id: string; full_name: string }) => (
             <option key={c.id} value={c.id}>
               {c.full_name}
             </option>
           ))}
-        </select>
-        <select value={serviceFilter} onChange={(e) => setServiceFilter(e.target.value)}>
+        </Select>
+        <Select value={serviceFilter} onChange={(e) => setServiceFilter(e.target.value)}>
           <option value="">{t("Все услуги", "Бардык кызматтар")}</option>
           {services.map((s) => (
             <option key={s.id} value={s.id}>
               {s.name}
             </option>
           ))}
-        </select>
+        </Select>
         <SearchBox value={clientQ} onChange={setClientQ} placeholder={t("Клиент…", "Кардар…")} />
       </div>
       <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 8 }}>
@@ -1680,7 +1684,7 @@ const JournalTab = ({ lang }: { lang: Lang }) => {
         <b style={{ color: "var(--red-600)" }}>С</b> {t("Списано", "Алынды")}
       </div>
       {isLoading ? (
-        <EmptyState title={t("Загрузка…", "Жүктөлүүдө…")} />
+        <SkeletonRows />
       ) : rows.length === 0 ? (
         <EmptyState title={t("Нет данных за период", "Бул мезгилде маалымат жок")} />
       ) : (
@@ -1751,7 +1755,7 @@ const SubsTab = ({ lang }: { lang: Lang }) => {
         <b>{formatCurrency(Math.round(totals.amount))}</b>
       </div>
       {isLoading ? (
-        <EmptyState title={t("Загрузка…", "Жүктөлүүдө…")} />
+        <SkeletonRows />
       ) : subs.length === 0 ? (
         <EmptyState title={t("Замен за период нет", "Алмаштыруулар жок")} />
       ) : (
@@ -1837,7 +1841,7 @@ const ReportsTab = ({ lang }: { lang: Lang }) => {
       )}
 
       {isLoading ? (
-        <EmptyState title={t("Загрузка…", "Жүктөлүүдө…")} />
+        <SkeletonRows />
       ) : rows.length === 0 ? (
         <EmptyState
           title={t("Нет проведённых персональных за период", "Бул мезгилде өткөрүлгөн жеке машыгуу жок")}

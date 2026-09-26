@@ -31,6 +31,9 @@ import { resolveStorageUrl } from "../shared/api/avatar";
 import { initialsOf, formatCurrency } from "./common";
 import { AddChildModal, SellCardModal, TopUpDepositModal, WithdrawDepositModal, AcceptPaymentModal } from "../shared/ui/forms";
 import { freezeOutcome, type CardType, type AttendanceStatus, type PaymentMethod } from "../shared/types/database";
+import { DateInput } from "../shared/ui/DateInput";
+import { SkeletonRows } from "../shared/ui/Skeleton";
+import { Select } from "../shared/ui/Select";
 
 type Role = "admin" | "coach" | "parent";
 type TabId = "subs" | "att" | "pay" | "deposit" | "freezes" | "notes" | "comments" | "group" | "pt";
@@ -728,7 +731,7 @@ const RemoveLessonsModal = ({ open, onClose, lang, childId, card }: {
         )}
       </div>
       {isLoading ? (
-        <div className="empty"><div className="empty__title">{t("Загрузка…", "Жүктөлүүдө…")}</div></div>
+        <SkeletonRows rows={4} />
       ) : upcoming.length === 0 ? (
         <div className="empty"><div className="empty__title">{t("Предстоящих тренировок по этому абонементу нет", "Алдыда машыгуу жок")}</div></div>
       ) : (
@@ -841,10 +844,10 @@ const AddLessonsModal = ({ open, onClose, lang, childId, card }: {
           <input type="number" min={0} value={price} onChange={(e) => setPrice(e.target.value)} />
         </Field>
         <Field label={t("Способ оплаты", "Төлөм ыкмасы")}>
-          <select value={method} onChange={(e) => setMethod(e.target.value as PaymentMethod)} disabled={cashNum <= 0}>
+          <Select value={method} onChange={(e) => setMethod(e.target.value as PaymentMethod)} disabled={cashNum <= 0}>
             <option value="cash">{t("Наличные", "Накта")}</option>
             <option value="terminal">{t("Терминал", "Терминал")}</option>
-          </select>
+          </Select>
         </Field>
       </div>
       {priceNum > 0 && (
@@ -1017,7 +1020,7 @@ const AttTab = ({ childId, lang }: { childId: string; lang: Lang }) => {
     <>
       {childCards.length > 1 && (
         <div style={{ marginBottom: 10 }}>
-          <select value={cardFilter} onChange={(e) => setCardFilter(e.target.value)} style={{ height: 34, padding: "0 10px", border: "1px solid var(--line)", borderRadius: "var(--r-sm)", fontSize: 13 }}>
+          <Select value={cardFilter} onChange={(e) => setCardFilter(e.target.value)} style={{ height: 34, padding: "0 10px", border: "1px solid var(--line)", borderRadius: "var(--r-sm)", fontSize: 13 }}>
             <option value="all">{t("Все абонементы", "Бардык абонементтер")}</option>
             {childCards.map((c) => {
               const sec = (c as any).section as { name_ru?: string; name_ky?: string } | null;
@@ -1029,7 +1032,7 @@ const AttTab = ({ childId, lang }: { childId: string; lang: Lang }) => {
                 </option>
               );
             })}
-          </select>
+          </Select>
         </div>
       )}
       <div className="summary-pill" style={{ marginBottom: 12 }}>
@@ -1444,7 +1447,7 @@ const FreezesTab = ({ childId, role, lang }: { childId: string; role: Role; lang
                   )
                 : undefined}
             >
-              <select value={effectiveCardId} onChange={(e) => setCardId(e.target.value)}>
+              <Select value={effectiveCardId} onChange={(e) => setCardId(e.target.value)}>
                 {freezable.map((c) => {
                   const rem = remainingOf(c.id);
                   return (
@@ -1457,14 +1460,14 @@ const FreezesTab = ({ childId, role, lang }: { childId: string; role: Role; lang
                     </option>
                   );
                 })}
-              </select>
+              </Select>
             </Field>
             <div className="grid-2">
               <Field label={t("С даты", "Качандан")}>
-                <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+                <DateInput value={startDate} onChange={(e) => setStartDate(e.target.value)} />
               </Field>
               <Field label={t("По дату", "Качанга")}>
-                <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+                <DateInput value={endDate} onChange={(e) => setEndDate(e.target.value)} />
               </Field>
             </div>
             {selectedCard && endDate >= startDate && (
@@ -1680,7 +1683,7 @@ const GroupTab = ({ childId, childName, lang }: { childId: string; childName: st
   return (
     <>
       {isLoading ? (
-        <div className="empty"><div className="empty__title">{t("Загрузка…", "Жүктөлүүдө…")}</div></div>
+        <SkeletonRows rows={4} />
       ) : enrollments.length === 0 ? (
         <div className="empty">
           <div className="empty__title">{t("Ребёнок не состоит ни в одной группе", "Бала эч бир топто жок")}</div>
@@ -1732,7 +1735,7 @@ const GroupTab = ({ childId, childName, lang }: { childId: string; childName: st
         ) : (
           <div className="card" style={{ padding: 12 }}>
             <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 10, flexWrap: "wrap" }}>
-              <select
+              <Select
                 value={pickSection}
                 onChange={(e) => setPickSection(e.target.value)}
                 style={{
@@ -1745,7 +1748,7 @@ const GroupTab = ({ childId, childName, lang }: { childId: string; childName: st
                 {sectionsList.map((s) => (
                   <option key={s.id} value={s.id}>{lang === "ru" ? s.name_ru : s.name_ky}</option>
                 ))}
-              </select>
+              </Select>
               <button className="btn btn--ghost" onClick={() => setPickerOpen(false)}>
                 {t("Закрыть", "Жабуу")}
               </button>
@@ -1788,8 +1791,7 @@ const GroupTab = ({ childId, childName, lang }: { childId: string; childName: st
                   {t(`С какой даты добавить в «${addTarget.name}»?`, `«${addTarget.name}» тобуна качантан кошобуз?`)}
                 </div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                  <input
-                    type="date"
+                  <DateInput
                     value={addDate}
                     onChange={(e) => setAddDate(e.target.value)}
                     style={{
@@ -1966,7 +1968,7 @@ const CommentsTab = ({ childId, lang, viewerRole }: { childId: string; lang: Lan
       </button>
 
       {isLoading ? (
-        <div className="empty"><div className="empty__title">{t("Загрузка…", "Жүктөлүүдө…")}</div></div>
+        <SkeletonRows rows={4} />
       ) : (
         <>
           {/* Комментарии администрации — видны всем сотрудникам (ТЗ §3.2). */}
@@ -2062,12 +2064,12 @@ const PtTab = ({ childId, role, lang }: { childId: string; role: Role; lang: Lan
                   {role === "admin" && (
                     coachEditPkg === p.id ? (
                       <span style={{ marginLeft: 6, display: "inline-flex", gap: 4 }}>
-                        <select value={newCoachId} onChange={(e) => setNewCoachId(e.target.value)} style={{ fontSize: 12 }}>
+                        <Select value={newCoachId} onChange={(e) => setNewCoachId(e.target.value)} style={{ fontSize: 12 }}>
                           <option value="">{t("— тренер —", "— тренер —")}</option>
                           {coaches.map((c: { id: string; full_name: string }) => (
                             <option key={c.id} value={c.id}>{c.full_name}</option>
                           ))}
-                        </select>
+                        </Select>
                         <button
                           className="btn btn--primary"
                           style={{ padding: "2px 8px", fontSize: 11 }}

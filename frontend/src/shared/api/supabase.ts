@@ -23,6 +23,8 @@ const demoFetch: typeof fetch = async (input, init) => {
   const accept = headers.get("Accept") ?? "";
   const reqUrl = typeof input === "string" ? input : input instanceof URL ? input.href : input.url;
   const isObject = accept.includes("vnd.pgrst.object");
+  // Имитация сети (~0,4 с), чтобы в демо было видно состояния загрузки.
+  if (!reqUrl.includes("/auth/v1/")) await new Promise((r) => setTimeout(r, 400));
   const body = init?.method === "HEAD" ? null : isObject ? "null" : "[]";
   return new Response(body, {
     status: reqUrl.includes("/auth/v1/") ? 401 : 200,

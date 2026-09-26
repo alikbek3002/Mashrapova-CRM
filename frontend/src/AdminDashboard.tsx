@@ -27,6 +27,7 @@ const DebtorsPage = lazy(() => import("./admin/Debtors").then((m) => ({ default:
 import { useStats, useAllCardDebts } from "./shared/api/queries";
 import { useAuth } from "./shared/auth/AuthProvider";
 import { can, type Permission } from "./shared/auth/rbac";
+import { SkeletonPage } from "./shared/ui/Skeleton";
 
 type NavId =
   | "dash"
@@ -204,7 +205,7 @@ export const AdminDashboard = ({ lang }: { lang: Lang }) => {
       </aside>
 
       <div className="main">
-        <Suspense fallback={<div style={{ padding: 24, color: "var(--muted)" }}>{lang === "ru" ? "Загрузка…" : "Жүктөлүүдө…"}</div>}>
+        <Suspense fallback={<SkeletonPage />}>
           <Page lang={lang} />
         </Suspense>
       </div>

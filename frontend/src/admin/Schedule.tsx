@@ -14,6 +14,8 @@ import { GroupDrawer } from "./GroupDrawer";
 import { GroupTabelModal } from "./GroupTabelModal";
 import { usePtSessions, usePtServices, type PtSessionFull } from "../shared/api/pt";
 import { BookModal, SessionDetailModal } from "./PersonalTrainings";
+import { SkeletonRows } from "../shared/ui/Skeleton";
+import { Select } from "../shared/ui/Select";
 
 // Тип занятий в сетке: обычные (групповые) / персональные (ПТ) / всё сразу.
 type LessonKind = "all" | "group" | "pt";
@@ -249,7 +251,7 @@ export const SchedulePage = ({ lang }: { lang: Lang }) => {
             </div>
           )}
 
-          <select
+          <Select
             value={sectionFilter}
             onChange={(e) => setSectionFilter(e.target.value)}
             title={tt("Секция", "Секция")}
@@ -258,9 +260,9 @@ export const SchedulePage = ({ lang }: { lang: Lang }) => {
             {sections.map((s) => (
               <option key={s.id} value={s.id}>{lang === "ru" ? s.name_ru : s.name_ky}</option>
             ))}
-          </select>
+          </Select>
 
-          <select
+          <Select
             value={coachFilter}
             onChange={(e) => setCoachFilter(e.target.value)}
             title={tt("Тренер", "Тренер")}
@@ -269,10 +271,10 @@ export const SchedulePage = ({ lang }: { lang: Lang }) => {
             {coaches.map((c: { id: string; full_name: string }) => (
               <option key={c.id} value={c.id}>{c.full_name}</option>
             ))}
-          </select>
+          </Select>
 
           {showPt && (
-            <select
+            <Select
               value={serviceFilter}
               onChange={(e) => setServiceFilter(e.target.value)}
               title={tt("Услуга ПТ", "ЖМ кызматы")}
@@ -281,7 +283,7 @@ export const SchedulePage = ({ lang }: { lang: Lang }) => {
               {ptServices.map((s) => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
-            </select>
+            </Select>
           )}
 
           {filtersOn && (
@@ -291,7 +293,7 @@ export const SchedulePage = ({ lang }: { lang: Lang }) => {
           )}
         </div>
 
-        {isLoading ? <EmptyState title={tt("Загрузка…", "Жүктөлүүдө…")} />
+        {isLoading ? <SkeletonRows />
           : shownLessons.length === 0 && shownPt.length === 0 ? (
             <EmptyState title={filtersOn
               ? tt("По выбранным фильтрам занятий нет", "Тандалган чыпкалар боюнча сабак жок")
@@ -692,7 +694,7 @@ const LessonInfoModal = ({
         <span>{t("Табель посещаемости", "Катышуу табели")} · {enrollments.length}</span>
       </div>
       {isLoading ? (
-        <div className="empty"><div className="empty__title">{t("Загрузка…", "Жүктөлүүдө…")}</div></div>
+        <SkeletonRows rows={4} />
       ) : enrollments.length === 0 ? (
         <div className="empty">
           <div className="empty__title">{t("В этой группе пока нет детей", "Топто бала жок")}</div>
@@ -742,7 +744,7 @@ const LessonInfoModal = ({
                     {t("Отменено", "Жокко чыгарылды")}
                   </span>
                 ) : editing ? (
-                  <select
+                  <Select
                     value={edits[c.id] ?? ""}
                     onChange={(e) => setEdits((p) => ({ ...p, [c.id]: e.target.value as AttendanceStatus | "" }))}
                     style={{ fontSize: 12, padding: "4px 8px", borderRadius: 6, border: "1px solid var(--line)", background: "var(--surface)" }}
@@ -751,7 +753,7 @@ const LessonInfoModal = ({
                     {STATUSES.map((s) => (
                       <option key={s} value={s}>{ATT_META[s].label[lang]}</option>
                     ))}
-                  </select>
+                  </Select>
                 ) : meta ? (
                   <span style={{
                     display: "inline-flex", alignItems: "center", gap: 6,

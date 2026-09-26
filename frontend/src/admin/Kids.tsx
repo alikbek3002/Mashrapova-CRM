@@ -7,6 +7,8 @@ import { AddChildModal } from "../shared/ui/forms";
 import { ChildAvatar } from "../shared/ui/ChildAvatar";
 import { ChildDrawer } from "./ChildDrawer";
 import { Gate } from "../shared/auth/Gate";
+import { SkeletonRows, SkeletonText } from "../shared/ui/Skeleton";
+import { Select } from "../shared/ui/Select";
 
 const ageFromDob = (dob: string): number => {
   const d = new Date(dob);
@@ -66,7 +68,7 @@ export const KidsPage = ({ lang }: { lang: Lang }) => {
     <>
       <PageHeader
         title={t("Дети", "Балдар")}
-        subtitle={isLoading ? t("Загрузка…", "Жүктөлүүдө…") : t(`${kids.length} активных в системе`, `${kids.length} активдүү бала`)}
+        subtitle={isLoading ? <SkeletonText /> : t(`${kids.length} активных в системе`, `${kids.length} активдүү бала`)}
         actions={
           <Gate perm="edit_kids">
             <button className="btn btn--primary" onClick={() => setAddOpen(true)}>
@@ -90,7 +92,7 @@ export const KidsPage = ({ lang }: { lang: Lang }) => {
       <div className="card">
         <div className="toolbar" style={{ flexWrap: "wrap", gap: 8 }}>
           <SearchBox value={q} onChange={setQ} placeholder={t("Имя ребёнка или родителя, телефон, номер карты…", "Баланын же ата-эненин аты, телефон, карта номери…")} />
-          <select
+          <Select
             value={sectionId}
             onChange={(e) => { setSectionId(e.target.value); setGroupId("all"); }}
             style={{
@@ -103,8 +105,8 @@ export const KidsPage = ({ lang }: { lang: Lang }) => {
             {sections.map((s) => (
               <option key={s.id} value={s.id}>{lang === "ru" ? s.name_ru : s.name_ky}</option>
             ))}
-          </select>
-          <select
+          </Select>
+          <Select
             value={groupId}
             onChange={(e) => setGroupId(e.target.value)}
             style={{
@@ -117,7 +119,7 @@ export const KidsPage = ({ lang }: { lang: Lang }) => {
             {groupsForSection.map((g: any) => (
               <option key={g.id} value={g.id}>{g.name}</option>
             ))}
-          </select>
+          </Select>
           <label className="check" style={{ margin: 0 }}>
             <input
               type="checkbox"
@@ -130,7 +132,7 @@ export const KidsPage = ({ lang }: { lang: Lang }) => {
         {error ? (
           <EmptyState title={t("Ошибка загрузки", "Жүктөө катасы")} hint={error.message} />
         ) : isLoading ? (
-          <EmptyState title={t("Загрузка…", "Жүктөлүүдө…")} />
+          <SkeletonRows />
         ) : rows.length === 0 ? (
           <EmptyState title={t("Никто не найден", "Эч ким табылган жок")} />
         ) : (

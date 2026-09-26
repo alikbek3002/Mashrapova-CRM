@@ -7,6 +7,8 @@ import { useChangePaymentMethod } from "../shared/api/mutations";
 import { AcceptPaymentModal, SellCardModal, TopUpDepositModal } from "../shared/ui/forms";
 import { Gate } from "../shared/auth/Gate";
 import { usePerm } from "../shared/auth/rbac";
+import { DateInput } from "../shared/ui/DateInput";
+import { SkeletonRows, SkeletonText } from "../shared/ui/Skeleton";
 
 const methodLabel: Record<string, { ru: string; ky: string }> = {
   cash: { ru: "Наличные", ky: "Накта" },
@@ -68,7 +70,7 @@ export const PaymentsPage = ({ lang }: { lang: Lang }) => {
     <>
       <PageHeader
         title={t("Платежи", "Төлөмдөр")}
-        subtitle={isLoading ? t("Загрузка…", "Жүктөлүүдө…") : t(`${formatCurrency(total30)} за 30 дней · наличные ${cashCount} · терминал ${termCount}`, `${formatCurrency(total30)} 30 күндө`)}
+        subtitle={isLoading ? <SkeletonText /> : t(`${formatCurrency(total30)} за 30 дней · наличные ${cashCount} · терминал ${termCount}`, `${formatCurrency(total30)} 30 күндө`)}
         actions={
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <Gate perm="receive_payment">
@@ -106,16 +108,14 @@ export const PaymentsPage = ({ lang }: { lang: Lang }) => {
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12.5, color: "var(--muted)" }}>
             {t("Период:", "Мезгил:")}
-            <input
-              type="date"
+            <DateInput
               value={dateFrom}
               onChange={(e) => setDateFrom(e.target.value)}
               style={{ height: 34, padding: "0 8px", border: "1px solid var(--line)", borderRadius: "var(--r-sm)", background: "var(--bg-soft)", fontSize: 13 }}
               title={t("С даты", "Күндөн")}
             />
             —
-            <input
-              type="date"
+            <DateInput
               value={dateTo}
               onChange={(e) => setDateTo(e.target.value)}
               style={{ height: 34, padding: "0 8px", border: "1px solid var(--line)", borderRadius: "var(--r-sm)", background: "var(--bg-soft)", fontSize: 13 }}
@@ -138,7 +138,7 @@ export const PaymentsPage = ({ lang }: { lang: Lang }) => {
           </div>
         </div>
         {error ? <EmptyState title={t("Ошибка", "Ката")} hint={error.message} /> :
-          isLoading ? <EmptyState title={t("Загрузка…", "Жүктөлүүдө…")} /> :
+          isLoading ? <SkeletonRows /> :
           rows.length === 0 ? <EmptyState title={t("Платежей нет", "Төлөмдөр жок")} /> : (
             <div className="table-scroll">
               <table className="admin-table">

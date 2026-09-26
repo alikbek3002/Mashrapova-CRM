@@ -19,6 +19,10 @@ import { toast } from "../shared/ui/toast";
 import { initialsOf } from "./common";
 import { SellCardModal } from "../shared/ui/forms";
 import { ChildDrawer } from "./ChildDrawer";
+import { DateInput } from "../shared/ui/DateInput";
+import { SkeletonRows } from "../shared/ui/Skeleton";
+import { Select } from "../shared/ui/Select";
+import { TimeInput } from "../shared/ui/TimeInput";
 
 type TabId = "params" | "kids" | "schedule" | "history";
 
@@ -48,7 +52,7 @@ export const GroupDrawer = ({
   if (!group) {
     return (
       <Modal open={open} onClose={onClose} width={760} title={t("Группа", "Топ")}>
-        <div className="empty"><div className="empty__title">{t("Загрузка…", "Жүктөлүүдө…")}</div></div>
+        <SkeletonRows rows={4} />
       </Modal>
     );
   }
@@ -183,16 +187,16 @@ const ParamsTab = ({ group, lang, onClose }: { group: any; lang: Lang; onClose: 
       </Field>
       <div className="grid-2">
         <Field label={t("Секция", "Секция")}>
-          <select value={sectionId} onChange={(e) => setSectionId(e.target.value)}>
+          <Select value={sectionId} onChange={(e) => setSectionId(e.target.value)}>
             <option value="">— {t("выбрать", "тандоо")} —</option>
             {sections.map((s) => (<option key={s.id} value={s.id}>{lang === "ru" ? s.name_ru : s.name_ky}</option>))}
-          </select>
+          </Select>
         </Field>
         <Field label={t("Тренер", "Тренер")}>
-          <select value={coachId} onChange={(e) => setCoachId(e.target.value)}>
+          <Select value={coachId} onChange={(e) => setCoachId(e.target.value)}>
             <option value="">— {t("выбрать", "тандоо")} —</option>
             {coaches.map((c) => (<option key={c.id} value={c.id}>{c.full_name}</option>))}
-          </select>
+          </Select>
         </Field>
         <Field label={t("Вместимость", "Багуу")}>
           <input type="number" value={cap} onChange={(e) => setCap(e.target.value)} />
@@ -207,11 +211,11 @@ const ParamsTab = ({ group, lang, onClose }: { group: any; lang: Lang; onClose: 
           <input type="number" min={0} step={1} value={rate} onChange={(e) => setRate(e.target.value)} placeholder="100" />
         </Field>
         <Field label={t("Аудитория", "Аудитория")}>
-          <select value={audience} onChange={(e) => setAudience(e.target.value as GroupAudience)}>
+          <Select value={audience} onChange={(e) => setAudience(e.target.value as GroupAudience)}>
             <option value="kids">{t("Дети", "Балдар")}</option>
             <option value="adults">{t("Взрослые", "Чоңдор")}</option>
             <option value="mixed">{t("Смешанная", "Аралаш")}</option>
-          </select>
+          </Select>
         </Field>
         <Field label={t("Уровень / примечание", "Деңгээл / эскертүү")}>
           <input value={level} onChange={(e) => setLevel(e.target.value)} placeholder={t("старшая, ОФП…", "улуу топ…")} />
@@ -223,13 +227,13 @@ const ParamsTab = ({ group, lang, onClose }: { group: any; lang: Lang; onClose: 
           <input type="number" min={0} value={ageMax} onChange={(e) => setAgeMax(e.target.value)} placeholder={t("напр. 8", "мис. 8")} />
         </Field>
         <Field label={t("Группа работает с", "Топ иштейт")}>
-          <input type="date" value={startsOn} onChange={(e) => setStartsOn(e.target.value)} />
+          <DateInput value={startsOn} onChange={(e) => setStartsOn(e.target.value)} />
         </Field>
         <Field
           label={t("по (срок группы)", "чейин (мөөнөт)")}
           hint={t("Пусто — бессрочная", "Бош — мөөнөтсүз")}
         >
-          <input type="date" value={endsOn} onChange={(e) => setEndsOn(e.target.value)} />
+          <DateInput value={endsOn} onChange={(e) => setEndsOn(e.target.value)} />
         </Field>
       </div>
       {endsOn && endsOn < new Date().toISOString().slice(0, 10) && (
@@ -481,7 +485,7 @@ const KidsTab = ({ group, enrollments, lang }: { group: any; enrollments: any[];
                     {t(`Перевести ${child.full_name} в другую группу`, `${child.full_name} башка топко которуу`)}
                   </div>
                   <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                    <select
+                    <Select
                       value={transferGroupId}
                       onChange={(ev) => setTransferGroupId(ev.target.value)}
                       style={{
@@ -500,9 +504,8 @@ const KidsTab = ({ group, enrollments, lang }: { group: any; enrollments: any[];
                           </option>
                         );
                       })}
-                    </select>
-                    <input
-                      type="date"
+                    </Select>
+                    <DateInput
                       value={transferDate}
                       onChange={(ev) => setTransferDate(ev.target.value)}
                       style={{
@@ -614,8 +617,7 @@ const KidsTab = ({ group, enrollments, lang }: { group: any; enrollments: any[];
                   {t(`С какой даты добавить ${addTarget.name}?`, `${addTarget.name} качантан кошобуз?`)}
                 </div>
                 <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap" }}>
-                  <input
-                    type="date"
+                  <DateInput
                     value={addDate}
                     onChange={(e) => setAddDate(e.target.value)}
                     style={{
@@ -784,7 +786,7 @@ const HistoryTab = ({ groupId, lang }: { groupId: string; lang: Lang }) => {
     }
   };
 
-  if (isLoading) return <div className="empty"><div className="empty__title">{t("Загрузка…", "Жүктөлүүдө…")}</div></div>;
+  if (isLoading) return <SkeletonRows rows={4} />;
   if (events.length === 0) {
     return (
       <div className="empty">
@@ -960,8 +962,7 @@ const ScheduleTab = ({ groupId, durationMin, lang }: { groupId: string; duration
                 }}
               >
                 <div style={{ width: 110, fontWeight: 600, fontSize: 13 }}>{dayFull[d]}</div>
-                <input
-                  type="time"
+                <TimeInput
                   value={dayTimes[d] ?? "16:00"}
                   onChange={(e) => setDayTime(d, e.target.value)}
                   disabled={saving}

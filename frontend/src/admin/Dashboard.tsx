@@ -8,6 +8,7 @@ import { useStats, useLessons, useAttendanceBySection, useKidsBySection, useLive
 import { SellCardModal } from "../shared/ui/forms";
 import { usePerm } from "../shared/auth/rbac";
 import { Gate } from "../shared/auth/Gate";
+import { SkeletonKpis, SkeletonRows } from "../shared/ui/Skeleton";
 
 // Локальная YYYY-MM-DD. toISOString() в UTC+N ночью отдаёт вчерашнюю дату —
 // из-за этого в дашборде уроки не попадали в свою колонку (числа в шапке
@@ -48,6 +49,7 @@ export const DashboardPage = ({ lang }: { lang: Lang }) => {
         }
       />
 
+      {stats.isLoading ? <SkeletonKpis count={4} /> : (
       <div className="kpi-grid">
         <AdminKpi
           label={t.kpi.activeKids}
@@ -91,6 +93,7 @@ export const DashboardPage = ({ lang }: { lang: Lang }) => {
           labelDotColor="var(--red)"
         />
       </div>
+      )}
 
       <div className="dash-grid">
         <KidsBySectionCard lang={lang} />
@@ -159,7 +162,7 @@ const KidsBySectionCard = ({ lang }: { lang: Lang }) => {
         </div>
       </div>
       <div className="att-chart">
-        {isLoading && <div className="empty"><div className="empty__title">{tt("Загрузка…", "Жүктөлүүдө…")}</div></div>}
+        {isLoading && <SkeletonRows rows={4} />}
         {!isLoading && data.length === 0 && <div className="empty"><div className="empty__title">{tt("Пока нет данных", "Маалымат жок")}</div></div>}
         {data.map((s) => {
           const pct = max ? Math.round((s.count / max) * 100) : 0;
@@ -208,7 +211,7 @@ const CoachPayrollCard = ({ lang }: { lang: Lang }) => {
         </div>
       </div>
       <div className="att-chart">
-        {isLoading && <div className="empty"><div className="empty__title">{tt("Загрузка…", "Жүктөлүүдө…")}</div></div>}
+        {isLoading && <SkeletonRows rows={4} />}
         {!isLoading && sorted.length === 0 && <div className="empty"><div className="empty__title">{tt("Тренеров пока нет", "Тренерлер жок")}</div></div>}
         {sorted.map((r) => {
           const a = Number(r.actual_amount);

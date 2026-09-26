@@ -7,6 +7,7 @@ import { useRecomputePayroll, useAdjustPayroll, useAdvancePayroll, useApprovePay
 import { Modal, Field } from "../shared/ui/Modal";
 import { Gate } from "../shared/auth/Gate";
 import { usePerm } from "../shared/auth/rbac";
+import { SkeletonRows } from "../shared/ui/Skeleton";
 
 // First and last day of current month, ISO yyyy-mm-dd.
 const monthRange = (offset = 0) => {
@@ -99,7 +100,7 @@ export const PayrollPage = ({ lang }: { lang: Lang }) => {
           </div>
         </div>
         {liveLoading ? (
-          <EmptyState title={t("Загрузка…", "Жүктөлүүдө…")} />
+          <SkeletonRows />
         ) : live.length === 0 ? (
           <EmptyState title={t("Тренеров пока нет", "Тренерлер жок")} />
         ) : (
@@ -199,7 +200,7 @@ export const PayrollPage = ({ lang }: { lang: Lang }) => {
         {error ? (
           <EmptyState title={t("Ошибка", "Ката")} hint={(error as Error).message} />
         ) : isLoading ? (
-          <EmptyState title={t("Загрузка…", "Жүктөлүүдө…")} />
+          <SkeletonRows />
         ) : periods.length === 0 ? (
           <EmptyState
             title={t("Нет начислений за период", "Бул мезгил үчүн эсептөөлөр жок")}

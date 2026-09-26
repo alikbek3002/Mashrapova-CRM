@@ -17,6 +17,7 @@ import { Modal, Field } from "./shared/ui/Modal";
 import { ChildDrawer } from "./admin/ChildDrawer";
 import { Shell } from "./shared/ui/Shell";
 import { ChildAvatar, EditableChildAvatar } from "./shared/ui/ChildAvatar";
+import { SkeletonRows } from "./shared/ui/Skeleton";
 
 type ParentT = (typeof I18N)["ru"]["parent"];
 
@@ -848,7 +849,7 @@ const ParentNotes = ({ lang, kid }: { lang: Lang; kid: any }) => {
         <span className="m-sect__title">{tt("Заметки тренера", "Тренердин жазмалары")}</span>
       </div>
       {isLoading ? (
-        <div className="empty"><div className="empty__title">{tt("Загрузка…", "Жүктөлүүдө…")}</div></div>
+        <SkeletonRows rows={4} />
       ) : notes.length === 0 ? (
         <div className="empty"><div className="empty__title">{tt("Заметок пока нет", "Жазмалар жок")}</div></div>
       ) : (

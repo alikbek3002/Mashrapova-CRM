@@ -14,6 +14,7 @@ import { usePerm } from "../shared/auth/rbac";
 import { ChildDrawer } from "./ChildDrawer";
 import { GroupDrawer } from "./GroupDrawer";
 import { AddFamilyModal, AddCoachModal, AddSectionModal } from "../shared/ui/forms";
+import { SkeletonRows } from "../shared/ui/Skeleton";
 
 type TabId = "kids" | "families" | "coaches" | "sections" | "groups";
 
@@ -121,7 +122,7 @@ const RowActions = ({
 
 // ---------- Per-tab tables ----------
 const Loading = ({ lang }: { lang: Lang }) => (
-  <EmptyState title={lang === "ru" ? "Загрузка…" : "Жүктөлүүдө…"} />
+  <SkeletonRows />
 );
 
 const Empty = ({ lang }: { lang: Lang }) => (

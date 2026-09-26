@@ -5,6 +5,7 @@ import { PageHeader, SearchBox, EmptyState, initialsOf } from "./common";
 import { useFamilies } from "../shared/api/queries";
 import { AddFamilyModal } from "../shared/ui/forms";
 import { Gate } from "../shared/auth/Gate";
+import { SkeletonRows, SkeletonText } from "../shared/ui/Skeleton";
 
 export const ParentsPage = ({ lang }: { lang: Lang }) => {
   const [q, setQ] = useState("");
@@ -27,7 +28,7 @@ export const ParentsPage = ({ lang }: { lang: Lang }) => {
     <>
       <PageHeader
         title={t("Родители", "Ата-энелер")}
-        subtitle={isLoading ? t("Загрузка…", "Жүктөлүүдө…") : t(`${families.length} семей в базе`, `${families.length} үй-бүлө`)}
+        subtitle={isLoading ? <SkeletonText /> : t(`${families.length} семей в базе`, `${families.length} үй-бүлө`)}
         actions={
           <Gate perm="edit_parents">
             <button className="btn btn--primary" onClick={() => setAddOpen(true)}>
@@ -63,7 +64,7 @@ export const ParentsPage = ({ lang }: { lang: Lang }) => {
         {error ? (
           <EmptyState title={t("Ошибка загрузки", "Жүктөө катасы")} hint={error.message} />
         ) : isLoading ? (
-          <EmptyState title={t("Загрузка…", "Жүктөлүүдө…")} />
+          <SkeletonRows />
         ) : rows.length === 0 ? (
           <EmptyState title={t("Никто не найден", "Эч ким табылган жок")} />
         ) : (

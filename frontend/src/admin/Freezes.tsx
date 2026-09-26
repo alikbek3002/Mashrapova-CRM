@@ -9,6 +9,7 @@ import { CreateFreezeModal } from "../shared/ui/forms";
 import { Gate } from "../shared/auth/Gate";
 import { usePerm } from "../shared/auth/rbac";
 import { freezeOutcome } from "../shared/types/database";
+import { SkeletonRows, SkeletonText } from "../shared/ui/Skeleton";
 
 // Заморозка, закрытая по истечении срока, и отклонённая заявка лежат в
 // одном статусе 'rejected' — раньше обе показывались как «Отклонено», хотя
@@ -33,7 +34,7 @@ export const FreezesPage = ({ lang }: { lang: Lang }) => {
     <>
       <PageHeader
         title={t("Заморозки", "Тындыруулар")}
-        subtitle={isLoading ? t("Загрузка…", "Жүктөлүүдө…") : t(`${freezes.length} записей`, `${freezes.length} жазуу`)}
+        subtitle={isLoading ? <SkeletonText /> : t(`${freezes.length} записей`, `${freezes.length} жазуу`)}
         actions={
           <Gate perm="create_freeze">
             <button className="btn btn--primary" onClick={() => setOpen(true)}>
@@ -45,7 +46,7 @@ export const FreezesPage = ({ lang }: { lang: Lang }) => {
 
       <div className="card">
         {error ? <EmptyState title={t("Ошибка", "Ката")} hint={error.message} /> :
-          isLoading ? <EmptyState title={t("Загрузка…", "Жүктөлүүдө…")} /> :
+          isLoading ? <SkeletonRows /> :
           freezes.length === 0 ? <EmptyState title={t("Заморозок нет", "Тындыруулар жок")} /> : (
             <div className="table-scroll">
               <table className="admin-table">

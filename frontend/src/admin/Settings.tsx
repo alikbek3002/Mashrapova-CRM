@@ -5,6 +5,8 @@ import { useOrganization, useUsers, useAuditLog, useOrgSettings } from "../share
 import { useUpdateOrgSettings } from "../shared/api/mutations";
 import { supabase } from "../shared/api/supabase";
 import { usePerm } from "../shared/auth/rbac";
+import { SkeletonRows } from "../shared/ui/Skeleton";
+import { Select } from "../shared/ui/Select";
 
 export const SettingsPage = ({ lang }: { lang: Lang }) => {
   const t = (ru: string, ky: string) => (lang === "ru" ? ru : ky);
@@ -99,7 +101,7 @@ const OrgTab = ({ lang }: { lang: Lang }) => {
     else { setMsg(t("Сохранено", "Сакталды")); refetch(); }
   };
 
-  if (isLoading) return <EmptyState title={t("Загрузка…", "Жүктөлүүдө…")} />;
+  if (isLoading) return <SkeletonRows />;
 
   return (
     <div style={{ maxWidth: 480 }}>
@@ -109,12 +111,12 @@ const OrgTab = ({ lang }: { lang: Lang }) => {
       </label>
       <label className="field">
         <span className="field__label">{t("Часовой пояс", "Убакыт алкагы")}</span>
-        <select value={tz} onChange={(e) => setTz(e.target.value)} disabled={busy}>
+        <Select value={tz} onChange={(e) => setTz(e.target.value)} disabled={busy}>
           <option value="Asia/Bishkek">Asia/Bishkek</option>
           <option value="Asia/Almaty">Asia/Almaty</option>
           <option value="Asia/Tashkent">Asia/Tashkent</option>
           <option value="Europe/Moscow">Europe/Moscow</option>
-        </select>
+        </Select>
       </label>
       <label className="field">
         <span className="field__label">{t("Телефон клуба", "Клубдун телефону")}</span>
@@ -165,7 +167,7 @@ const DiscountsTab = ({ lang }: { lang: Lang }) => {
     });
   };
 
-  if (isLoading) return <EmptyState title={t("Загрузка…", "Жүктөлүүдө…")} />;
+  if (isLoading) return <SkeletonRows />;
 
   return (
     <div style={{ maxWidth: 480 }}>
@@ -220,7 +222,7 @@ const UsersTab = ({ lang }: { lang: Lang }) => {
     refetch();
   };
 
-  if (isLoading) return <EmptyState title={t("Загрузка…", "Жүктөлүүдө…")} />;
+  if (isLoading) return <SkeletonRows />;
   return (
     <div className="table-scroll">
       <table className="admin-table">
@@ -260,7 +262,7 @@ const AuditTab = ({ lang }: { lang: Lang }) => {
   const t = (ru: string, ky: string) => (lang === "ru" ? ru : ky);
   const { data: log = [], isLoading } = useAuditLog(100);
 
-  if (isLoading) return <EmptyState title={t("Загрузка…", "Жүктөлүүдө…")} />;
+  if (isLoading) return <SkeletonRows />;
   if (log.length === 0) return <EmptyState title={t("Журнал пуст", "Журнал бош")} />;
 
   return (

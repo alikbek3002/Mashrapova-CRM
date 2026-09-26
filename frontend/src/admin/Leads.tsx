@@ -7,6 +7,8 @@ import { useUpdateLeadStage } from "../shared/api/mutations";
 import { AddLeadModal } from "../shared/ui/forms";
 import type { LeadStage } from "../shared/types/database";
 import { Gate } from "../shared/auth/Gate";
+import { SkeletonRows, SkeletonText } from "../shared/ui/Skeleton";
+import { Select } from "../shared/ui/Select";
 
 const sourceColor: Record<string, string> = {
   Instagram: "var(--red)",
@@ -45,7 +47,7 @@ export const LeadsPage = ({ lang }: { lang: Lang }) => {
     <>
       <PageHeader
         title={tt("Воронка продаж", "Сатуу каналы")}
-        subtitle={isLoading ? tt("Загрузка…", "Жүктөлүүдө…") : tt(`${leads.length} лидов`, `${leads.length} арыз`)}
+        subtitle={isLoading ? <SkeletonText /> : tt(`${leads.length} лидов`, `${leads.length} арыз`)}
         actions={
           <Gate perm="edit_leads">
             <button className="btn btn--primary" onClick={() => setOpen(true)}>
@@ -67,7 +69,7 @@ export const LeadsPage = ({ lang }: { lang: Lang }) => {
           </div>
         </div>
         {error ? <EmptyState title={tt("Ошибка", "Ката")} hint={error.message} /> :
-          isLoading ? <EmptyState title={tt("Загрузка…", "Жүктөлүүдө…")} /> :
+          isLoading ? <SkeletonRows /> :
           rows.length === 0 ? <EmptyState title={tt("Лидов нет", "Арыздар жок")} /> : (
             <div className="table-scroll">
               <table className="admin-table">
@@ -99,7 +101,7 @@ export const LeadsPage = ({ lang }: { lang: Lang }) => {
                       </td>
                       <td style={{ color: "var(--muted)" }}>{l.source ?? "—"}</td>
                       <td>
-                        <select
+                        <Select
                           className="lead-row__stage"
                           value={l.stage}
                           onChange={(e) => updateStage.mutate({ id: l.id, stage: e.target.value as LeadStage })}
@@ -108,7 +110,7 @@ export const LeadsPage = ({ lang }: { lang: Lang }) => {
                           <option value="new">{stageLabel.new}</option>
                           <option value="trial">{stageLabel.trial}</option>
                           <option value="waiting">{stageLabel.waiting}</option>
-                        </select>
+                        </Select>
                       </td>
                       <td style={{ color: "var(--muted)", fontSize: 12 }}>
                         {new Date(l.created_at).toLocaleDateString(lang === "ru" ? "ru-RU" : "ky-KG")}

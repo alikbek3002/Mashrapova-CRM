@@ -15,6 +15,9 @@ import { normalizeE164KG, isValidPhoneInput } from "../shared/auth/normalizePhon
 import { Gate } from "../shared/auth/Gate";
 import { useAuth } from "../shared/auth/AuthProvider";
 import { resolveAvatarUrl } from "../shared/api/avatar";
+import { DateInput } from "../shared/ui/DateInput";
+import { SkeletonRows, SkeletonText } from "../shared/ui/Skeleton";
+import { Select } from "../shared/ui/Select";
 
 const ROLE_LABELS: Record<StaffMember["role"], { ru: string; ky: string }> = {
   director:         { ru: "Директор",         ky: "Директор" },
@@ -71,7 +74,7 @@ export const UsersPage = ({ lang }: { lang: Lang }) => {
   }, [q, staff]);
 
   const totalLabel = isLoading
-    ? t("Загрузка…", "Жүктөлүүдө…")
+    ? <SkeletonText />
     : showArchived
       ? t(`${staff.length} (вкл. архивных)`, `${staff.length} (архив менен)`)
       : t(`${staff.length} сотрудников`, `${staff.length} кызматкер`);
@@ -127,7 +130,7 @@ export const UsersPage = ({ lang }: { lang: Lang }) => {
         {error ? (
           <EmptyState title={t("Ошибка загрузки", "Жүктөө катасы")} hint={(error as Error).message} />
         ) : isLoading ? (
-          <EmptyState title={t("Загрузка…", "Жүктөлүүдө…")} />
+          <SkeletonRows />
         ) : rows.length === 0 ? (
           <EmptyState title={t("Никого не найдено", "Эч ким табылган жок")} />
         ) : (
@@ -463,7 +466,7 @@ const StaffModal = ({
             <label className="btn" style={{ alignSelf: "flex-start", cursor: busy ? "not-allowed" : "pointer", padding: "8px 14px", fontSize: 13 }}>
               <Icon name="download" size={14} />
               {uploadAvatar.isPending
-                ? t("Загрузка…", "Жүктөлүүдө…")
+                ? <SkeletonText />
                 : (avatarUrl ? t("Заменить фото", "Сүрөттү алмаштыруу") : t("Загрузить фото", "Сүрөт жүктөө"))}
               <input
                 type="file"
@@ -499,12 +502,12 @@ const StaffModal = ({
             <input value={fullName} onChange={(e) => setFullName(e.target.value)} disabled={busy} required />
           </Field>
           <Field label={t("Должность", "Кызмат") + " *"}>
-            <select value={role} onChange={(e) => setRole(e.target.value as StaffRole)} disabled={busy}>
+            <Select value={role} onChange={(e) => setRole(e.target.value as StaffRole)} disabled={busy}>
               <option value="fitness_director">{t("Управляющий", "Башкаруучу")}</option>
               <option value="senior_manager">{t("Старший менеджер", "Башкы менеджер")}</option>
               <option value="manager">{t("Менеджер", "Менеджер")}</option>
               <option value="cashier">{t("Ресепшен / кассир", "Ресепшен / кассир")}</option>
-            </select>
+            </Select>
           </Field>
 
           <Field label={t("Телефон (логин)", "Телефон (логин)") + " *"}>
@@ -542,8 +545,7 @@ const StaffModal = ({
             />
           </Field>
           <Field label={t("Дата рождения", "Туулган күнү")}>
-            <input
-              type="date"
+            <DateInput
               value={birthday}
               onChange={(e) => setBirthday(e.target.value)}
               disabled={busy}
@@ -551,8 +553,7 @@ const StaffModal = ({
           </Field>
 
           <Field label={t("Дата приёма на работу", "Жумушка кабыл алынган күн")}>
-            <input
-              type="date"
+            <DateInput
               value={hireDate}
               onChange={(e) => setHireDate(e.target.value)}
               disabled={busy}
@@ -560,14 +561,14 @@ const StaffModal = ({
           </Field>
           {!isCreate && (
             <Field label={t("Статус", "Абалы")}>
-              <select
+              <Select
                 value={isActive ? "1" : "0"}
                 onChange={(e) => setIsActive(e.target.value === "1")}
                 disabled={busy}
               >
                 <option value="1">{t("Активен", "Активдүү")}</option>
                 <option value="0">{t("Отключён", "Өчүрүлгөн")}</option>
-              </select>
+              </Select>
             </Field>
           )}
           {isCreate && (

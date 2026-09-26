@@ -6,6 +6,8 @@ import {
   usePayments, useChildren, useCards, usePayroll, useAttendanceBySection, useFreezes,
 } from "../shared/api/queries";
 import { usePerm } from "../shared/auth/rbac";
+import { DateInput } from "../shared/ui/DateInput";
+import { SkeletonRows } from "../shared/ui/Skeleton";
 
 const ymd = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -167,11 +169,11 @@ const SalesTab = ({ lang }: { lang: Lang }) => {
       <div className="grid-2" style={{ maxWidth: 360 }}>
         <label className="field">
           <span className="field__label">{t("С", "Башт.")}</span>
-          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+          <DateInput value={from} onChange={(e) => setFrom(e.target.value)} />
         </label>
         <label className="field">
           <span className="field__label">{t("По", "Чейин")}</span>
-          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+          <DateInput value={to} onChange={(e) => setTo(e.target.value)} />
         </label>
       </div>
 
@@ -290,7 +292,7 @@ const PayrollTab = ({ lang }: { lang: Lang }) => {
       </div>
 
       {isLoading ? (
-        <EmptyState title={t("Загрузка…", "Жүктөлүүдө…")} />
+        <SkeletonRows />
       ) : periods.length === 0 ? (
         <EmptyState title={t("Нет начислений за период", "Эсептөөлөр жок")} hint={t("Перейдите в раздел «Зарплаты» и нажмите «Пересчитать».", "")} />
       ) : (

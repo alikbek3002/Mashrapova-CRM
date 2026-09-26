@@ -7,6 +7,7 @@ import { AddSectionModal, AddGroupModal } from "../shared/ui/forms";
 import { GroupDrawer } from "./GroupDrawer";
 import { Gate } from "../shared/auth/Gate";
 import { usePerm } from "../shared/auth/rbac";
+import { SkeletonText } from "../shared/ui/Skeleton";
 
 type SectionRow = ReturnType<typeof useSections>["data"] extends (infer U)[] | undefined ? U : never;
 
@@ -55,7 +56,7 @@ export const SectionsPage = ({ lang }: { lang: Lang }) => {
     <>
       <PageHeader
         title={t("Секции и группы", "Секциялар жана топтор")}
-        subtitle={isLoading ? t("Загрузка…", "Жүктөлүүдө…") : t(`${dirCount} направлений · ${sections.length} секций · ${groups.length} групп`, `${dirCount} багыт · ${sections.length} секция · ${groups.length} топ`)}
+        subtitle={isLoading ? <SkeletonText /> : t(`${dirCount} направлений · ${sections.length} секций · ${groups.length} групп`, `${dirCount} багыт · ${sections.length} секция · ${groups.length} топ`)}
         actions={
           <Gate perm="manage_sections">
             <button className="btn btn--primary" onClick={() => setOpen(true)}>
