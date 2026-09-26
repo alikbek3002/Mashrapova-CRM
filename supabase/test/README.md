@@ -70,6 +70,20 @@ npm run db:stop
    db-anon-role = "local_api"
    server-host = "127.0.0.1"
    server-port = 3000
+   jwt-secret = "<случайные 32+ байта>"
+   ```
+
+   **`jwt-secret` обязателен, и это не про безопасность стенда.**
+   `supabase-js` посылает заголовок `Authorization: Bearer <ключ>` в
+   каждом запросе, даже когда никто не вошёл. PostgREST без секрета
+   разобрать его не может и отвечает `500 PGRST300 Server lacks JWT
+   secret` — **на всё**. Снаружи это выглядит как «страницы открываются,
+   данных нет»: экраны показывают пустое состояние, потому что запрос
+   завершился ошибкой, а не потому что база пуста. Проверить в одну
+   команду:
+
+   ```bash
+   curl -s -H "Authorization: Bearer $TOKEN" 'http://127.0.0.1:3000/children?limit=1'
    ```
 
    Если он падает с `libpq.5.dylib not found`, библиотека лежит в самом
@@ -79,13 +93,27 @@ npm run db:stop
    export DYLD_FALLBACK_LIBRARY_PATH=node_modules/@embedded-postgres/darwin-arm64/native/lib
    ```
 
-3. `frontend/.env` (файл в `.gitignore`, в прод не попадёт):
+3. Ключ для фронтенда — JWT роли `local_api`, подписанный тем же
+   секретом. Годится любой минтер, ставить зависимости не нужно:
+
+   ```bash
+   node -e 'const c=require("crypto"),s=process.argv[1],
+     b=o=>Buffer.from(JSON.stringify(o)).toString("base64url"),
+     h=b({alg:"HS256",typ:"JWT"}),
+     p=b({role:"local_api",exp:Math.floor(Date.now()/1000)+31536000});
+     console.log(h+"."+p+"."+c.createHmac("sha256",s).update(h+"."+p).digest("base64url"))' "<секрет>"
+   ```
+
+4. `frontend/.env` (файл в `.gitignore`, в прод не попадёт):
 
    ```
    VITE_SUPABASE_URL=http://127.0.0.1:3000
-   VITE_SUPABASE_ANON_KEY=local-dev-no-jwt
+   VITE_SUPABASE_ANON_KEY=<токен из шага 3>
    VITE_DEMO_AUTH=true
    ```
+
+   Vite читает `.env` только при старте — после правки перезапустите
+   `npm run dev`, перезагрузки страницы недостаточно.
 
 `VITE_DEMO_AUTH=true` включает вход по роли без пароля и подтягивает
 настоящий профиль сотрудника из базы. Без флага заданный
