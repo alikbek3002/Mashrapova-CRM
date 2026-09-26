@@ -1,9 +1,16 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase, apiUrl, isSupabaseConfigured } from "./supabase";
 import { apiPost, apiPatch, apiDelete } from "./api-client";
+// Офлайн-очередь (ТЗ §12.4): продажа за наличные и отметка посещаемости
+// откладываются, если связи нет, и уходят сами при её появлении.
+import { enqueue } from "../offline/outbox";
+import { writeAttendanceMarks } from "../offline/ops";
+
+/** Подпись операции в списке ожидающих отправки. */
+const formatSum = (n: number): string => `${Math.round(n).toLocaleString("ru-RU")} сом`;
 import { toast } from "../ui/toast";
 import { useAuth } from "../auth/AuthProvider";
-import type { CardType, PaymentMethod, LeadStage, AttendanceStatus, SectionCategory } from "../types/database";
+import type { CardType, PaymentMethod, LeadStage, LeadSource, Lead, AttendanceStatus, SectionCategory, LessonFault } from "../types/database";
 
 // Парсит сырое сообщение из apiPost/apiPatch (формат "API 409: {\"error\":\"code\"}")
 // и возвращает понятный русский текст. Если код не распознан — возвращает
@@ -134,6 +141,8 @@ export const useAddChild = () => {
       responsible_manager_id?: string | null;
       amo_url?: string | null;
       source?: "target" | "referral" | "other" | null;
+      // ТЗ §3.3: кто привёл клиента — основание для бонуса «Приведи друга».
+      referred_by_child_id?: string | null;
     }) => {
       const orgId = await getMyOrgId();
       const { data, error } = await supabase
@@ -305,6 +314,24 @@ export const useUpdateCoachRate = () => {
       qc.invalidateQueries({ queryKey: ["payroll_live"] });
       qc.invalidateQueries({ queryKey: ["payroll_me_live"] });
       toast.ok("Ставка тренера обновлена");
+    },
+    onError: (e: Error) => toast.err("Ошибка: " + e.message),
+  });
+};
+
+// ТЗ §12.3: сброс второго фактора сотруднику. Доступно только директору
+// (проверяет бэкенд). Нужен, потому что политика mfa_required требует
+// aal2 — с потерянным телефоном сотрудник иначе заперт навсегда.
+export const useResetMfa = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (userId: string) =>
+      apiPost<{ ok: boolean; removed: number }>(`/v1/staff/${userId}/reset-mfa`, {}),
+    onSuccess: (r) => {
+      qc.invalidateQueries({ queryKey: ["users"] });
+      toast.ok(Number(r?.removed ?? 0) > 0
+        ? "Второй фактор сброшен — сотрудник настроит его заново при входе"
+        : "У сотрудника не было настроенного второго фактора");
     },
     onError: (e: Error) => toast.err("Ошибка: " + e.message),
   });
@@ -534,6 +561,10 @@ export const useAddSection = () => {
     mutationFn: async (input: {
       name_ru: string; name_ky: string; category: SectionCategory;
       color?: string | null;
+      // ТЗ §5.1 и §4.1: цены секции. null — берётся цена тарифа из каталога.
+      trial_price?: number | null;
+      single_price?: number | null;
+      subscription_price?: number | null;
     }) => {
       const orgId = await getMyOrgId();
       const { data, error } = await supabase
@@ -750,7 +781,8 @@ export const useAddLead = () => {
       parent_name?: string | null; phone?: string | null;
       child_name?: string | null; child_age?: number | null;
       section_interest_id?: string | null; stage?: LeadStage;
-      source?: string | null; comment?: string | null;
+      source?: LeadSource | null; comment?: string | null;
+      instagram?: string | null;
     }) => {
       const orgId = await getMyOrgId();
       const { data, error } = await supabase
@@ -782,6 +814,25 @@ export const useUpdateLeadStage = () => {
       qc.invalidateQueries({ queryKey: ["leads"] });
       qc.invalidateQueries({ queryKey: ["stats"] });
     },
+  });
+};
+
+// Правка карточки лида целиком (ТЗ §8.2): запись на пробную, причина
+// отказа, ответственный менеджер. first_contact_at при уходе с этапа
+// «новый» проставляет триггер в БД — руками его слать не нужно.
+export const useUpdateLead = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, patch }: { id: string; patch: Partial<Lead> }) => {
+      const { data, error } = await supabase.from("leads").update(patch).eq("id", id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["leads"] });
+      qc.invalidateQueries({ queryKey: ["stats"] });
+    },
+    onError: (e: Error) => toast.err("Ошибка: " + e.message),
   });
 };
 
@@ -1053,6 +1104,8 @@ export const useSellCard = () => {
       plan_id?: string | null; duration_days?: number | null;
       freeze_quota?: number; price: number;
       discount_pct: number;
+      // ТЗ §3.3: причина обязательна, если скидка больше нуля.
+      discount_reason?: string | null;
       start_date: string; end_date: string; payment_method: PaymentMethod;
       section_id?: string | null;
       group_id?: string | null;
@@ -1072,6 +1125,36 @@ export const useSellCard = () => {
       );
       const deposit_amount = input.deposit_amount ?? 0;
       const cash_amount = input.cash_amount ?? Math.max(0, finalAmount - deposit_amount);
+      const body = { freeze_quota: 0, ...input, deposit_amount, cash_amount };
+
+      // ТЗ §12.4: без интернета доступна продажа ЗА НАЛИЧНЫЕ. Терминал
+      // офлайн невозможен физически, а списание с депозита требует
+      // проверки баланса на сервере — их в очередь не кладём.
+      const cashOnly = input.payment_method === "cash" && deposit_amount === 0;
+      if (!navigator.onLine && cashOnly) {
+        const op = enqueue("card.sell", { body }, `Продажа абонемента · ${formatSum(cash_amount)}`, {
+          idempotent: true,
+        });
+        // Ответ сервера появится только после синхронизации. Возвращаем
+        // заглушку, чтобы экран продажи закрылся: деньги от клиента
+        // получены, задерживать кассира нечем.
+        return {
+          ok: true,
+          queued: true,
+          op_id: op.id,
+          card_id: "",
+          applied_discount: 0,
+          applied_discount_pct: 0,
+          discount_reason: null,
+          enrollment_id: null,
+        };
+      }
+      if (!navigator.onLine) {
+        throw new Error(
+          "Нет связи. Офлайн можно продать только за наличные — без терминала и списания с депозита.",
+        );
+      }
+
       return apiPost<{
         ok: boolean;
         card_id: string;
@@ -1079,11 +1162,7 @@ export const useSellCard = () => {
         applied_discount_pct: number;
         discount_reason: string | null;
         enrollment_id: string | null;
-      }>(
-        "/v1/cards/sell",
-        { freeze_quota: 0, ...input, deposit_amount, cash_amount },
-        { idempotent: true }
-      );
+      }>("/v1/cards/sell", body, { idempotent: true });
     },
     onSuccess: (data, vars) => {
       qc.invalidateQueries({ queryKey: ["club_cards"] });
@@ -1108,6 +1187,12 @@ export const useSellCard = () => {
       qc.invalidateQueries({ queryKey: ["deposit_summary"] });
       qc.invalidateQueries({ queryKey: ["payroll_live"] });
       qc.invalidateQueries({ queryKey: ["payroll_me_live"] });
+      // Офлайн-продажа (ТЗ §12.4): сервер её ещё не видел, поэтому ни
+      // скидок, ни записи в группу в ответе нет — не выдумываем их.
+      if ((data as { queued?: boolean } | undefined)?.queued) {
+        toast.ok("Продажа сохранена и уйдёт, как появится связь. Абонемент появится после синхронизации.");
+        return;
+      }
       const enrolled = !!data?.enrollment_id;
       const sibling = data?.discount_reason === "auto_2nd_child";
       const msg = enrolled
@@ -1438,12 +1523,29 @@ export const useUpdateLesson = () => {
 export const useCancelLesson = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, reason, force_majeure }: { id: string; reason: string; force_majeure: boolean }) =>
-      apiPost<{ ok: boolean }>(`/v1/lessons/${id}/cancel`, { reason, force_majeure }, { idempotent: true }),
-    onSuccess: () => {
+    mutationFn: async ({ id, reason, force_majeure, cancellation_fault }: {
+      id: string;
+      reason: string;
+      force_majeure: boolean;
+      // ТЗ §5.3 п.4: от вины зависит оплата тренера.
+      cancellation_fault?: LessonFault;
+    }) =>
+      apiPost<{ ok: boolean; credited: number; notified: number }>(
+        `/v1/lessons/${id}/cancel`,
+        { reason, force_majeure, cancellation_fault },
+        { idempotent: true },
+      ),
+    onSuccess: (r) => {
       qc.invalidateQueries({ queryKey: ["lessons"] });
       qc.invalidateQueries({ queryKey: ["freezes"] });
-      toast.ok("Занятие отменено");
+      // Компенсация по ТЗ §4.4 — не молчаливая: офис должен видеть,
+      // скольким детям вернули занятие.
+      qc.invalidateQueries({ queryKey: ["club_cards"] });
+      qc.invalidateQueries({ queryKey: ["card_balance"] });
+      const credited = Number(r?.credited ?? 0);
+      toast.ok(credited > 0
+        ? `Занятие отменено · +1 занятие вернули ${credited} детям`
+        : "Занятие отменено");
     },
     onError: (e: Error) => toast.err("Ошибка отмены: " + e.message),
   });
@@ -1474,6 +1576,33 @@ export const useMarkAttendance = () => {
   const role = user?.role ?? null;
   return useMutation({
     mutationFn: async ({ lessonId, marks }: { lessonId: string; marks: { child_id: string; status: AttendanceStatus }[] }) => {
+      if (marks.length === 0) throw new Error("Нечего сохранять");
+
+      // ТЗ §12.4: офлайн отметка посещений должна работать. Проверяем
+      // связь ПЕРВЫМ делом: и сверка занятия ниже, и auth.getUser() ходят
+      // в сеть, то есть офлайн мы бы упали, не дойдя до очереди.
+      //
+      // Серверные проверки (будущая дата, 24-часовое окно) при этом не
+      // теряются: экран тренера уже блокирует кнопки по тем же правилам,
+      // а на синхронизации границу держит RLS. Отклонённое попадёт в
+      // список отклонённых, а не растворится.
+      if (!navigator.onLine) {
+        // getSession читает токен из локального хранилища, без сети —
+        // в отличие от getUser().
+        const { data: sess } = await supabase.auth.getSession();
+        enqueue(
+          "attendance.mark",
+          {
+            lessonId,
+            marks,
+            markedBy: sess.session?.user?.id ?? null,
+            markedAt: new Date().toISOString(),
+          },
+          `Посещаемость · ${marks.length} отметок`,
+        );
+        return { failedIds: [] as string[], failedNames: [] as string[], queued: true };
+      }
+
       // 1. Lesson must not be in the future, and for coaches the 24h
       // marking window must still be open. Mirrors the RLS policy, gives
       // a clearer error than the obscure RLS denial.
@@ -1510,45 +1639,20 @@ export const useMarkAttendance = () => {
       const acceptedMarks = marks;
       if (acceptedMarks.length === 0) throw new Error("Нечего сохранять");
 
-      const { data: sess } = await supabase.auth.getUser();
-      const markedBy = sess.user?.id ?? null;
-      const nowIso = new Date().toISOString();
-      const rows = acceptedMarks.map((m) => ({
-        lesson_id: lessonId,
-        ...m,
-        marked_by: markedBy,
-        marked_at: nowIso,
-      }));
-      // Delete existing for these children in this lesson then insert
-      // (simplest atomic-ish path; the table doesn't have ON CONFLICT for the pair).
-      const acceptedIds = acceptedMarks.map((m) => m.child_id);
-      const { error: dErr } = await supabase
-        .from("attendance")
-        .delete()
-        .eq("lesson_id", lessonId)
-        .in("child_id", acceptedIds);
-      if (dErr) throw dErr;
-      const { error } = await supabase.from("attendance").insert(rows);
-      if (error) {
-        // Пакет не прошёл целиком (RLS/триггер заморозки у одного ребёнка
-        // валит весь insert) — сохраняем построчно и собираем, кто не прошёл.
-        const failedIds: string[] = [];
-        let lastMsg = error.message;
-        for (const r of rows) {
-          const { error: e1 } = await supabase.from("attendance").insert(r);
-          if (e1) { failedIds.push(r.child_id); lastMsg = e1.message; }
-        }
-        if (failedIds.length === rows.length) {
-          throw new Error(/row-level security|42501/i.test(lastMsg)
-            ? "У выбранных детей нет абонемента или записи в группу на эту дату"
-            : lastMsg);
-        }
-        const { data: kids } = await supabase.from("children").select("id, full_name").in("id", failedIds);
-        const names = (kids ?? []).map((k) => k.full_name);
-        return { failedIds, failedNames: names };
-      }
+      const { data: sess } = await supabase.auth.getSession();
+      // Время отметки, а не отправки: тренер отмечает в зале, а очередь
+      // может уйти вечером. marked_at должен показывать первое.
+      const payload = {
+        lessonId,
+        marks: acceptedMarks,
+        markedBy: sess.session?.user?.id ?? null,
+        markedAt: new Date().toISOString(),
+      };
 
-      return { failedIds: [] as string[], failedNames: [] as string[] };
+      // Онлайн идём тем же исполнителем, что и очередь: две копии пути
+      // записи неизбежно разъехались бы.
+      const res = await writeAttendanceMarks(payload);
+      return { ...res, queued: false };
     },
     onSuccess: (res, vars) => {
       qc.invalidateQueries({ queryKey: ["attendance_lesson", vars.lessonId] });
@@ -1569,6 +1673,12 @@ export const useMarkAttendance = () => {
       // ["stats"] намеренно НЕ инвалидируем: отметку делает тренер, а это
       // запускало 11-запросный пересчёт KPI, который тренеру не показывается.
       // Посещаемость в Dashboard обновится по staleTime.
+      // Офлайн-отметка ещё не доехала до сервера — не говорим «сохранено»,
+      // это разные вещи (ТЗ §12.4).
+      if ((res as { queued?: boolean } | undefined)?.queued) {
+        toast.ok("Отмечено. Отправим, как появится связь.");
+        return;
+      }
       const failed = res?.failedIds?.length ?? 0;
       if (failed > 0) {
         const who = res.failedNames.length ? res.failedNames.join(", ") : `${failed} детей`;
@@ -1646,10 +1756,15 @@ export const useAdjustPayroll = () => {
 export const useAdvancePayroll = () => {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (id: string) => apiPost<{ ok: boolean }>(`/v1/payroll/${id}/advance`, {}),
-    onSuccess: () => {
+    mutationFn: async (id: string) =>
+      apiPost<{ ok: boolean; advance_amount: number }>(`/v1/payroll/${id}/advance`, {}),
+    onSuccess: (r) => {
       qc.invalidateQueries({ queryKey: ["payroll"] });
-      toast.ok("Аванс отмечен");
+      // Сумму показываем сразу: по ТЗ §10.2 её считает сервер (50% от
+      // заработанного с 1-го по 20-е), и управляющий должен увидеть,
+      // сколько выдавать на руки, не открывая отчёт.
+      const amount = Number(r?.advance_amount ?? 0);
+      toast.ok(amount > 0 ? `Аванс отмечен: ${amount.toLocaleString("ru-RU")} сом` : "Аванс отмечен");
     },
     onError: (e: Error) => toast.err("Ошибка: " + e.message),
   });
@@ -2018,3 +2133,164 @@ export const useBulkCancelLessons = () => {
   });
 };
 
+
+// ======================================================================
+// Уведомления: матрица, шаблоны, рассылка и разбор очереди (ТЗ §9)
+// ======================================================================
+
+/**
+ * Галочка канала в матрице §9.1.
+ *
+ * upsert, а не update: строки может не быть вовсе — матрица засеяна
+ * фиксированным набором событий, а список в интерфейсе шире (например,
+ * freeze.approved событие есть, а строки матрицы для него нет).
+ * Ключ конфликта — тот же, что первичный ключ таблицы.
+ */
+export const useSetNotificationChannel = () => {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: async (input: {
+      event_type: string;
+      channel: "push" | "sms" | "inapp";
+      audience: "client" | "staff";
+      enabled: boolean;
+    }) => {
+      if (!user?.organization_id) throw new Error("Организация не определена");
+      const { error } = await supabase
+        .from("notification_matrix")
+        .upsert(
+          { organization_id: user.organization_id, ...input, updated_at: new Date().toISOString() },
+          { onConflict: "organization_id,event_type,channel" },
+        );
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notification_matrix"] }),
+    onError: (e: Error) => toast.err("Не удалось изменить канал: " + e.message),
+  });
+};
+
+export const useSaveMessageTemplate = () => {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: async (input: {
+      event_type: string;
+      // inapp здесь недопустим: у служебного канала текста нет
+      // (message_templates_channel_check разрешает только push и sms).
+      channel: "push" | "sms";
+      body_ru: string;
+      body_ky: string | null;
+    }) => {
+      if (!user?.organization_id) throw new Error("Организация не определена");
+      const { error } = await supabase
+        .from("message_templates")
+        .upsert(
+          {
+            organization_id: user.organization_id,
+            ...input,
+            body_ky: input.body_ky || null,
+            updated_by: user.id,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "organization_id,event_type,channel" },
+        );
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["message_templates"] });
+      toast.ok("Шаблон сохранён");
+    },
+    onError: (e: Error) => toast.err("Не удалось сохранить шаблон: " + e.message),
+  });
+};
+
+export type BroadcastInput = {
+  text: string;
+  section_id?: string | null;
+  coach_id?: string | null;
+  card_status?: "active" | "ending" | "frozen" | "expired" | "debt" | null;
+  end_date_from?: string | null;
+  end_date_to?: string | null;
+  dry_run?: boolean;
+};
+
+export type BroadcastResult = {
+  ok: true;
+  dry_run?: boolean;
+  recipients: number;
+  batch_id?: string;
+};
+
+/**
+ * Массовая рассылка §9.2. Идёт через бэкенд, а не напрямую в очередь:
+ * outbound_messages закрыта на запись для всех, кроме service_role, —
+ * иначе любой сотрудник с правом на чтение мог бы отправить что угодно
+ * кому угодно.
+ *
+ * Не идемпотентна намеренно: два одинаковых письма подряд — это
+ * осознанное решение человека, а ключ склеил бы их в одно. От дублей
+ * внутри одной рассылки защищает dedup_key на паре «рассылка + телефон».
+ */
+export const useBroadcast = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: BroadcastInput) =>
+      apiPost<BroadcastResult>("/v1/notifications/broadcast", input),
+    onSuccess: (res) => {
+      if (res.dry_run) return;
+      qc.invalidateQueries({ queryKey: ["outbound_messages"] });
+      toast.ok(
+        res.recipients > 0
+          ? `В очередь поставлено сообщений: ${res.recipients}`
+          : "Под фильтр никто не попал — сообщения не поставлены",
+      );
+    },
+    onError: (e: Error) => toast.err("Рассылка не удалась: " + e.message),
+  });
+};
+
+/** Разбор очереди вручную — тот же код, что раз в час гоняет планировщик. */
+export const useDispatchOutbound = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () =>
+      apiPost<{ ok: true; sent: number; failed: number; skipped: number }>(
+        "/v1/notifications/dispatch",
+        {},
+      ),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["outbound_messages"] });
+      toast.ok(`Отправлено: ${res.sent}, пропущено: ${res.skipped}, ошибок: ${res.failed}`);
+    },
+    onError: (e: Error) => toast.err("Не удалось разобрать очередь: " + e.message),
+  });
+};
+
+/**
+ * Пометить прочитанными несколько уведомлений.
+ *
+ * Отдельно от useMarkAllNotificationsRead: та берёт пользователя из
+ * supabase.auth.getUser() и гасит ВСЁ, а инбоксу нужно закрыть именно то,
+ * что человек видит на экране после фильтра. Получатель проверяется RLS
+ * (notifications_owner_rw: recipient_id = auth.uid()), поэтому явная
+ * привязка к пользователю здесь не нужна.
+ */
+export const useMarkNotificationsRead = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      if (ids.length === 0) return;
+      const { error } = await supabase
+        .from("notifications")
+        .update({ is_read: true })
+        .in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+      qc.invalidateQueries({ queryKey: ["notifications_unread"] });
+    },
+    onError: (e: Error) => toast.err("Не удалось отметить: " + e.message),
+  });
+};

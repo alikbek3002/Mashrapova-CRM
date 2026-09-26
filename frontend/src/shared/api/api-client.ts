@@ -5,7 +5,7 @@ import { supabase, apiUrl, isSupabaseConfigured } from "./supabase";
 
 const DEMO_ERROR = "Демо-режим: сервер не подключён";
 
-const newKey = (): string => {
+export const newKey = (): string => {
   if (typeof crypto !== "undefined" && "randomUUID" in crypto) return crypto.randomUUID();
   // RFC4122 v4 fallback
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
@@ -34,7 +34,12 @@ export const apiGet = async <T>(path: string): Promise<T> => {
 export const apiPost = async <T>(
   path: string,
   body: unknown,
-  opts: { idempotent?: boolean } = {}
+  // idempotencyKey позволяет задать ключ СНАРУЖИ. Это нужно офлайн-очереди
+  // (ТЗ §12.4): ключ создаётся в момент постановки операции и не меняется
+  // при повторах. Если генерировать его при каждой отправке, повтор после
+  // оборванного соединения продаст абонемент второй раз — сервер не
+  // узнает, что это та же операция.
+  opts: { idempotent?: boolean; idempotencyKey?: string } = {}
 ): Promise<T> => {
   const { data: sessionData } = await supabase.auth.getSession();
   const token = sessionData.session?.access_token;
@@ -44,7 +49,8 @@ export const apiPost = async <T>(
     "Content-Type": "application/json",
     Authorization: `Bearer ${token}`,
   };
-  if (opts.idempotent) headers["Idempotency-Key"] = newKey();
+  if (opts.idempotencyKey) headers["Idempotency-Key"] = opts.idempotencyKey;
+  else if (opts.idempotent) headers["Idempotency-Key"] = newKey();
 
   const res = await fetch(`${apiUrl}${path}`, {
     method: "POST",

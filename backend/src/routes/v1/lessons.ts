@@ -66,7 +66,7 @@ export const lessonsRoutes = async (app: FastifyInstance) => {
 
       const { data: lesson, error: lessonErr } = await supabaseAdmin
         .from("lessons")
-        .select("id, group_id, organization_id, status")
+        .select("id, group_id, organization_id, status, date, start_time, group:groups(name, section_id)")
         .eq("id", id)
         .single();
       if (lessonErr || !lesson) return reply.code(404).send({ error: "lesson_not_found" });
@@ -75,50 +75,110 @@ export const lessonsRoutes = async (app: FastifyInstance) => {
       }
 
       const newStatus = parsed.data.force_majeure ? "force_majeure" : "cancelled";
+      // Отметка force_majeure сама по себе говорит о вине: явный выбор
+      // офиса имеет приоритет, иначе выводим из флага.
+      const fault =
+        parsed.data.cancellation_fault ??
+        (parsed.data.force_majeure ? "force_majeure" : null);
+
+      const group = (Array.isArray((lesson as any).group)
+        ? (lesson as any).group[0]
+        : (lesson as any).group) as { name?: string; section_id?: string } | null;
 
       const { error: updateErr } = await supabaseAdmin
         .from("lessons")
         .update({
           status: newStatus,
           cancellation_reason: parsed.data.reason,
+          cancellation_fault: fault,
         })
         .eq("id", id);
       if (updateErr) return reply.code(500).send({ error: "cancel_failed" });
 
-      // Force-majeure: credit +1 lesson to each enrolled child
-      if (parsed.data.force_majeure) {
-        const { data: enrolled } = await supabaseAdmin
-          .from("enrollments")
-          .select("child_id")
-          .eq("group_id", lesson.group_id)
-          .is("archived_at", null);
+      // Состав группы нужен и для компенсации, и для уведомлений.
+      const { data: enrolled } = await supabaseAdmin
+        .from("enrollments")
+        .select("child_id")
+        .eq("group_id", lesson.group_id)
+        .is("archived_at", null);
+      const childIds = (enrolled ?? []).map((e) => e.child_id);
 
-        if (enrolled && enrolled.length > 0) {
-          const childIds = enrolled.map((e) => e.child_id);
-          const { data: cards } = await supabaseAdmin
+      // ТЗ §4.4 и §5.3 п.3: форс-мажор → клиенту +1 ЗАНЯТИЕ к абонементу.
+      //
+      // Раньше это делалось вставкой approved-заморозки каждому ребёнку:
+      // заморозка двигает end_date на день, и это выдавали за компенсацию.
+      // Но остаток абонемента и формула возврата (§7.3) считаются по
+      // total_lessons, а не по датам, и главное — компенсация за вину
+      // клуба тратила заморозки КЛИЕНТА, лимит которых по §4.3 ограничен
+      // типом абонемента. Теперь наращиваем total_lessons — тот же
+      // механизм, что у «Добавить занятия» в карточке.
+      let credited = 0;
+      if (parsed.data.force_majeure && childIds.length > 0) {
+        const { data: cards } = await supabaseAdmin
+          .from("club_cards")
+          .select("id, child_id, total_lessons, section_id")
+          .in("child_id", childIds)
+          .in("status", ["active", "ending", "frozen"])
+          .lte("start_date", lesson.date)
+          .gte("end_date", lesson.date);
+
+        for (const c of cards ?? []) {
+          // Абонемент другой секции этим занятием не затронут.
+          if (c.section_id && group?.section_id && c.section_id !== group.section_id) continue;
+          // Безлимитные карты (personal) в занятиях не считаются.
+          if (c.total_lessons == null) continue;
+          const { error: creditErr } = await supabaseAdmin
             .from("club_cards")
-            .select("id, child_id")
-            .in("child_id", childIds)
-            .eq("status", "active");
-
-          if (cards && cards.length > 0) {
-            await supabaseAdmin.from("freezes").insert(
-              cards.map((c) => ({
-                child_id: c.child_id,
-                club_card_id: c.id,
-                initiated_by: user.id,
-                initiator_role: "manager",
-                reason: `force_majeure:${parsed.data.reason}`,
-                status: "approved",
-                approved_by: user.id,
-                approved_at: new Date().toISOString(),
-              }))
-            );
+            .update({ total_lessons: Number(c.total_lessons) + 1 })
+            .eq("id", c.id);
+          if (creditErr) {
+            req.log.error({ err: creditErr, card_id: c.id }, "force_majeure_credit_failed");
+            continue;
           }
+          credited += 1;
         }
       }
 
-      return reply.send({ ok: true, status: newStatus });
+      // ТЗ §5.3 п.2: уведомить всех родителей группы. SMS и Push пока
+      // отправлять нечем (провайдера нет, §13) — пишем в notifications,
+      // приложение родителя их уже читает.
+      let notified = 0;
+      if (childIds.length > 0) {
+        const { data: kids } = await supabaseAdmin
+          .from("children")
+          .select("id, family:families(parent_user_id)")
+          .in("id", childIds);
+        const recipients = new Set<string>();
+        for (const k of kids ?? []) {
+          const fam = Array.isArray((k as any).family) ? (k as any).family[0] : (k as any).family;
+          if (fam?.parent_user_id) recipients.add(fam.parent_user_id as string);
+        }
+        if (recipients.size > 0) {
+          const { error: notifErr } = await supabaseAdmin.from("notifications").insert(
+            Array.from(recipients).map((rid) => ({
+              recipient_id: rid,
+              type: "lesson.cancelled",
+              payload: {
+                lesson_id: id,
+                group_name: group?.name ?? null,
+                date: lesson.date,
+                start_time: lesson.start_time,
+                reason: parsed.data.reason,
+                force_majeure: parsed.data.force_majeure,
+                // Клиенту важно узнать не только об отмене, но и о том,
+                // что занятие ему вернули (§4.4).
+                lesson_credited: parsed.data.force_majeure,
+              },
+            }))
+          );
+          // Уведомления не критичны: отмена уже проведена, откатывать её
+          // из-за сбоя рассылки нельзя.
+          if (notifErr) req.log.error({ err: notifErr }, "lesson_cancel_notify_failed");
+          else notified = recipients.size;
+        }
+      }
+
+      return reply.send({ ok: true, status: newStatus, fault, credited, notified });
     }
   );
 

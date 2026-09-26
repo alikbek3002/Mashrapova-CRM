@@ -10,10 +10,11 @@ import { resolveAvatarUrl } from "../api/avatar";
 import { computeWindowEnd, formatWindow } from "../lib/enrollmentWindow";
 import { fmtD } from "../lib/dates";
 import { useAuth } from "../auth/AuthProvider";
+import { usePerm } from "../auth/rbac";
 import { normalizeE164KG, isValidPhoneInput } from "../auth/normalizePhone";
 import { supabase } from "../api/supabase";
 import type { Lang } from "../../data";
-import type { CardType, PaymentMethod, SectionCategory, LeadStage, Family, ClientSource, GroupAudience } from "../types/database";
+import type { CardType, PaymentMethod, SectionCategory, LeadStage, LeadSource, Family, ClientSource, GroupAudience, CoachPayMode, LessonFault } from "../types/database";
 import { DateInput } from "./DateInput";
 import { SkeletonText } from "./Skeleton";
 import { Select } from "./Select";
@@ -779,6 +780,7 @@ type ChildInitial = {
   responsible_manager_id?: string | null;
   amo_url?: string | null;
   source?: ClientSource | null;
+  referred_by_child_id?: string | null;
 };
 
 export const AddChildModal = ({
@@ -821,6 +823,9 @@ export const AddChildModal = ({
   // AmoCRM — версия 2.0 по ТЗ: поля в форме нет, но ссылку у существующих не теряем.
   const [amoUrl] = useState(initial?.amo_url ?? "");
   const [source, setSource] = useState<ClientSource | "">(initial?.source ?? "");
+  // ТЗ §3.3 «Приведи друга»: кто привёл этого клиента. Бонус −300 сом
+  // начисляется рефереру и применяется к его следующему абонементу.
+  const [referredBy, setReferredBy] = useState(initial?.referred_by_child_id ?? "");
   const [managerId, setManagerId] = useState<string>(
     initial?.responsible_manager_id
       ?? (currentUserIsManagerLike ? (user?.id ?? "") : ""),
@@ -909,6 +914,7 @@ export const AddChildModal = ({
           responsible_manager_id: managerId || null,
           amo_url: amoUrl.trim() || null,
           source: source || null,
+          referred_by_child_id: referredBy || null,
         });
         // Полная карточка: правки родителей/телефонов/адреса сохраняются
         // в выбранную семью тем же сабмитом.
@@ -950,12 +956,13 @@ export const AddChildModal = ({
         responsible_manager_id: managerId || null,
         amo_url: amoUrl.trim() || null,
         source: source || null,
+        referred_by_child_id: referredBy || null,
       });
       if (onCreated && created && (created as { id?: string }).id) {
         onCreated((created as { id: string }).id);
       }
       onClose();
-      setFullName(""); setBirth(""); setCard(""); setSource("");
+      setFullName(""); setBirth(""); setCard(""); setSource(""); setReferredBy("");
       setFather(""); setFatherPhone("");
       setMother(""); setMotherPhone("");
       setFamilyComment("");
@@ -1143,6 +1150,22 @@ export const AddChildModal = ({
         </Select>
       </Field>
 
+      {/* ТЗ §3.3 «Приведи друга»: −300 сом с абонемента того, кто привёл */}
+      {source === "referral" && (
+        <Field label={t("Кто привёл", "Ким алып келди")}>
+          <Select value={referredBy} onChange={(e) => setReferredBy(e.target.value)} disabled={busy}>
+            <option value="">{t("— не указан —", "— көрсөтүлгөн эмес —")}</option>
+            {kidsForFamilies
+              .filter((c) => c.id !== initial?.id && !c.deleted_at)
+              .map((c) => <option key={c.id} value={c.id}>{c.full_name}</option>)}
+          </Select>
+          <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4, lineHeight: 1.45 }}>
+            {t("Бонус 300 сом спишется с его следующего абонемента — после того, как этот клиент купит свой.",
+               "300 сом бонус ал кийинки абонементинен кемийт.")}
+          </div>
+        </Field>
+      )}
+
       {err && <div className="field__error" style={{ marginTop: 8 }}>{err}</div>}
 
       <div className="modal__foot">
@@ -1174,6 +1197,9 @@ type CoachInitial = {
   experience_years?: number | null;
   is_active?: boolean;
   avatar_url?: string | null;
+  pay_mode?: CoachPayMode | null;
+  percent_rate?: number | null;
+  fixed_monthly?: number | null;
 };
 
 // =============================================================
@@ -1395,6 +1421,15 @@ export const AddCoachModal = ({
   const [achievements, setAchievements] = useState(initial?.achievements ?? "");
   const [exp, setExp] = useState(String(initial?.experience_years ?? ""));
   const [avatarUrl, setAvatarUrl] = useState<string>(initial?.avatar_url ?? "");
+  // Оплата тренера (ТЗ §6.1, §10.1). По умолчанию процент от выручки 40% —
+  // основной режим для единоборств.
+  // Ставки тренера по ТЗ §2.2 ставит только директор/управляющий — то же
+  // правило, что и в триггере forbid_coach_pay_change. Старший менеджер
+  // тренера заводит, но блок оплаты не видит, иначе упрётся в ошибку БД.
+  const canSetPay = usePerm("manage_coach_rates");
+  const [payMode, setPayMode] = useState<CoachPayMode>(initial?.pay_mode ?? "percent");
+  const [percentRate, setPercentRate] = useState(String(initial?.percent_rate ?? 40));
+  const [fixedMonthly, setFixedMonthly] = useState(String(initial?.fixed_monthly ?? 0));
   const [sectionIds, setSectionIds] = useState<Set<string>>(new Set());
   const [sectionsLoaded, setSectionsLoaded] = useState(false);
   const [err, setErr] = useState<string | null>(null);
@@ -1444,7 +1479,17 @@ export const AddCoachModal = ({
   const reset = () => {
     setEmail(""); setPassword(""); setFullName(""); setPhone(""); setBio(""); setAchievements(""); setExp("");
     setAvatarUrl(""); setSectionIds(new Set()); setErr(null);
+    setPayMode("percent"); setPercentRate("40"); setFixedMonthly("0");
   };
+
+  // Поля оплаты пишутся прямо в coaches (RLS пускает только директора и
+  // управляющего — ТЗ §2.2). Неактуальное для режима поле не обнуляем:
+  // переключили на оклад и обратно — процент остался прежним.
+  const payFields = () => ({
+    pay_mode: payMode,
+    percent_rate: percentRate === "" ? 0 : Number(percentRate),
+    fixed_monthly: fixedMonthly === "" ? 0 : Number(fixedMonthly),
+  });
 
   const submit = async () => {
     setErr(null);
@@ -1454,6 +1499,17 @@ export const AddCoachModal = ({
     }
     if (!isEdit && !isValidPhoneInput(phone)) {
       setErr(t("Укажите телефон в формате +996 700 12 34 56", "+996 700 12 34 56 форматында"));
+      return;
+    }
+    // Без права на ставки поля оплаты вообще не отправляем: БД их всё
+    // равно отклонит триггером, а затирать чужую настройку нельзя.
+    const pay = canSetPay ? payFields() : null;
+    if (pay && payMode === "percent" && (!Number.isFinite(pay.percent_rate) || pay.percent_rate < 0 || pay.percent_rate > 100)) {
+      setErr(t("Процент тренера — число от 0 до 100", "Тренердин пайызы 0дөн 100гө чейин"));
+      return;
+    }
+    if (pay && payMode === "fixed" && (!Number.isFinite(pay.fixed_monthly) || pay.fixed_monthly <= 0)) {
+      setErr(t("Укажите оклад в месяц", "Айлык маяна көрсөтүңүз"));
       return;
     }
     try {
@@ -1469,6 +1525,7 @@ export const AddCoachModal = ({
             bio: bio || null,
             achievements: achievements || null,
             experience_years: exp ? Number(exp) : 0,
+            ...(pay ?? {}),
           },
         });
         // Sync sections
@@ -1485,11 +1542,13 @@ export const AddCoachModal = ({
         achievements: achievements || null,
         experience_years: exp ? Number(exp) : 0,
       });
-      // Сохраняем avatar_url отдельно (POST /v1/coaches его не принимает)
-      if (avatarUrl) {
+      // Аватар и модель оплаты POST /v1/coaches не принимает — дописываем
+      // их отдельным апдейтом сразу после создания.
+      if (avatarUrl || pay) {
         await upd.mutateAsync({
           id: created.coach_id,
-          profile: { avatar_url: avatarUrl },
+          profile: avatarUrl ? { avatar_url: avatarUrl } : undefined,
+          coach: pay ?? undefined,
         });
       }
       // Sync sections after coach is created
@@ -1683,6 +1742,77 @@ export const AddCoachModal = ({
         )}
       </div>
 
+      {/* Оплата тренера — ТЗ §6.1 «тип оплаты», §10.1 логика расчёта */}
+      {canSetPay && (
+      <div style={{
+        padding: 12, marginBottom: 12,
+        background: "var(--bg-soft)",
+        border: "1px solid var(--line)",
+        borderRadius: "var(--r-sm)",
+      }}>
+        <div style={{
+          fontSize: 11, fontWeight: 600, color: "var(--muted)",
+          textTransform: "uppercase", letterSpacing: 0.04, marginBottom: 8,
+        }}>
+          {t("Оплата тренера", "Тренердин төлөмү")}
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6, marginBottom: 10 }}>
+          {([
+            { v: "percent", ru: "% от выручки", ky: "Түшүмдөн %" },
+            { v: "fixed", ru: "Оклад в месяц", ky: "Айлык маяна" },
+            { v: "per_child", ru: "Ставка за ребёнка", ky: "Бала үчүн ставка" },
+          ] as Array<{ v: CoachPayMode; ru: string; ky: string }>).map((o) => (
+            <button
+              key={o.v}
+              type="button"
+              className={`btn ${payMode === o.v ? "btn--primary" : ""}`}
+              style={{ padding: "6px 12px", fontSize: 12 }}
+              onClick={() => setPayMode(o.v)}
+              disabled={busy}
+            >
+              {payMode === o.v ? <Icon name="check" size={12} stroke={2.5} /> : null} {t(o.ru, o.ky)}
+            </button>
+          ))}
+        </div>
+
+        {payMode === "percent" && (
+          <Field label={t("Процент от выручки занятия, %", "Сабактын түшүмүнөн пайыз, %")}>
+            <input
+              type="number" min={0} max={100} step={1}
+              value={percentRate}
+              onChange={(e) => setPercentRate(e.target.value)}
+              disabled={busy}
+            />
+          </Field>
+        )}
+        {payMode === "fixed" && (
+          <Field label={t("Оклад в месяц, сом", "Айлык маяна, сом")}>
+            <input
+              type="number" min={0} step={500}
+              value={fixedMonthly}
+              onChange={(e) => setFixedMonthly(e.target.value)}
+              disabled={busy}
+            />
+          </Field>
+        )}
+
+        <div style={{ fontSize: 11, color: "var(--muted)", lineHeight: 1.45 }}>
+          {payMode === "percent" && t(
+            "За каждого пришедшего: доля абонемента, приходящаяся на одно занятие, × процент. Пробные не оплачиваются.",
+            "Келген ар бир бала үчүн: бир сабакка туура келген абонементтин үлүшү × пайыз. Сыноо сабактары төлөнбөйт.",
+          )}
+          {payMode === "fixed" && t(
+            "Посещения не влияют. Для дежурного тренера фитнес-зоны. В аванс попадает часть оклада за отработанные дни.",
+            "Катышуулар таасир этпейт. Фитнес-зонанын кезметчи тренери үчүн.",
+          )}
+          {payMode === "per_child" && t(
+            "Фиксированная ставка группы за каждого пришедшего ребёнка. Задаётся в карточке группы.",
+            "Келген ар бир бала үчүн топтун белгиленген ставкасы. Топтун карточкасында коюлат.",
+          )}
+        </div>
+      </div>
+      )}
+
       <Field label={t("Био / квалификация", "Био / квалификация")}>
         <textarea rows={2} value={bio} onChange={(e) => setBio(e.target.value)} disabled={busy} />
       </Field>
@@ -1733,6 +1863,10 @@ type SectionInitial = {
   name_ky?: string;
   category?: SectionCategory;
   color?: string | null;
+  // ТЗ §5.1: цены в карточке секции. Пусто — берётся цена тарифа из каталога.
+  trial_price?: number | null;
+  single_price?: number | null;
+  subscription_price?: number | null;
 };
 
 export const AddSectionModal = ({ open, onClose, lang, initial }: { open: boolean; onClose: () => void; lang: Lang; initial?: SectionInitial }) => {
@@ -1745,18 +1879,35 @@ export const AddSectionModal = ({ open, onClose, lang, initial }: { open: boolea
   const [nameKy, setNameKy] = useState(initial?.name_ky ?? "");
   const [category, setCategory] = useState<SectionCategory>(initial?.category ?? "martial_arts");
   const [color, setColor] = useState(initial?.color ?? "#3b82f6");
+  // ТЗ §5.1 и §4.1: цены по секции. Пустая строка = «не задано», тогда
+  // цена берётся из каталога тарифов — это рабочее состояние, а не пробел.
+  const [trialPrice, setTrialPrice] = useState(initial?.trial_price != null ? String(initial.trial_price) : "");
+  const [singlePrice, setSinglePrice] = useState(initial?.single_price != null ? String(initial.single_price) : "");
+  const [subPrice, setSubPrice] = useState(initial?.subscription_price != null ? String(initial.subscription_price) : "");
   const [err, setErr] = useState<string | null>(null);
+
+  // Пустое поле должно сохраняться как NULL, а не как 0: ноль означал бы
+  // «бесплатно», а нам нужно «берём из каталога».
+  const priceOrNull = (v: string): number | null => {
+    const t = v.trim();
+    if (t === "") return null;
+    const n = Number(t);
+    return Number.isFinite(n) && n >= 0 ? n : null;
+  };
 
   const submit = async () => {
     setErr(null);
     try {
       const payload = {
         name_ru: nameRu, name_ky: nameKy || nameRu, category, color,
+        trial_price: priceOrNull(trialPrice),
+        single_price: priceOrNull(singlePrice),
+        subscription_price: priceOrNull(subPrice),
       };
       if (isEdit) await upd.mutateAsync({ id: initial!.id!, ...payload });
       else await add.mutateAsync(payload);
       onClose();
-      if (!isEdit) { setNameRu(""); setNameKy(""); }
+      if (!isEdit) { setNameRu(""); setNameKy(""); setTrialPrice(""); setSinglePrice(""); setSubPrice(""); }
     } catch (e: unknown) { setErr((e as Error).message); }
   };
 
@@ -1789,6 +1940,29 @@ export const AddSectionModal = ({ open, onClose, lang, initial }: { open: boolea
           <input type="color" value={color ?? "#3b82f6"} onChange={(e) => setColor(e.target.value)} style={{ height: 40 }} disabled={busy} />
         </Field>
       </div>
+
+      {/* ТЗ §5.1: «Стоимость абонемента и пробной тренировки» в карточке
+          секции. §4.1 ставит разовому и пробному цену «по секции». */}
+      <div className="form-sec">{t("Цены этой секции", "Бул секциянын баалары")}</div>
+      <div className="grid-2">
+        <Field label={t("Пробная тренировка, сом", "Сыноо машыгуу, сом")}>
+          <input type="number" min={0} value={trialPrice} disabled={busy}
+            onChange={(e) => setTrialPrice(e.target.value)} placeholder={t("из каталога", "каталогдон")} />
+        </Field>
+        <Field label={t("Разовое занятие, сом", "Бир жолку сабак, сом")}>
+          <input type="number" min={0} value={singlePrice} disabled={busy}
+            onChange={(e) => setSinglePrice(e.target.value)} placeholder={t("из каталога", "каталогдон")} />
+        </Field>
+        <Field label={t("Абонемент, сом", "Абонемент, сом")}>
+          <input type="number" min={0} value={subPrice} disabled={busy}
+            onChange={(e) => setSubPrice(e.target.value)} placeholder={t("из каталога", "каталогдон")} />
+        </Field>
+      </div>
+      <div style={{ fontSize: 11, color: "var(--muted)", marginTop: -4, marginBottom: 10, lineHeight: 1.45 }}>
+        {t("Пустое поле — цена берётся из каталога видов абонементов. Заполняйте, только если у этой дисциплины цена своя.",
+           "Бош талаа — баа абонемент түрлөрүнүн каталогунан алынат.")}
+      </div>
+
       {err && <div className="field__error" style={{ marginTop: 8 }}>{err}</div>}
       <div className="modal__foot">
         {isEdit && (
@@ -2209,21 +2383,32 @@ export const AddLeadModal = ({ open, onClose, lang }: { open: boolean; onClose: 
   const [phone, setPhone] = useState("");
   const [cname, setCname] = useState("");
   const [age, setAge] = useState("");
-  const [stage, setStage] = useState<LeadStage>("new");
   const [secId, setSecId] = useState("");
-  const [source, setSource] = useState("Instagram");
+  // ТЗ §8.1: таргет Instagram — основной канал, поэтому он по умолчанию.
+  const [source, setSource] = useState<LeadSource>("target");
+  const [instagram, setInstagram] = useState("");
   const [err, setErr] = useState<string | null>(null);
 
   const submit = async () => {
     setErr(null);
+    if (!phone.trim() && !instagram.trim()) {
+      setErr(t("Нужен телефон или Instagram — иначе с лидом не связаться",
+               "Телефон же Instagram керек"));
+      return;
+    }
     try {
+      // Этап всегда «новый»: с этого момента идёт отсчёт норматива
+      // первого контакта (ТЗ §8.3 — 10 минут). Выбирать этап руками при
+      // создании нельзя, иначе SLA можно обойти, заведя лид сразу
+      // «сконвертированным».
       await add.mutateAsync({
         parent_name: pname || null, phone: phone || null,
         child_name: cname || null, child_age: age ? Number(age) : null,
-        section_interest_id: secId || null, stage, source,
+        section_interest_id: secId || null, stage: "new", source,
+        instagram: instagram.trim() ? instagram.trim().replace(/^@/, "") : null,
       });
       onClose();
-      setPname(""); setPhone(""); setCname(""); setAge("");
+      setPname(""); setPhone(""); setCname(""); setAge(""); setInstagram("");
     } catch (e: unknown) { setErr((e as Error).message); }
   };
 
@@ -2249,17 +2434,20 @@ export const AddLeadModal = ({ open, onClose, lang }: { open: boolean; onClose: 
           </Select>
         </Field>
         <Field label={t("Источник", "Булак")}>
-          <Select value={source} onChange={(e) => setSource(e.target.value)}>
-            {["Instagram", "WhatsApp", "Сарафан", "Google Ads", "Другое"].map((s) => <option key={s}>{s}</option>)}
+          <Select value={source} onChange={(e) => setSource(e.target.value as LeadSource)}>
+            <option value="target">{t("Таргет Instagram", "Instagram таргет")}</option>
+            <option value="referral">{t("Рекомендация", "Сунуштама")}</option>
+            <option value="direct">{t("Прямое обращение", "Түз кайрылуу")}</option>
+            <option value="other">{t("Другое", "Башка")}</option>
           </Select>
         </Field>
-        <Field label={t("Стадия", "Этап")}>
-          <Select value={stage} onChange={(e) => setStage(e.target.value as LeadStage)}>
-            <option value="new">{t("Новый", "Жаңы")}</option>
-            <option value="trial">{t("Пробное", "Сыноо")}</option>
-            <option value="waiting">{t("В ожидании", "Күтүүдө")}</option>
-          </Select>
+        <Field label={t("Instagram", "Instagram")}>
+          <input value={instagram} onChange={(e) => setInstagram(e.target.value)} placeholder="@nickname" />
         </Field>
+      </div>
+      <div style={{ fontSize: 11, color: "var(--muted)", marginTop: -4, marginBottom: 8, lineHeight: 1.45 }}>
+        {t("Лид создаётся на этапе «Новый». Связаться нужно в течение 10 минут — дальше воронка подсветит просрочку.",
+           "Арыз «Жаңы» этабында түзүлөт. 10 мүнөттүн ичинде байланышуу керек.")}
       </div>
       {err && <div className="field__error" style={{ marginTop: 8 }}>{err}</div>}
       <div className="modal__foot">
@@ -2311,6 +2499,11 @@ export const SellCardModal = ({
   // Скидка в сомах (0..цена). Обязательное поле. Бэкенд принимает процент,
   // поэтому перед отправкой сумма конвертируется в точную долю от цены.
   const [discountAmt, setDiscountAmt] = useState("0");
+  // ТЗ §3.3: индивидуальную скидку менеджер обязан обосновать. Поле
+  // появляется, только когда скидка больше нуля; авто-скидку на 2-го
+  // ребёнка и реферальный бонус проставляет сама БД, обосновывать их
+  // руками не нужно.
+  const [discountReason, setDiscountReason] = useState("");
   const [method, setMethod] = useState<PaymentMethod>("cash");
   // Деньги с депозита — строка чтобы можно было вводить вручную и контролировать.
   const [depositInput, setDepositInput] = useState("0");
@@ -2383,14 +2576,27 @@ export const SellCardModal = ({
 
   // Выбранный тариф из каталога. При выборе — тип/занятия/цена из тарифа.
   const plan = plans.find((p) => p.id === planId) ?? null;
+  // ТЗ §4.1: у разового занятия и пробной тренировки цена «по секции».
+  // Если у выбранной секции она задана — она главнее каталога. Зеркалит
+  // функцию section_price() в базе.
+  const sectionForSale = sections.find((x) => x.id === sectionId) ?? null;
+  const sectionPriceFor = (planType: CardType): number | null => {
+    if (!sectionForSale) return null;
+    const v = planType === "trial" ? sectionForSale.trial_price
+      : planType === "single" ? sectionForSale.single_price
+      : sectionForSale.subscription_price;
+    return v != null ? Number(v) : null;
+  };
   useEffect(() => {
     if (!plan) return;
     setType(plan.type);
     setTotal(plan.lessons_count != null ? String(plan.lessons_count) : "");
-    setPrice(String(Number(plan.price)));
-    // deps по planId: правки цены менеджером не затираются фоновым refetch.
+    setPrice(String(sectionPriceFor(plan.type) ?? Number(plan.price)));
+    // deps по planId и sectionId: цена пересчитывается и при смене секции,
+    // иначе после выбора другой дисциплины осталась бы цена прежней.
+    // Ручные правки цены менеджером фоновый refetch не затирает.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [planId]);
+  }, [planId, sectionId]);
 
   // Группы фильтруются по выбранной секции.
   const groupsForSection = sectionId
@@ -2478,6 +2684,10 @@ export const SellCardModal = ({
       setErr(t("Скидка не может быть больше цены", "Жеңилдик баадан чоң боло албайт"));
       return;
     }
+    if (Number(discountAmt) > 0 && !discountReason.trim()) {
+      setErr(t("Укажите причину скидки", "Жеңилдиктин себебин көрсөтүңүз"));
+      return;
+    }
     if (!sectionId) {
       setErr(t("Выберите секцию", "Секцияны тандаңыз"));
       return;
@@ -2507,6 +2717,7 @@ export const SellCardModal = ({
         duration_days: periodDays,
         freeze_quota: plan?.freeze_quota ?? 0,
         price: Number(price), discount_pct: pctNum,
+        discount_reason: discountReason.trim() || null,
         // При окне: карта стартует с первой тренировки и «действует до»
         // даты N-го занятия (совпадает с окном ростера). Иначе — обычный период.
         start_date: windowStart ?? today,
@@ -2712,6 +2923,18 @@ export const SellCardModal = ({
           />
         </Field>
       </div>
+
+      {/* ТЗ §3.3: причина обязательна для любой ручной скидки */}
+      {Number(discountAmt) > 0 && (
+        <Field label={<>{t("Причина скидки", "Жеңилдиктин себеби")} <span style={{ color: "var(--red-600)" }}>*</span></>}>
+          <input
+            value={discountReason}
+            onChange={(e) => setDiscountReason(e.target.value)}
+            required
+            placeholder={t("многодетная семья / сотрудник / акция…", "көп балалуу үй-бүлө / кызматкер / акция…")}
+          />
+        </Field>
+      )}
 
       {/* Окно записи: дата первой тренировки → дата N-го занятия */}
       {groupId && (
@@ -3546,14 +3769,21 @@ export const CancelLessonModal = ({
   const cancel = useCancelLesson();
   const [reason, setReason] = useState("");
   const [forceMaj, setForceMaj] = useState(false);
+  // ТЗ §5.3 п.4: вина определяет, оплачивается ли занятие тренеру.
+  const [fault, setFault] = useState<LessonFault | "">("");
   const [err, setErr] = useState<string | null>(null);
 
   const submit = async () => {
     setErr(null);
     try {
-      await cancel.mutateAsync({ id: lessonId, reason, force_majeure: forceMaj });
+      await cancel.mutateAsync({
+        id: lessonId,
+        reason,
+        force_majeure: forceMaj,
+        cancellation_fault: fault || undefined,
+      });
       onClose();
-      setReason(""); setForceMaj(false);
+      setReason(""); setForceMaj(false); setFault("");
     } catch (e: unknown) { setErr((e as Error).message); }
   };
 
@@ -3562,11 +3792,34 @@ export const CancelLessonModal = ({
       <Field label={t("Причина", "Себеп")}>
         <textarea rows={3} value={reason} onChange={(e) => setReason(e.target.value)} />
       </Field>
+
+      <Field label={t("Из-за чего отмена", "Эмнеден улам")}>
+        <Select
+          value={forceMaj ? "force_majeure" : fault}
+          onChange={(e) => setFault(e.target.value as LessonFault | "")}
+          disabled={forceMaj}
+        >
+          <option value="">{t("— не указано —", "— көрсөтүлгөн эмес —")}</option>
+          <option value="coach">{t("Вина тренера", "Тренердин күнөөсү")}</option>
+          <option value="club">{t("Вина клуба", "Клубдун күнөөсү")}</option>
+          <option value="force_majeure">{t("Форс-мажор", "Форс-мажор")}</option>
+          <option value="client">{t("По просьбе клиентов", "Кардарлардын өтүнүчү")}</option>
+          <option value="other">{t("Другое", "Башка")}</option>
+        </Select>
+        <div style={{ fontSize: 11, color: "var(--muted)", marginTop: 4, lineHeight: 1.45 }}>
+          {fault === "coach" && !forceMaj
+            ? t("Это занятие не войдёт в зарплату тренера.", "Бул сабак тренердин эмгек акысына кирбейт.")
+            : t("Влияет на зарплату тренера и на отчётность по отменам.",
+                "Тренердин эмгек акысына жана отчётко таасир этет.")}
+        </div>
+      </Field>
+
       <label className="check">
         <input type="checkbox" checked={forceMaj} onChange={(e) => setForceMaj(e.target.checked)} />
         <span>
           <b>{t("Форс-мажор", "Форс-мажор")}</b>
-          <small>{t("Создаст +1 заморозку на занятие всем детям группы", "Топтогу балдарга +1 тындыруу түзөт")}</small>
+          <small>{t("Всем детям группы вернётся +1 занятие к абонементу, родители получат уведомление",
+                    "Топтогу бардык балдарга абонементке +1 сабак кайтарылат")}</small>
         </span>
       </label>
       {err && <div className="field__error" style={{ marginTop: 8 }}>{err}</div>}

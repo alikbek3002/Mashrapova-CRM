@@ -413,4 +413,64 @@ export const staffRoutes = async (app: FastifyInstance) => {
       return reply.send({ ok: true });
     },
   );
+
+  // ТЗ §12.3: сброс второго фактора.
+  //
+  // Без этого потерянный или перепрошитый телефон означает необратимую
+  // блокировку: RLS-политика mfa_required требует aal2, а пройти его
+  // нечем. Сбрасывает только директор и только сотруднику своей
+  // организации; себе — нельзя, иначе смысл второго фактора теряется
+  // (достаточно угнать сессию и сбросить фактор).
+  app.post<{ Params: { id: string } }>(
+    "/v1/staff/:id/reset-mfa",
+    { preHandler: [authenticate, requireRole("director")] },
+    async (req, reply) => {
+      const user = req.user!;
+      const targetId = req.params.id;
+
+      if (targetId === user.id) {
+        return reply.code(400).send({
+          error: "cannot_reset_own_mfa",
+          message: "Свой второй фактор сбросить нельзя — попросите другого директора.",
+        });
+      }
+
+      const { data: target, error: tErr } = await supabaseAdmin
+        .from("profiles")
+        .select("id, organization_id, full_name")
+        .eq("id", targetId)
+        .maybeSingle();
+      if (tErr || !target) return reply.code(404).send({ error: "user_not_found" });
+      if (target.organization_id !== user.organization_id) {
+        return reply.code(403).send({ error: "user_outside_org" });
+      }
+
+      const { data: factors, error: fErr } = await supabaseAdmin.auth.admin.mfa.listFactors({
+        userId: targetId,
+      });
+      if (fErr) {
+        req.log.error({ err: fErr }, "mfa_list_factors_failed");
+        return reply.code(500).send({ error: "mfa_list_failed", message: fErr.message });
+      }
+
+      let removed = 0;
+      for (const f of factors?.factors ?? []) {
+        const { error: dErr } = await supabaseAdmin.auth.admin.mfa.deleteFactor({
+          id: f.id,
+          userId: targetId,
+        });
+        if (dErr) {
+          req.log.error({ err: dErr, factor: f.id }, "mfa_delete_factor_failed");
+          continue;
+        }
+        removed += 1;
+      }
+
+      req.log.warn(
+        { actor: user.id, target: targetId, removed },
+        "mfa_reset_by_director",
+      );
+      return reply.send({ ok: true, removed });
+    },
+  );
 };

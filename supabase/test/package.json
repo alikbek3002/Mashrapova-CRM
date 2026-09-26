@@ -1,0 +1,17 @@
+{
+  "name": "mashrapova-migration-test",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "db:start": "node start-db.mjs",
+    "db:stop": "node stop-db.mjs",
+    "migrate": "node run-migrations.mjs ../migrations",
+    "smoke": "node smoke.mjs",
+    "tariffs": "node tariffs.mjs",
+    "demo": "node demo-data.mjs"
+  },
+  "dependencies": {
+    "embedded-postgres": "^18.4.0-beta.17",
+    "pg": "^8.13.0"
+  }
+}

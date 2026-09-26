@@ -26,6 +26,24 @@ export const lifecycleRoutes = async (app: FastifyInstance) => {
         req.log.error({ err: error }, "lifecycle_refresh_failed");
         return reply.code(500).send({ error: "refresh_failed", message: error.message });
       }
+      // События по сроку абонемента (ТЗ §4.5): за 7/3/0 дней, win-back
+      // через 3 дня, риск оттока, закрытие карты по последней тренировке.
+      // Строго ПОСЛЕ refresh_lifecycle: win-back смотрит на статус
+      // 'expired', который проставляет именно она.
+      const { error: noticeErr } = await supabaseAdmin.rpc("refresh_card_notices");
+      if (noticeErr) {
+        req.log.error({ err: noticeErr }, "card_notices_refresh_failed");
+        return reply.code(500).send({ error: "card_notices_failed", message: noticeErr.message });
+      }
+      // Нормативы воронки лидов (ТЗ §8.3): просрочка первого контакта,
+      // эскалация старшему менеджеру, напоминания о пробной, задачи
+      // «не пришёл» и «предложить абонемент». Отдельной RPC, чтобы сбой
+      // в SLA не откатывал уже пересчитанные статусы карт и заморозок.
+      const { error: slaErr } = await supabaseAdmin.rpc("refresh_lead_sla");
+      if (slaErr) {
+        req.log.error({ err: slaErr }, "lead_sla_refresh_failed");
+        return reply.code(500).send({ error: "lead_sla_failed", message: slaErr.message });
+      }
       return reply.send({ ok: true });
     },
   );

@@ -7,6 +7,11 @@ import { I18N, BrandLogo } from "./data";
 import type { Lang } from "./data";
 import { AuthProvider, useAuth } from "./shared/auth/AuthProvider";
 import { Login } from "./shared/auth/Login";
+import { MfaGate } from "./shared/auth/MfaGate";
+// Офлайн-режим (ТЗ §12.4): очередь отложенных операций и её индикатор.
+import { startOutbox } from "./shared/offline/outbox";
+import { registerOutboxHandlers } from "./shared/offline/ops";
+import { OfflineBar } from "./shared/offline/OfflineBar";
 import { ToastHost } from "./shared/ui/toast";
 import { Sk, SkeletonPage } from "./shared/ui/Skeleton";
 
@@ -115,6 +120,14 @@ const Shell = () => {
     document.documentElement.lang = lang;
   }
 
+  // Офлайн-очередь (ТЗ §12.4): регистрируем обработчики и запускаем
+  // автоотправку. Должно случиться один раз и до любых early-return —
+  // иначе число хуков меняется между рендерами (React error #310).
+  useEffect(() => {
+    registerOutboxHandlers();
+    startOutbox();
+  }, []);
+
   // Ставим класс на body для CSS-правил «PWA-режим» (тренер/родитель).
   // ВАЖНО: useEffect должен быть до любых early-return — иначе число
   // хуков меняется между рендерами и React падает с error #310.
@@ -206,6 +219,9 @@ const Shell = () => {
     user.role === "cashier";
 
   return (
+    // ТЗ §12.3: между входом и приложением — второй фактор. Директора и
+    // управляющего он не пускает дальше, пока тот не настроен.
+    <MfaGate lang={lang}>
     <div className="cards-bordered">
       <div className={`app-chrome ${isPwaRole ? "app-chrome--pwa" : ""}`}>
         <div className="app-chrome__inner">
@@ -249,6 +265,8 @@ const Shell = () => {
         {user.role === "parent" && <ParentScreen lang={lang} />}
       </Suspense>
     </div>
+    <OfflineBar lang={lang} />
+    </MfaGate>
   );
 };
 

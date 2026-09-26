@@ -41,6 +41,37 @@ export type FreezeWithChild = Freeze & {
 };
 export type LeadWithSection = Lead & { section: Section | null };
 
+// ТЗ §7.4 — шесть KPI менеджера за период. Считает SQL-функция
+// manager_kpi: метрики берутся из трёх источников (лиды, абонементы,
+// платежи), собирать их на клиенте значило бы выкачивать все три
+// таблицы целиком. Строка с manager_id = null — записи без
+// ответственного менеджера, в итогах они нужны.
+export type ManagerKpiRow = {
+  manager_id: string | null;
+  manager_name: string | null;
+  leads_total: number;
+  first_contact_total: number;
+  avg_first_contact_min: number | null;
+  within_sla_total: number;
+  trial_booked_total: number;
+  trial_attended_total: number;
+  converted_total: number;
+  renewals_due: number;
+  renewals_done: number;
+  sales_total: number;
+  sales_per_day: number;
+};
+
+export const useManagerKpi = (from: string, to: string) =>
+  useQuery({
+    queryKey: ["manager_kpi", from, to],
+    queryFn: async (): Promise<ManagerKpiRow[]> => {
+      const { data, error } = await supabase.rpc("manager_kpi", { p_from: from, p_to: to });
+      if (error) throw error;
+      return (data ?? []) as ManagerKpiRow[];
+    },
+  });
+
 // ======================================================================
 // Children / Families / Sections / Coaches
 // ======================================================================
@@ -578,6 +609,18 @@ export type OrgSettingsRow = {
   organization_id: string;
   sibling_discount_enabled: boolean;
   sibling_discount_amount: number;
+  // ТЗ §10.2 — аванс тренерам.
+  advance_share_pct: number;
+  advance_day: number;
+  // ТЗ §8.3 — нормативы воронки лидов.
+  lead_first_contact_min: number;
+  lead_escalation_min: number;
+  lead_no_show_hours: number;
+  // ТЗ §3.3 — бонус «Приведи друга».
+  referral_enabled: boolean;
+  referral_bonus_amount: number;
+  // ТЗ §4.5 — сколько дней без посещений считать риском оттока.
+  churn_no_visit_days: number;
   updated_by: string | null;
   updated_at: string;
 };
@@ -1765,6 +1808,199 @@ export const useOutreachWeek = (weekStart: string) =>
 // ======================================================================
 // Aggregated counts (for sidebar badges + dashboard KPIs)
 // ======================================================================
+// ======================================================================
+// Дашборд директора — ТЗ §11.1
+//
+// Одна RPC вместо каскада клиентских выборок: считать выручку с
+// динамикой, зону риска и заполненность групп на клиенте означало бы
+// выкачивать платежи и зачисления целиком.
+// ======================================================================
+export type DirectorDashboard = {
+  revenue_day: number;
+  revenue_day_prev: number;
+  revenue_week: number;
+  revenue_week_prev: number;
+  revenue_month: number;
+  revenue_month_prev: number;
+  active_clients: number;
+  new_clients_month: number;
+  new_clients_month_prev: number;
+  risk_no_visits: number;
+  risk_expiring_7: number;
+};
+
+export const useDirectorDashboard = () =>
+  useQuery({
+    queryKey: ["director_dashboard"],
+    staleTime: 60_000,
+    queryFn: async (): Promise<DirectorDashboard | null> => {
+      const { data, error } = await supabase.rpc("director_dashboard");
+      if (error) throw error;
+      const row = Array.isArray(data) ? data[0] : data;
+      return (row ?? null) as DirectorDashboard | null;
+    },
+  });
+
+export type SectionLoadRow = {
+  section_id: string;
+  name_ru: string;
+  name_ky: string;
+  groups_count: number;
+  capacity: number;
+  enrolled: number;
+  fill_pct: number | null;
+};
+
+export const useSectionLoad = () =>
+  useQuery({
+    queryKey: ["section_load"],
+    staleTime: 60_000,
+    queryFn: async (): Promise<SectionLoadRow[]> => {
+      const { data, error } = await supabase
+        .from("v_section_load")
+        .select("section_id, name_ru, name_ky, groups_count, capacity, enrolled, fill_pct")
+        .order("fill_pct", { ascending: false, nullsFirst: false });
+      if (error) throw error;
+      return (data ?? []) as SectionLoadRow[];
+    },
+  });
+
+export type ActiveBySectionRow = {
+  section_id: string;
+  name_ru: string;
+  name_ky: string;
+  active_clients: number;
+};
+
+export const useActiveClientsBySection = () =>
+  useQuery({
+    queryKey: ["active_by_section"],
+    staleTime: 60_000,
+    queryFn: async (): Promise<ActiveBySectionRow[]> => {
+      const { data, error } = await supabase
+        .from("v_active_clients_by_section")
+        .select("section_id, name_ru, name_ky, active_clients")
+        .order("active_clients", { ascending: false });
+      if (error) throw error;
+      return (data ?? []) as ActiveBySectionRow[];
+    },
+  });
+
+export type ClientAtRisk = {
+  child_id: string;
+  full_name: string;
+  churn_risk_at: string | null;
+  card_end_date: string | null;
+  reason: "no_visits" | "expiring";
+};
+
+export const useClientsAtRisk = (limit = 50) =>
+  useQuery({
+    queryKey: ["clients_at_risk", limit],
+    staleTime: 60_000,
+    queryFn: async (): Promise<ClientAtRisk[]> => {
+      const { data, error } = await supabase
+        .from("v_clients_at_risk")
+        .select("child_id, full_name, churn_risk_at, card_end_date, reason")
+        .order("card_end_date", { ascending: true, nullsFirst: false })
+        .limit(limit);
+      if (error) throw error;
+      return (data ?? []) as ClientAtRisk[];
+    },
+  });
+
+// ======================================================================
+// Отчёты §11.2 и §11.3. Считает SQL: собирать посещаемость на клиенте —
+// значит выгружать таблицу attendance целиком (нынешний
+// useAttendanceBySection упирается в limit 5000 и врёт на больших
+// периодах).
+// ======================================================================
+export type SalesBySection = {
+  section_id: string;
+  name_ru: string;
+  name_ky: string;
+  cards_sold: number;
+  revenue: number;
+  avg_check: number;
+};
+
+export const useSalesBySection = (from: string, to: string) =>
+  useQuery({
+    queryKey: ["sales_by_section", from, to],
+    queryFn: async (): Promise<SalesBySection[]> => {
+      const { data, error } = await supabase.rpc("sales_by_section", { p_from: from, p_to: to });
+      if (error) throw error;
+      return (data ?? []) as SalesBySection[];
+    },
+  });
+
+export type AttendanceByGroup = {
+  group_id: string;
+  group_name: string;
+  section_name: string;
+  coach_name: string | null;
+  lessons_held: number;
+  visits: number;
+  misses: number;
+  attendance_pct: number | null;
+};
+
+export const useAttendanceByGroup = (from: string, to: string) =>
+  useQuery({
+    queryKey: ["attendance_by_group", from, to],
+    queryFn: async (): Promise<AttendanceByGroup[]> => {
+      const { data, error } = await supabase.rpc("attendance_by_group", { p_from: from, p_to: to });
+      if (error) throw error;
+      return (data ?? []) as AttendanceByGroup[];
+    },
+  });
+
+export type AttendanceByChild = {
+  child_id: string;
+  full_name: string;
+  visits: number;
+  misses: number;
+  last_visit: string | null;
+  per_week: number;
+  attendance_pct: number | null;
+};
+
+export const useAttendanceByChild = (from: string, to: string) =>
+  useQuery({
+    queryKey: ["attendance_by_child", from, to],
+    queryFn: async (): Promise<AttendanceByChild[]> => {
+      const { data, error } = await supabase.rpc("attendance_by_child", { p_from: from, p_to: to });
+      if (error) throw error;
+      return (data ?? []) as AttendanceByChild[];
+    },
+  });
+
+export type PayrollDetailRow = {
+  lesson_id: string;
+  lesson_date: string;
+  group_id: string;
+  group_name: string;
+  section_name: string;
+  visits: number;
+  amount: number;
+  rate_source: string;
+};
+
+// ТЗ §11.4: детализация начисления по занятиям и группам. Грузится
+// только по клику на тренера — таблица занятий за месяц большая.
+export const usePayrollDetail = (coachId: string | null, from: string, to: string) =>
+  useQuery({
+    queryKey: ["payroll_detail", coachId, from, to],
+    enabled: !!coachId,
+    queryFn: async (): Promise<PayrollDetailRow[]> => {
+      const { data, error } = await supabase.rpc("payroll_detail", {
+        p_coach: coachId, p_from: from, p_to: to,
+      });
+      if (error) throw error;
+      return (data ?? []) as PayrollDetailRow[];
+    },
+  });
+
 export const useStats = () =>
   useQuery({
     queryKey: ["stats"],
@@ -1919,6 +2155,10 @@ export type PayrollPeriod = {
   manual_adjustment: number;
   adjustment_reason: string | null;
   status: "draft" | "advance_paid" | "paid";
+  // ТЗ §10.2: сумма аванса фиксируется в момент выдачи (50% заработанного
+  // с 1-го по 20-е), чтобы к итоговой выплате было видно, что уже выдано.
+  advance_amount: number | null;
+  advance_paid_at: string | null;
   approved_at: string | null;
   coach?: { full_name: string } | null;
   approver?: { full_name: string } | null;
@@ -2266,6 +2506,95 @@ export const useUnreadNotificationsCount = () => {
     refetchInterval: 30_000,
   });
 };
+
+// ======================================================================
+// Уведомления: матрица каналов, шаблоны и очередь исходящих (ТЗ §9)
+//
+// Таблицы появились миграцией 20260926000012 и до сих пор не читались ни
+// одним экраном: матрицу и шаблоны можно было править только SQL-запросом,
+// а очередь отправок не видел никто. Права проверять здесь не нужно — они
+// уже описаны RLS: читают сотрудники, матрицу пишет директор, шаблоны —
+// от старшего менеджера, очередь видна с правом на финотчёты.
+// ======================================================================
+export type NotificationMatrixRow = {
+  organization_id: string;
+  event_type: string;
+  channel: "push" | "sms" | "inapp";
+  audience: "client" | "staff";
+  enabled: boolean;
+  updated_at: string;
+};
+
+export type MessageTemplateRow = {
+  organization_id: string;
+  event_type: string;
+  // Только push и sms: у служебного канала inapp текста нет — задача
+  // сотруднику показывается разделом «Задачи», а не сообщением
+  // (ограничение message_templates_channel_check).
+  channel: "push" | "sms";
+  body_ru: string;
+  body_ky: string | null;
+  updated_at: string;
+};
+
+export type OutboundMessageRow = {
+  id: string;
+  channel: "push" | "sms";
+  event_type: string;
+  to_phone: string | null;
+  body: string;
+  status: "queued" | "sent" | "failed" | "skipped";
+  attempts: number;
+  last_error: string | null;
+  provider: string | null;
+  created_at: string;
+  sent_at: string | null;
+};
+
+export const useNotificationMatrix = () =>
+  useQuery({
+    queryKey: ["notification_matrix"],
+    queryFn: async (): Promise<NotificationMatrixRow[]> => {
+      const { data, error } = await supabase
+        .from("notification_matrix")
+        .select("*")
+        .order("event_type");
+      if (error) throw error;
+      return (data ?? []) as NotificationMatrixRow[];
+    },
+  });
+
+export const useMessageTemplates = () =>
+  useQuery({
+    queryKey: ["message_templates"],
+    queryFn: async (): Promise<MessageTemplateRow[]> => {
+      const { data, error } = await supabase
+        .from("message_templates")
+        .select("*")
+        .order("event_type");
+      if (error) throw error;
+      return (data ?? []) as MessageTemplateRow[];
+    },
+  });
+
+/**
+ * Очередь исходящих. Пока провайдера нет, статус skipped — норма, а не
+ * сбой: диспетчер помечает так сообщения, которые ушли бы при включённом
+ * SMS_PROVIDER. Поэтому в интерфейсе они показываются отдельным статусом.
+ */
+export const useOutboundMessages = (limit = 200) =>
+  useQuery({
+    queryKey: ["outbound_messages", limit],
+    queryFn: async (): Promise<OutboundMessageRow[]> => {
+      const { data, error } = await supabase
+        .from("outbound_messages")
+        .select("id, channel, event_type, to_phone, body, status, attempts, last_error, provider, created_at, sent_at")
+        .order("created_at", { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return (data ?? []) as OutboundMessageRow[];
+    },
+  });
 
 // ======================================================================
 // Children list для родителя с указанием менеджера и тренера

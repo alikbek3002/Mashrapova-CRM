@@ -31,9 +31,11 @@ export const refundsRoutes = async (app: FastifyInstance) => {
     },
   );
 
-  // Create a refund. Backend computes amount + fee per ТЗ formula:
-  //   refund = (remaining/total) * card_price - 30% (if kind=with_30pct)
-  //   refund = (remaining/total) * card_price       (if kind=full_no_fee)
+  // Create a refund. Backend computes amount + fee per ТЗ §7.3:
+  //   refund = (remaining/total) * price_paid - 30% (kind=with_30pct)
+  //   refund = (remaining/total) * price_paid       (kind=full_no_fee)
+  // База — цена тарифа, как написано в ТЗ («Сумма абонемента»). Сверху
+  // предохранитель: не больше фактически уплаченного (см. ниже).
   // full_no_fee additionally requires director / fitness_director / senior_manager.
   //
   // Возврат идёт АВТОМАТОМ на депозит ребёнка (deposit_transactions.type=refund_in).
@@ -64,7 +66,7 @@ export const refundsRoutes = async (app: FastifyInstance) => {
       // Pull card info (price + lessons left).
       const { data: card, error: cErr } = await supabaseAdmin
         .from("club_cards")
-        .select("id, child_id, price_paid, total_lessons, organization_id")
+        .select("id, child_id, price_paid, discount, total_lessons, organization_id")
         .eq("id", club_card_id)
         .single();
       if (cErr || !card) return reply.code(404).send({ error: "card_not_found" });
@@ -78,11 +80,48 @@ export const refundsRoutes = async (app: FastifyInstance) => {
         .maybeSingle();
       const remaining = Number(bal?.remaining ?? card.total_lessons ?? 0);
       const total = Number(card.total_lessons ?? 0) || 1;
+      // ТЗ §7.3 буквально: база — «Сумма абонемента», то есть цена тарифа,
+      // без вычета скидки. Решение владельца: считаем как в ТЗ.
       const price = Number(card.price_paid ?? 0);
       const baseRefund = total > 0 ? (remaining / total) * price : 0;
       const fee = kind === "with_30pct" ? baseRefund * 0.3 : 0;
-      const refundAmount = Math.max(0, Math.round((baseRefund - fee) * 100) / 100);
-      const feeAmount = Math.round(fee * 100) / 100;
+      const computed = Math.max(0, Math.round((baseRefund - fee) * 100) / 100);
+
+      // Предохранитель: не возвращаем больше, чем клиент реально заплатил.
+      //
+      // При базе от цены тарифа это не теория. Абонемент 2 500 со скидкой
+      // 2-го ребёнка 500 и бонусом «приведи друга» 300: клиент заплатил
+      // 1 700, а формула даёт 1 750 даже С удержанием 30%. А возврат БЕЗ
+      // удержания (старший менеджер) отдаёт полную цену тарифа при любой
+      // скидке — то есть всегда больше полученного.
+      //
+      // ТЗ такого случая не описывает: это не изменение формулы, а защита
+      // от отрицательной маржи.
+      const { data: paidRows } = await supabaseAdmin
+        .from("payments")
+        .select("amount")
+        .eq("club_card_id", club_card_id)
+        .gt("amount", 0);
+      const { data: depRows } = await supabaseAdmin
+        .from("deposit_transactions")
+        .select("amount")
+        .eq("related_card_id", club_card_id)
+        .eq("type", "card_purchase");
+      // Списание с депозита хранится отрицательным — берём модуль.
+      const actuallyPaid =
+        (paidRows ?? []).reduce((s, r) => s + Number(r.amount ?? 0), 0) +
+        (depRows ?? []).reduce((s, r) => s + Math.abs(Number(r.amount ?? 0)), 0);
+
+      const refundAmount = Math.min(computed, Math.round(actuallyPaid * 100) / 100);
+      if (refundAmount < computed) {
+        req.log.warn(
+          { card_id: club_card_id, computed, actuallyPaid, refundAmount },
+          "refund_capped_at_paid",
+        );
+      }
+      // Удержание пересчитываем от фактически возвращаемого, иначе сумма
+      // возврата и удержание перестанут складываться в базу.
+      const feeAmount = Math.max(0, Math.round((baseRefund - refundAmount) * 100) / 100);
 
       // Подтянуть метод оригинального платежа — для согласованности отчётов по cash/terminal.
       const { data: origPayment } = await supabaseAdmin

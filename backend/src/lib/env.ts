@@ -15,6 +15,16 @@ const schema = z.object({
   // На время миграции второй бэкенд поднимаем с SCHEDULER_ENABLED=false.
   SCHEDULER_ENABLED: z.enum(["true", "false"]).default("true").transform((v) => v === "true"),
 
+  // SMS-провайдер (ТЗ §9.2, §13). Договора с SMS.kg пока нет, поэтому по
+  // умолчанию провайдер "noop": сообщения копятся в очереди и помечаются
+  // как пропущенные, ничего никуда не уходит. Когда ключи появятся —
+  // выставить SMS_PROVIDER=smskg и заполнить логин, пароль и отправителя.
+  SMS_PROVIDER: z.enum(["noop", "smskg"]).default("noop"),
+  SMS_API_URL: z.string().optional(),
+  SMS_LOGIN: z.string().optional(),
+  SMS_PASSWORD: z.string().optional(),
+  SMS_SENDER: z.string().optional(),
+
   // MinIO / S3-compatible storage (avatars, photos).
   // Работает с MinIO, Tigris (t3.storageapi.dev), R2, AWS S3 и т.д.
   // Все необязательные — если не заданы, /v1/uploads/* возвращают 503.

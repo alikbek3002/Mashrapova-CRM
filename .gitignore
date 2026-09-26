@@ -53,7 +53,11 @@ Thumbs.db
 *.swo
 *~
 .cursor/
-.claude/
+# .claude/: локальные сессии — мимо репозитория, но settings.json общий:
+# в нём PreToolUse-хуки graphify, они должны работать у всей команды.
+.claude/*
+!.claude/settings.json
+.claude/settings.local.json
 
 # ----- Testing -----
 coverage/
@@ -86,7 +90,9 @@ backend/backups/
 /*.png
 backend/.env.bak*
 .playwright-mcp/
-# граф graphify (57 МБ, регенерируется `graphify update .`)
+# Граф graphify: не коммитим — полная пересборка занимает ~15 с
+# (`graphify extract . --code-only`), инкремент — `graphify update .`.
+# Исключения: .graphifyignore и .claude/settings.json в репозитории есть.
 graphify-out/
 
 # ----- Документы и данные заказчика: КП, ТЗ, ПТ, выгрузки, база -----
