@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
-import { supabase, isSupabaseConfigured } from "../api/supabase";
+import { supabase, isSupabaseConfigured, isDemoAuth } from "../api/supabase";
 
 // Re-export the canonical AppRole type from rbac (single source of truth).
 export type AppRole =
@@ -58,7 +58,9 @@ const makeDemoUser = (role: AppRole): AppUser => ({
   id: `00000000-0000-0000-0000-00000000000${Object.keys(DEMO_NAMES).indexOf(role) + 1}`,
   email: null,
   role,
-  organization_id: "00000000-0000-0000-0000-000000000000",
+  // Организация демонстрационных данных (supabase/seed.sql). В локальном
+  // режиме её тут же перезаписывает настоящий профиль из базы.
+  organization_id: "00000000-0000-0000-0000-000000000001",
   full_name: DEMO_NAMES[role],
 });
 
@@ -73,15 +75,19 @@ const readDemoUser = (): AppUser | null => {
 
 const AuthContext = createContext<AuthState | null>(null);
 
+// Вход демонстрационный, если ключей нет вовсе ИЛИ включён локальный режим
+// (данные из базы, авторизации нет — см. isDemoAuth).
+const demoLogin = !isSupabaseConfigured || isDemoAuth;
+
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AppUser | null>(() =>
-    isSupabaseConfigured ? null : readDemoUser(),
+    demoLogin ? readDemoUser() : null,
   );
-  const [loading, setLoading] = useState(isSupabaseConfigured);
+  const [loading, setLoading] = useState(!demoLogin);
   const [profileError, setProfileError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!isSupabaseConfigured) return;
+    if (demoLogin) return;
     let cancelled = false;
 
     const loadProfile = async (uid: string) => {
@@ -144,11 +150,27 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (!acc) return false;
     try { (remember ? localStorage : sessionStorage).setItem(DEMO_KEY, acc.role); } catch {}
     setUser(makeDemoUser(acc.role));
+
+    // Локальный режим: данные настоящие, поэтому и профиль берём настоящий —
+    // первый сотрудник с этой ролью. Иначе демо-пользователь сидел бы в
+    // другой организации, чем данные, и часть выборок была бы пустой.
+    if (isDemoAuth && isSupabaseConfigured) {
+      void (async () => {
+        const { data } = await supabase
+          .from("profiles")
+          .select("id, email, role, organization_id, full_name, mfa_required")
+          .eq("role", acc.role)
+          .is("deleted_at", null)
+          .limit(1)
+          .maybeSingle();
+        if (data) setUser(data as AppUser);
+      })();
+    }
     return true;
   };
 
   const signOut = async () => {
-    if (!isSupabaseConfigured) {
+    if (demoLogin) {
       try { localStorage.removeItem(DEMO_KEY); sessionStorage.removeItem(DEMO_KEY); } catch {}
       setUser(null);
       return;
@@ -159,7 +181,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, profileError, signOut, demoMode: !isSupabaseConfigured, signInDemo }}>
+    <AuthContext.Provider value={{ user, loading, profileError, signOut, demoMode: demoLogin, signInDemo }}>
       {children}
     </AuthContext.Provider>
   );

@@ -9,6 +9,25 @@ const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined;
 // завершаются ошибкой, которую экраны показывают как «нет данных».
 export const isSupabaseConfigured = Boolean(url && anonKey);
 
+// Локальный режим разработки: данные берём из базы по VITE_SUPABASE_URL,
+// но вход оставляем демонстрационным — по роли, без пароля.
+//
+// Зачем: локально можно поднять Postgres и PostgREST (см. supabase/test),
+// а вот GoTrue без Docker не поднять. Без этого флага заданный
+// VITE_SUPABASE_URL выключал демо-вход, и войти было нечем: настоящей
+// авторизации нет, а демо уже отключено.
+//
+// Только для локальной разработки. В проде флаг не ставится, и вход идёт
+// обычным путём через Supabase Auth.
+export const isDemoAuth = (import.meta.env.VITE_DEMO_AUTH as string | undefined) === "true";
+
+if (isDemoAuth) {
+  console.warn(
+    "[Mashrapov] VITE_DEMO_AUTH=true — вход по роли без пароля, данные из базы. " +
+      "Только для локальной разработки."
+  );
+}
+
 if (!isSupabaseConfigured) {
   console.warn(
     "[Mashrapov] VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY не заданы — демо-режим без базы. " +
