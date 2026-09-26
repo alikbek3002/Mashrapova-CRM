@@ -2133,3 +2133,164 @@ export const useBulkCancelLessons = () => {
   });
 };
 
+
+// ======================================================================
+// Уведомления: матрица, шаблоны, рассылка и разбор очереди (ТЗ §9)
+// ======================================================================
+
+/**
+ * Галочка канала в матрице §9.1.
+ *
+ * upsert, а не update: строки может не быть вовсе — матрица засеяна
+ * фиксированным набором событий, а список в интерфейсе шире (например,
+ * freeze.approved событие есть, а строки матрицы для него нет).
+ * Ключ конфликта — тот же, что первичный ключ таблицы.
+ */
+export const useSetNotificationChannel = () => {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: async (input: {
+      event_type: string;
+      channel: "push" | "sms" | "inapp";
+      audience: "client" | "staff";
+      enabled: boolean;
+    }) => {
+      if (!user?.organization_id) throw new Error("Организация не определена");
+      const { error } = await supabase
+        .from("notification_matrix")
+        .upsert(
+          { organization_id: user.organization_id, ...input, updated_at: new Date().toISOString() },
+          { onConflict: "organization_id,event_type,channel" },
+        );
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["notification_matrix"] }),
+    onError: (e: Error) => toast.err("Не удалось изменить канал: " + e.message),
+  });
+};
+
+export const useSaveMessageTemplate = () => {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  return useMutation({
+    mutationFn: async (input: {
+      event_type: string;
+      // inapp здесь недопустим: у служебного канала текста нет
+      // (message_templates_channel_check разрешает только push и sms).
+      channel: "push" | "sms";
+      body_ru: string;
+      body_ky: string | null;
+    }) => {
+      if (!user?.organization_id) throw new Error("Организация не определена");
+      const { error } = await supabase
+        .from("message_templates")
+        .upsert(
+          {
+            organization_id: user.organization_id,
+            ...input,
+            body_ky: input.body_ky || null,
+            updated_by: user.id,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: "organization_id,event_type,channel" },
+        );
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["message_templates"] });
+      toast.ok("Шаблон сохранён");
+    },
+    onError: (e: Error) => toast.err("Не удалось сохранить шаблон: " + e.message),
+  });
+};
+
+export type BroadcastInput = {
+  text: string;
+  section_id?: string | null;
+  coach_id?: string | null;
+  card_status?: "active" | "ending" | "frozen" | "expired" | "debt" | null;
+  end_date_from?: string | null;
+  end_date_to?: string | null;
+  dry_run?: boolean;
+};
+
+export type BroadcastResult = {
+  ok: true;
+  dry_run?: boolean;
+  recipients: number;
+  batch_id?: string;
+};
+
+/**
+ * Массовая рассылка §9.2. Идёт через бэкенд, а не напрямую в очередь:
+ * outbound_messages закрыта на запись для всех, кроме service_role, —
+ * иначе любой сотрудник с правом на чтение мог бы отправить что угодно
+ * кому угодно.
+ *
+ * Не идемпотентна намеренно: два одинаковых письма подряд — это
+ * осознанное решение человека, а ключ склеил бы их в одно. От дублей
+ * внутри одной рассылки защищает dedup_key на паре «рассылка + телефон».
+ */
+export const useBroadcast = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: BroadcastInput) =>
+      apiPost<BroadcastResult>("/v1/notifications/broadcast", input),
+    onSuccess: (res) => {
+      if (res.dry_run) return;
+      qc.invalidateQueries({ queryKey: ["outbound_messages"] });
+      toast.ok(
+        res.recipients > 0
+          ? `В очередь поставлено сообщений: ${res.recipients}`
+          : "Под фильтр никто не попал — сообщения не поставлены",
+      );
+    },
+    onError: (e: Error) => toast.err("Рассылка не удалась: " + e.message),
+  });
+};
+
+/** Разбор очереди вручную — тот же код, что раз в час гоняет планировщик. */
+export const useDispatchOutbound = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async () =>
+      apiPost<{ ok: true; sent: number; failed: number; skipped: number }>(
+        "/v1/notifications/dispatch",
+        {},
+      ),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["outbound_messages"] });
+      toast.ok(`Отправлено: ${res.sent}, пропущено: ${res.skipped}, ошибок: ${res.failed}`);
+    },
+    onError: (e: Error) => toast.err("Не удалось разобрать очередь: " + e.message),
+  });
+};
+
+/**
+ * Пометить прочитанными несколько уведомлений.
+ *
+ * Отдельно от useMarkAllNotificationsRead: та берёт пользователя из
+ * supabase.auth.getUser() и гасит ВСЁ, а инбоксу нужно закрыть именно то,
+ * что человек видит на экране после фильтра. Получатель проверяется RLS
+ * (notifications_owner_rw: recipient_id = auth.uid()), поэтому явная
+ * привязка к пользователю здесь не нужна.
+ */
+export const useMarkNotificationsRead = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (ids: string[]) => {
+      if (ids.length === 0) return;
+      const { error } = await supabase
+        .from("notifications")
+        .update({ is_read: true })
+        .in("id", ids);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["notifications"] });
+      qc.invalidateQueries({ queryKey: ["notifications_unread"] });
+    },
+    onError: (e: Error) => toast.err("Не удалось отметить: " + e.message),
+  });
+};

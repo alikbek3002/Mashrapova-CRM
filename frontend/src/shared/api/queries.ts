@@ -2508,6 +2508,95 @@ export const useUnreadNotificationsCount = () => {
 };
 
 // ======================================================================
+// Уведомления: матрица каналов, шаблоны и очередь исходящих (ТЗ §9)
+//
+// Таблицы появились миграцией 20260926000012 и до сих пор не читались ни
+// одним экраном: матрицу и шаблоны можно было править только SQL-запросом,
+// а очередь отправок не видел никто. Права проверять здесь не нужно — они
+// уже описаны RLS: читают сотрудники, матрицу пишет директор, шаблоны —
+// от старшего менеджера, очередь видна с правом на финотчёты.
+// ======================================================================
+export type NotificationMatrixRow = {
+  organization_id: string;
+  event_type: string;
+  channel: "push" | "sms" | "inapp";
+  audience: "client" | "staff";
+  enabled: boolean;
+  updated_at: string;
+};
+
+export type MessageTemplateRow = {
+  organization_id: string;
+  event_type: string;
+  // Только push и sms: у служебного канала inapp текста нет — задача
+  // сотруднику показывается разделом «Задачи», а не сообщением
+  // (ограничение message_templates_channel_check).
+  channel: "push" | "sms";
+  body_ru: string;
+  body_ky: string | null;
+  updated_at: string;
+};
+
+export type OutboundMessageRow = {
+  id: string;
+  channel: "push" | "sms";
+  event_type: string;
+  to_phone: string | null;
+  body: string;
+  status: "queued" | "sent" | "failed" | "skipped";
+  attempts: number;
+  last_error: string | null;
+  provider: string | null;
+  created_at: string;
+  sent_at: string | null;
+};
+
+export const useNotificationMatrix = () =>
+  useQuery({
+    queryKey: ["notification_matrix"],
+    queryFn: async (): Promise<NotificationMatrixRow[]> => {
+      const { data, error } = await supabase
+        .from("notification_matrix")
+        .select("*")
+        .order("event_type");
+      if (error) throw error;
+      return (data ?? []) as NotificationMatrixRow[];
+    },
+  });
+
+export const useMessageTemplates = () =>
+  useQuery({
+    queryKey: ["message_templates"],
+    queryFn: async (): Promise<MessageTemplateRow[]> => {
+      const { data, error } = await supabase
+        .from("message_templates")
+        .select("*")
+        .order("event_type");
+      if (error) throw error;
+      return (data ?? []) as MessageTemplateRow[];
+    },
+  });
+
+/**
+ * Очередь исходящих. Пока провайдера нет, статус skipped — норма, а не
+ * сбой: диспетчер помечает так сообщения, которые ушли бы при включённом
+ * SMS_PROVIDER. Поэтому в интерфейсе они показываются отдельным статусом.
+ */
+export const useOutboundMessages = (limit = 200) =>
+  useQuery({
+    queryKey: ["outbound_messages", limit],
+    queryFn: async (): Promise<OutboundMessageRow[]> => {
+      const { data, error } = await supabase
+        .from("outbound_messages")
+        .select("id, channel, event_type, to_phone, body, status, attempts, last_error, provider, created_at, sent_at")
+        .order("created_at", { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return (data ?? []) as OutboundMessageRow[];
+    },
+  });
+
+// ======================================================================
 // Children list для родителя с указанием менеджера и тренера
 // ======================================================================
 export type ChildForParent = {

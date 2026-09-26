@@ -24,12 +24,15 @@ const RefundsPage = lazy(() => import("./admin/Refunds").then((m) => ({ default:
 const UsersPage = lazy(() => import("./admin/Users").then((m) => ({ default: m.UsersPage })));
 const PersonalTrainingsPage = lazy(() => import("./admin/PersonalTrainings").then((m) => ({ default: m.PersonalTrainingsPage })));
 const DebtorsPage = lazy(() => import("./admin/Debtors").then((m) => ({ default: m.DebtorsPage })));
-import { useStats, useAllCardDebts } from "./shared/api/queries";
+const InboxPage = lazy(() => import("./admin/Inbox").then((m) => ({ default: m.InboxPage })));
+const NotificationsPage = lazy(() => import("./admin/Notifications").then((m) => ({ default: m.NotificationsPage })));
+import { useStats, useAllCardDebts, useUnreadNotificationsCount } from "./shared/api/queries";
 import { useAuth } from "./shared/auth/AuthProvider";
 import { can, type Permission } from "./shared/auth/rbac";
 
 type NavId =
   | "dash"
+  | "inbox"
   | "kids"
   | "parents"
   | "schedule"
@@ -40,6 +43,7 @@ type NavId =
   | "freezes"
   | "leads"
   | "reports"
+  | "notify"
   | "coaches"
   | "coachRates"
   | "payroll"
@@ -50,8 +54,12 @@ type NavId =
   | "users"
   | "settings";
 
-const PAGES: Record<NavId, ComponentType<{ lang: Lang }>> = {
+// onNavigate передаётся всем страницам, а объявляют его только те, кому
+// нужно уводить пользователя в другой раздел (инбокс задач). Роутера в
+// приложении нет — активный экран это состояние компонента.
+const PAGES: Record<NavId, ComponentType<{ lang: Lang; onNavigate?: (id: string) => void }>> = {
   dash: DashboardPage,
+  inbox: InboxPage,
   kids: KidsPage,
   parents: ParentsPage,
   schedule: SchedulePage,
@@ -62,6 +70,7 @@ const PAGES: Record<NavId, ComponentType<{ lang: Lang }>> = {
   freezes: FreezesPage,
   leads: LeadsPage,
   reports: ReportsPage,
+  notify: NotificationsPage,
   coaches: CoachesPage,
   coachRates: CoachRatesPage,
   payroll: PayrollPage,
@@ -89,6 +98,9 @@ export const AdminDashboard = ({ lang }: { lang: Lang }) => {
   const { data: stats } = useStats();
   const { data: debtors } = useAllCardDebts();
   const debtorsCount = (debtors ?? []).filter((d) => d.known && d.total > 0).length;
+  // ТЗ §9.1, колонка «Системное (менеджер)»: задачи по лидам, продлениям и
+  // заморозкам писались в notifications, но не показывались нигде.
+  const { data: unread = 0 } = useUnreadNotificationsCount();
 
   useEffect(() => {
     try { localStorage.setItem(SIDEBAR_COLLAPSED_KEY, collapsed ? "1" : "0"); } catch {}
@@ -99,6 +111,7 @@ export const AdminDashboard = ({ lang }: { lang: Lang }) => {
       group: t.section.operations,
       items: [
         ["dash",     "space_dashboard",    t.nav.dash,      null],
+        ["inbox",    "inbox",              lang === "ru" ? "Задачи" : "Тапшырмалар", null, unread || undefined],
         ["kids",     "child_care",         t.nav.kids,      "view_kids",     stats?.activeKids],
         ["parents",  "family_restroom",    t.nav.parents,   "view_parents",  stats?.families],
         ["schedule", "calendar_month",     t.nav.schedule,  "view_schedule"],
@@ -118,6 +131,7 @@ export const AdminDashboard = ({ lang }: { lang: Lang }) => {
       items: [
         ["leads",   "filter_alt",  t.nav.leads,    "view_leads",            stats?.leadsNew || undefined],
         ["reports", "bar_chart",   lang === "ru" ? "Отчёты" : "Отчёттор", "view_finance_reports"],
+        ["notify",  "campaign",    lang === "ru" ? "Уведомления" : "Эскертүүлөр", "view_finance_reports"],
       ],
     },
     {
@@ -132,7 +146,7 @@ export const AdminDashboard = ({ lang }: { lang: Lang }) => {
         ["settings",   "settings",                t.nav.settings,   "system_settings"],
       ],
     },
-  ], [t, stats, lang, debtorsCount]);
+  ], [t, stats, lang, debtorsCount, unread]);
 
   const NAV = useMemo(() => NAV_RAW
     .map((g) => ({
@@ -184,7 +198,7 @@ export const AdminDashboard = ({ lang }: { lang: Lang }) => {
                       <span
                         className="nav-item__badge"
                         style={
-                          id === "leads"
+                          id === "leads" || id === "inbox"
                             ? { background: "var(--red-50)", color: "var(--red-600)" }
                             : { background: "var(--bg-soft)", color: "var(--muted)" }
                         }
@@ -193,7 +207,7 @@ export const AdminDashboard = ({ lang }: { lang: Lang }) => {
                       </span>
                     )}
                     {typeof badge === "number" && badge > 0 && collapsed && (
-                      <span className="nav-item__dot" style={{ background: id === "leads" ? "var(--red-600)" : "var(--blue)" }} />
+                      <span className="nav-item__dot" style={{ background: id === "leads" || id === "inbox" ? "var(--red-600)" : "var(--blue)" }} />
                     )}
                   </button>
                 );
@@ -205,7 +219,7 @@ export const AdminDashboard = ({ lang }: { lang: Lang }) => {
 
       <div className="main">
         <Suspense fallback={<div style={{ padding: 24, color: "var(--muted)" }}>{lang === "ru" ? "Загрузка…" : "Жүктөлүүдө…"}</div>}>
-          <Page lang={lang} />
+          <Page lang={lang} onNavigate={(id) => setActiveNav(id as NavId)} />
         </Suspense>
       </div>
     </div>
