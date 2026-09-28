@@ -13,6 +13,8 @@ import {
   isTaskEvent,
 } from "./notificationEvents";
 import { humanMinutes } from "./leadFunnel";
+import { SkeletonRows } from "../shared/ui/Skeleton";
+import { SkeletonText } from "../shared/ui/Skeleton";
 
 // =====================================================================
 // Инбокс сотрудника — ТЗ §9.1, колонка «Системное (менеджер)».
@@ -60,7 +62,7 @@ export const InboxPage = ({
   const shown = tab === "todo" ? todo : items;
 
   const subtitle = isLoading
-    ? t("Загрузка…", "Жүктөлүүдө…")
+    ? <SkeletonText />
     : todo.length > 0
       ? t(`${todo.length} требуют действия`, `${todo.length} аракет талап кылат`)
       : t("Задач нет", "Тапшырма жок");
@@ -109,7 +111,7 @@ export const InboxPage = ({
         {error ? (
           <EmptyState title={t("Ошибка", "Ката")} hint={error.message} />
         ) : isLoading ? (
-          <EmptyState title={t("Загрузка…", "Жүктөлүүдө…")} />
+          <SkeletonRows />
         ) : shown.length === 0 ? (
           <EmptyState
             title={

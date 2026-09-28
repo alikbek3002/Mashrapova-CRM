@@ -41,7 +41,28 @@ export const getVerifiedFactorId = async (): Promise<string | null> => {
  * Заводит новый TOTP-фактор и возвращает QR-код (SVG) с секретом.
  * Фактор остаётся неподтверждённым, пока пользователь не введёт код.
  */
-export const enrollTotp = async (): Promise<{ factorId: string; qrSvg: string; secret: string }> => {
+// Supabase отдаёт QR как «data:image/svg+xml;utf-8,<svg…>» с сырым SVG.
+// Вставлять его как HTML нельзя (вылезает текст «data:…»), а в <img>
+// без кодирования ломается на символах вроде «#». Перекодируем.
+const toImgSrc = (qr: string): string => {
+  const i = qr.indexOf(",");
+  if (!qr.startsWith("data:image/svg+xml") || i < 0) return qr;
+  let svg = qr.slice(i + 1);
+  try { if (/%3C/i.test(svg)) svg = decodeURIComponent(svg); } catch { /* уже раскодирован */ }
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`;
+};
+
+export type TotpEnrollment = {
+  factorId: string;
+  /** Готовый src для <img>. */
+  qrSrc: string;
+  /** Секрет для ручного ввода. */
+  secret: string;
+  /** otpauth://… — на телефоне открывает приложение-аутентификатор. */
+  uri: string;
+};
+
+export const enrollTotp = async (): Promise<TotpEnrollment> => {
   // Незавершённые попытки накапливаются и мешают: Supabase не даёт
   // завести второй фактор с тем же именем. Чистим брошенные.
   const { data: existing } = await supabase.auth.mfa.listFactors();
@@ -51,10 +72,12 @@ export const enrollTotp = async (): Promise<{ factorId: string; qrSvg: string; s
 
   const { data, error } = await supabase.auth.mfa.enroll({
     factorType: "totp",
-    friendlyName: `totp-${Date.now()}`,
+    // Так аккаунт называется в Google Authenticator.
+    issuer: "Академия Машрапова",
+    friendlyName: `Академия Машрапова ${new Date().toLocaleDateString("ru-RU")} ${Date.now() % 10000}`,
   });
   if (error || !data) throw error ?? new Error("mfa_enroll_failed");
-  return { factorId: data.id, qrSvg: data.totp.qr_code, secret: data.totp.secret };
+  return { factorId: data.id, qrSrc: toImgSrc(data.totp.qr_code), secret: data.totp.secret, uri: data.totp.uri };
 };
 
 /**

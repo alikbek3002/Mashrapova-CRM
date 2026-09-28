@@ -7,6 +7,8 @@ import { useCardPlans } from "../shared/api/queries";
 import { useAddCardPlan, useUpdateCardPlan, useDeleteCardPlan } from "../shared/api/mutations";
 import { Modal, Field } from "../shared/ui/Modal";
 import { usePerm } from "../shared/auth/rbac";
+import { SkeletonRows } from "../shared/ui/Skeleton";
+import { Select } from "../shared/ui/Select";
 
 // ============ Виды абонементов (каталог card_plans) ============
 // Живёт вкладкой на странице «Абонементы»: директор создаёт виды,
@@ -59,7 +61,7 @@ export const CardPlansPanel = ({ lang }: { lang: Lang }) => {
       )}
 
       {isLoading ? (
-        <EmptyState title={t("Загрузка…", "Жүктөлүүдө…")} />
+        <SkeletonRows />
       ) : plans.length === 0 ? (
         <EmptyState
           title={t("Видов абонементов пока нет", "Абонемент түрлөрү азырынча жок")}
@@ -206,11 +208,11 @@ const PlanModal = ({ open, onClose, lang, plan }: {
           <input value={nameKy} onChange={(e) => setNameKy(e.target.value)} disabled={busy} />
         </Field>
         <Field label={t("Тип", "Түрү")}>
-          <select value={type} onChange={(e) => onTypeChange(e.target.value as CardType)} disabled={busy}>
+          <Select value={type} onChange={(e) => onTypeChange(e.target.value as CardType)} disabled={busy}>
             {PLAN_TYPE_OPTS.map((o) => (
               <option key={o.value} value={o.value}>{lang === "ru" ? o.ru : o.ky}</option>
             ))}
-          </select>
+          </Select>
         </Field>
         <Field label={t("Срок, дней", "Мөөнөтү, күн")}>
           <input type="number" min={1} value={days} onChange={(e) => setDays(e.target.value)} disabled={busy} />

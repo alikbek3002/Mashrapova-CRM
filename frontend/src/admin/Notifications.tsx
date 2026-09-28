@@ -19,6 +19,9 @@ import {
 } from "../shared/api/mutations";
 import { usePerm } from "../shared/auth/rbac";
 import { EVENTS, eventLabel, eventMeta } from "./notificationEvents";
+import { Select } from "../shared/ui/Select";
+import { DateInput } from "../shared/ui/DateInput";
+import { SkeletonRows } from "../shared/ui/Skeleton";
 
 // =====================================================================
 // Модуль «Уведомления» — ТЗ §9.
@@ -227,43 +230,43 @@ const BroadcastTab = ({ lang }: { lang: Lang }) => {
 
         <label className="field">
           <span className="field__label">{t("Дисциплина", "Дисциплина")}</span>
-          <select value={sectionId} onChange={(e) => { setSectionId(e.target.value); setPreview(null); }}>
+          <Select value={sectionId} onChange={(e) => { setSectionId(e.target.value); setPreview(null); }}>
             <option value="">{t("Любая", "Баары")}</option>
             {sections.map((s) => (
               <option key={s.id} value={s.id}>{lang === "ru" ? s.name_ru : s.name_ky}</option>
             ))}
-          </select>
+          </Select>
         </label>
 
         <label className="field">
           <span className="field__label">{t("Тренер", "Машыктыруучу")}</span>
-          <select value={coachId} onChange={(e) => { setCoachId(e.target.value); setPreview(null); }}>
+          <Select value={coachId} onChange={(e) => { setCoachId(e.target.value); setPreview(null); }}>
             <option value="">{t("Любой", "Баары")}</option>
             {coaches.map((c) => (
               <option key={c.id} value={c.id}>{c.full_name}</option>
             ))}
-          </select>
+          </Select>
         </label>
 
         <label className="field">
           <span className="field__label">{t("Статус абонемента", "Абонемент абалы")}</span>
-          <select value={cardStatus} onChange={(e) => { setCardStatus(e.target.value); setPreview(null); }}>
+          <Select value={cardStatus} onChange={(e) => { setCardStatus(e.target.value); setPreview(null); }}>
             <option value="">{t("Действующие (активный, истекает, заморожен)", "Колдонулуучу")}</option>
             <option value="active">{t("Активный", "Активдүү")}</option>
             <option value="ending">{t("Истекает", "Бүтүп жатат")}</option>
             <option value="frozen">{t("Заморожен", "Тындырылган")}</option>
             <option value="expired">{t("Истёк", "Бүттү")}</option>
             <option value="debt">{t("Долг", "Карыз")}</option>
-          </select>
+          </Select>
         </label>
 
         <label className="field">
           <span className="field__label">{t("Срок заканчивается с", "Мөөнөтү бүтөт")}</span>
-          <input type="date" value={from} onChange={(e) => { setFrom(e.target.value); setPreview(null); }} />
+          <DateInput value={from} onChange={(e) => { setFrom(e.target.value); setPreview(null); }} />
         </label>
         <label className="field">
           <span className="field__label">{t("по", "чейин")}</span>
-          <input type="date" value={to} onChange={(e) => { setTo(e.target.value); setPreview(null); }} />
+          <DateInput value={to} onChange={(e) => { setTo(e.target.value); setPreview(null); }} />
         </label>
       </div>
     </div>
@@ -303,7 +306,7 @@ const MatrixTab = ({ lang }: { lang: Lang }) => {
   }, [rows]);
 
   if (error) return <EmptyState title={t("Ошибка", "Ката")} hint={error.message} />;
-  if (isLoading) return <EmptyState title={t("Загрузка…", "Жүктөлүүдө…")} />;
+  if (isLoading) return <SkeletonRows />;
 
   return (
     <>
@@ -404,7 +407,7 @@ const TemplatesTab = ({ lang }: { lang: Lang }) => {
   };
 
   if (error) return <EmptyState title={t("Ошибка", "Ката")} hint={error.message} />;
-  if (isLoading) return <EmptyState title={t("Загрузка…", "Жүктөлүүдө…")} />;
+  if (isLoading) return <SkeletonRows />;
   if (rows.length === 0) {
     return (
       <EmptyState
@@ -508,19 +511,19 @@ const QueueTab = ({ lang }: { lang: Lang }) => {
   }, [rows]);
 
   if (error) return <EmptyState title={t("Ошибка", "Ката")} hint={error.message} />;
-  if (isLoading) return <EmptyState title={t("Загрузка…", "Жүктөлүүдө…")} />;
+  if (isLoading) return <SkeletonRows />;
 
   return (
     <>
       <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 12, flexWrap: "wrap" }}>
-        <select value={status} onChange={(e) => setStatus(e.target.value)} style={{ maxWidth: 220 }}>
+        <Select value={status} onChange={(e) => setStatus(e.target.value)} style={{ maxWidth: 220 }}>
           <option value="">{t("Все статусы", "Бардык статустар")}</option>
           {Object.keys(statusPill).map((s) => (
             <option key={s} value={s}>
               {statusPill[s]![lang === "ru" ? "ru" : "ky"]} · {counts[s] ?? 0}
             </option>
           ))}
-        </select>
+        </Select>
         <div style={{ flex: 1 }} />
         <button className="btn" onClick={() => dispatch.mutate()} disabled={dispatch.isPending}>
           <MIcon name="outbox" size={16} /> {t("Разобрать очередь", "Кезекти иштетүү")}

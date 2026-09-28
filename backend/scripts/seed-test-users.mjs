@@ -26,15 +26,19 @@ const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
 
 const ORG_ID = "00000000-0000-0000-0000-000000000001";
 
+// Вход по телефону: логин = телефон, в Supabase Auth он хранится как
+// «996XXXXXXXXX@staff.mashrapov.local» (как делает бэкенд, lib/phone.ts).
+// Пароль у всех тестовых учёток один — сменить перед боевыми данными.
+const TEST_PASSWORD = "mashrapova2026";
 const users = [
-  { email: "director@mashrapov.test",   password: "director12345",   role: "director",         full_name: "Айбек Директор" },
-  { email: "fitnessdir@mashrapov.test", password: "fitnessdir12345", role: "fitness_director", full_name: "Эльдар Управляющий" },
-  { email: "srmanager@mashrapov.test",  password: "srmanager12345",  role: "senior_manager",   full_name: "Айгерим Ст.Менеджер" },
-  { email: "manager@mashrapov.test",    password: "manager12345",    role: "manager",          full_name: "Нурлан Менеджер" },
-  { email: "cashier@mashrapov.test",    password: "cashier12345",    role: "cashier",          full_name: "Бегимай Ресепшен" },
-  { email: "coach@mashrapov.test",      password: "coach12345",      role: "coach",            full_name: "Гульмира Тренер" },
-  { email: "parent@mashrapov.test",     password: "parent12345",     role: "parent",           full_name: "Айгуль Родитель" },
-];
+  { phone: "+996700000000", role: "director",         full_name: "Айбек Директор" },
+  { phone: "+996700000005", role: "fitness_director", full_name: "Эльдар Управляющий" },
+  { phone: "+996700000003", role: "senior_manager",   full_name: "Айгерим Ст. менеджер" },
+  { phone: "+996700000004", role: "manager",          full_name: "Нурлан Менеджер" },
+  { phone: "+996700000006", role: "cashier",          full_name: "Бегимай Ресепшен" },
+  { phone: "+996700000001", role: "coach",            full_name: "Азамат Тренер" },
+  { phone: "+996700000002", role: "parent",           full_name: "Айгуль Родитель" },
+].map((u) => ({ ...u, email: `${u.phone.slice(1)}@staff.mashrapov.local`, password: TEST_PASSWORD }));
 
 const upsertUser = async (u) => {
   // Try create; if exists, find by email
@@ -91,6 +95,7 @@ const main = async () => {
       role: u.role,
       full_name: u.full_name,
       email: u.email,
+      phone: u.phone,
       is_active: true,
     });
     if (profErr) throw profErr;
@@ -100,7 +105,7 @@ const main = async () => {
   console.log("=== Coach record ===");
   const { error: coachErr } = await supabase.from("coaches").upsert({
     id: usersById.coach,
-    bio: "Мастер спорта по спортивной гимнастике",
+    bio: "Мастер спорта по боксу",
     achievements: "КМС",
     experience_years: 8,
   });
@@ -121,8 +126,8 @@ const main = async () => {
   if (famErr) throw famErr;
 
   const children = [
-    { id: "00000000-0000-0000-0000-0000000000c1", full_name: "Айдана Жанышева", birth_date: "2015-04-12", card_number: "U-0001" },
-    { id: "00000000-0000-0000-0000-0000000000c2", full_name: "Эрлан Жанышев", birth_date: "2017-08-30", card_number: "U-0002" },
+    { id: "00000000-0000-0000-0000-0000000000c1", full_name: "Айдана Жанышева", birth_date: "2015-04-12", card_number: "M-0001" },
+    { id: "00000000-0000-0000-0000-0000000000c2", full_name: "Эрлан Жанышев", birth_date: "2017-08-30", card_number: "M-0002" },
   ];
   for (const c of children) {
     const { error } = await supabase.from("children").upsert({
@@ -155,7 +160,7 @@ const main = async () => {
     organization_id: ORG_ID,
     section_id: SECTION_ID,
     coach_id: usersById.coach,
-    name: "СГ-1 (младшая)",
+    name: "Бокс · Дети 8–12",
     max_capacity: 12,
     duration_min: 60,
   });
@@ -204,7 +209,7 @@ const main = async () => {
         type: "monthly",
         total_lessons: 12,
         freeze_quota: 0,
-        price_paid: 5000,
+        price_paid: 2500,
         discount: 0,
         start_date: start,
         end_date: end,
@@ -217,7 +222,7 @@ const main = async () => {
       organization_id: ORG_ID,
       child_id: children[0].id,
       club_card_id: card.id,
-      amount: 5000,
+      amount: 2500,
       method: "cash",
       received_by: usersById.director,
     });
@@ -225,9 +230,9 @@ const main = async () => {
 
   console.log("\n=== ✅ Seed complete ===");
   console.log("Login credentials:");
-  console.log("  ROLE              EMAIL                       PASSWORD");
+  console.log("  ROLE              PHONE            PASSWORD");
   for (const u of users) {
-    console.log(`  ${u.role.padEnd(17)} ${u.email.padEnd(27)} ${u.password}`);
+    console.log(`  ${u.role.padEnd(17)} ${u.phone.padEnd(16)} ${u.password}`);
   }
 };
 

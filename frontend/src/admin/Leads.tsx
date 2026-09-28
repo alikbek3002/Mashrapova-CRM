@@ -14,6 +14,8 @@ import {
   stageLabel, stageTone, sourceLabel, leadTask, taskLabel, humanMinutes,
   type LeadSla,
 } from "./leadFunnel";
+import { SkeletonRows, SkeletonText } from "../shared/ui/Skeleton";
+import { Select } from "../shared/ui/Select";
 
 const sourceStripe: Record<string, string> = {
   target: "var(--red)",
@@ -73,7 +75,7 @@ const BookTrialModal = ({
         <input type="datetime-local" value={when} onChange={(e) => setWhen(e.target.value)} />
       </Field>
       <Field label={t("Группа (секция и тренер)", "Топ (секция жана тренер)")}>
-        <select value={groupId} onChange={(e) => setGroupId(e.target.value)}>
+        <Select value={groupId} onChange={(e) => setGroupId(e.target.value)}>
           <option value="">—</option>
           {groups.map((g) => {
             const row = g as { id: string; name: string; section?: { name_ru: string; name_ky: string } | null; coach?: { full_name: string } | null };
@@ -84,7 +86,7 @@ const BookTrialModal = ({
               </option>
             );
           })}
-        </select>
+        </Select>
       </Field>
       <div style={{ fontSize: 11, color: "var(--muted)", lineHeight: 1.45 }}>
         {t("Напоминания за 24 часа и за 2 часа до пробной система поставит сама. Если клиент не придёт — через 3 часа появится задача позвонить.",
@@ -302,7 +304,7 @@ export const LeadsPage = ({ lang }: { lang: Lang }) => {
       <PageHeader
         title={tt("Воронка лидов", "Арыздар каналы")}
         subtitle={isLoading
-          ? tt("Загрузка…", "Жүктөлүүдө…")
+          ? <SkeletonText />
           : tt(`${leads.length} лидов · ${counts.todo} требуют действия`,
                `${leads.length} арыз · ${counts.todo} аракет талап кылат`)}
         actions={
@@ -412,7 +414,7 @@ export const LeadsPage = ({ lang }: { lang: Lang }) => {
         </div>
 
         {error ? <EmptyState title={tt("Ошибка", "Ката")} hint={error.message} /> :
-          isLoading ? <EmptyState title={tt("Загрузка…", "Жүктөлүүдө…")} /> :
+          isLoading ? <SkeletonRows /> :
           rows.length === 0 ? (
             <EmptyState
               title={filter === "todo" ? tt("Всё отработано", "Баары аткарылды") : tt("Лидов нет", "Арыздар жок")}

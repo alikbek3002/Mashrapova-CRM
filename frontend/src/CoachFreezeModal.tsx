@@ -10,6 +10,9 @@ import { Modal, Field } from "./shared/ui/Modal";
 import type { Lang } from "./data";
 import { useChildActiveCards } from "./shared/api/queries";
 import { useCreateFreeze } from "./shared/api/mutations";
+import { Select } from "./shared/ui/Select";
+import { DateInput } from "./shared/ui/DateInput";
+import { SkeletonText } from "./shared/ui/Skeleton";
 
 const ymd = (d: Date) => {
   const y = d.getFullYear();
@@ -100,7 +103,7 @@ export const CoachFreezeModal = ({
       </div>
 
       {isLoading ? (
-        <div style={{ fontSize: 13, color: "var(--muted)" }}>{t("Загрузка…", "Жүктөлүүдө…")}</div>
+        <div style={{ fontSize: 13, color: "var(--muted)" }}>{<SkeletonText />}</div>
       ) : cards.length === 0 ? (
         <div style={{ fontSize: 13, color: "var(--muted)" }}>
           {t("У ребёнка нет действующего абонемента — замораживать нечего.",
@@ -110,22 +113,22 @@ export const CoachFreezeModal = ({
         <>
           {cards.length > 1 && (
             <Field label={t("Абонемент", "Абонемент")}>
-              <select value={cardId} onChange={(e) => setCardId(e.target.value)}>
+              <Select value={cardId} onChange={(e) => setCardId(e.target.value)}>
                 <option value="">—</option>
                 {cards.map((c) => (
                   <option key={c.id} value={c.id}>
                     {c.type} · {c.start_date} — {c.end_date}
                   </option>
                 ))}
-              </select>
+              </Select>
             </Field>
           )}
           <div className="grid-2">
             <Field label={t("С какого дня", "Кайсы күндөн")}>
-              <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+              <DateInput value={from} onChange={(e) => setFrom(e.target.value)} />
             </Field>
             <Field label={t("По какой день", "Кайсы күнгө чейин")}>
-              <input type="date" value={to} min={from} onChange={(e) => setTo(e.target.value)} />
+              <DateInput value={to} min={from} onChange={(e) => setTo(e.target.value)} />
             </Field>
           </div>
           <Field label={t("Причина", "Себеби")}>

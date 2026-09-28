@@ -7,7 +7,7 @@ export const PageHeader = ({
   actions,
 }: {
   title: string;
-  subtitle?: string;
+  subtitle?: ReactNode;
   actions?: ReactNode;
 }) => (
   <div className="page-head">

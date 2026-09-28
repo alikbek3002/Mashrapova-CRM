@@ -9,6 +9,9 @@ import {
   type ManagerKpiRow,
 } from "../shared/api/queries";
 import { usePerm } from "../shared/auth/rbac";
+import { DateInput } from "../shared/ui/DateInput";
+import { SkeletonRows } from "../shared/ui/Skeleton";
+import { SkeletonText } from "../shared/ui/Skeleton";
 
 const ymd = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -197,11 +200,11 @@ const SalesTab = ({ lang }: { lang: Lang }) => {
       <div className="grid-2" style={{ maxWidth: 360 }}>
         <label className="field">
           <span className="field__label">{t("С", "Башт.")}</span>
-          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+          <DateInput value={from} onChange={(e) => setFrom(e.target.value)} />
         </label>
         <label className="field">
           <span className="field__label">{t("По", "Чейин")}</span>
-          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+          <DateInput value={to} onChange={(e) => setTo(e.target.value)} />
         </label>
       </div>
 
@@ -410,7 +413,7 @@ const PayrollTab = ({ lang }: { lang: Lang }) => {
       </div>
 
       {isLoading ? (
-        <EmptyState title={t("Загрузка…", "Жүктөлүүдө…")} />
+        <SkeletonRows />
       ) : periods.length === 0 ? (
         <EmptyState title={t("Нет начислений за период", "Эсептөөлөр жок")} hint={t("Перейдите в раздел «Зарплаты» и нажмите «Пересчитать».", "")} />
       ) : (
@@ -503,7 +506,7 @@ const PayrollDetail = ({
     return Array.from(m.values()).sort((a, b) => b.amount - a.amount);
   }, [data]);
 
-  if (isLoading) return <div style={{ fontSize: 12, color: "var(--muted)" }}>{t("Загрузка…", "Жүктөлүүдө…")}</div>;
+  if (isLoading) return <div style={{ fontSize: 12, color: "var(--muted)" }}>{<SkeletonText />}</div>;
   if (data.length === 0) {
     return <div style={{ fontSize: 12, color: "var(--muted)" }}>{t("Нет оплачиваемых занятий за период", "Мезгилде төлөнүүчү сабак жок")}</div>;
   }
@@ -597,11 +600,11 @@ const OpsTab = ({ lang }: { lang: Lang }) => {
       <div className="grid-2" style={{ maxWidth: 360, marginTop: 16 }}>
         <label className="field">
           <span className="field__label">{t("С", "Башт.")}</span>
-          <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+          <DateInput value={from} onChange={(e) => setFrom(e.target.value)} />
         </label>
         <label className="field">
           <span className="field__label">{t("По", "Чейин")}</span>
-          <input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+          <DateInput value={to} onChange={(e) => setTo(e.target.value)} />
         </label>
       </div>
 

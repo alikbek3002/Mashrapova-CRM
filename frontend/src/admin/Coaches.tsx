@@ -7,6 +7,7 @@ import { useCoaches } from "../shared/api/queries";
 import { AddCoachModal } from "../shared/ui/forms";
 import { Gate } from "../shared/auth/Gate";
 import { usePerm } from "../shared/auth/rbac";
+import { SkeletonText } from "../shared/ui/Skeleton";
 
 export const CoachesPage = ({ lang }: { lang: Lang }) => {
   const { data: coaches = [], isLoading, error } = useCoaches();
@@ -25,7 +26,7 @@ export const CoachesPage = ({ lang }: { lang: Lang }) => {
     <>
       <PageHeader
         title={t("Тренеры", "Тренерлер")}
-        subtitle={isLoading ? t("Загрузка…", "Жүктөлүүдө…") : t(`${coaches.length} активных`, `${coaches.length} активдүү`)}
+        subtitle={isLoading ? <SkeletonText /> : t(`${coaches.length} активных`, `${coaches.length} активдүү`)}
         actions={
           <Gate perm="manage_coaches">
             <button className="btn btn--primary" onClick={() => setAddOpen(true)}>

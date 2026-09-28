@@ -13,6 +13,7 @@ import { startOutbox } from "./shared/offline/outbox";
 import { registerOutboxHandlers } from "./shared/offline/ops";
 import { OfflineBar } from "./shared/offline/OfflineBar";
 import { ToastHost } from "./shared/ui/toast";
+import { Sk, SkeletonPage } from "./shared/ui/Skeleton";
 
 // Code-splitting по роли: каждый persona-экран — отдельный чанк. Тренер/родитель
 // на телефоне не грузят весь админский код (формы, отчёты, payroll и т.д.).
@@ -113,6 +114,11 @@ const Shell = () => {
       localStorage.setItem("uq_lang", lang);
     } catch {}
   }, [lang]);
+  // Язык документа читают общие компоненты (календарь DateInput) — ставим
+  // до отрисовки детей, чтобы при переключении не было кадра со старым языком.
+  if (typeof document !== "undefined" && document.documentElement.lang !== lang) {
+    document.documentElement.lang = lang;
+  }
 
   // Офлайн-очередь (ТЗ §12.4): регистрируем обработчики и запускаем
   // автоотправку. Должно случиться один раз и до любых early-return —
@@ -166,13 +172,19 @@ const Shell = () => {
     return () => { cancelled = true; };
   }, [user?.id, user?.role]);
 
+  // Проверка сессии: скелетон интерфейса вместо надписи «Загрузка…».
   if (loading) {
     return (
-      <div className="login-page">
-        <div className="login-card login-card--splash">
-          <BrandLogo size={56} />
-          <div className="login-card__title">{lang === "ru" ? "Загрузка..." : "Жүктөлүүдө..."}</div>
+      <div className="cards-bordered">
+        <div className="app-chrome">
+          <div className="app-chrome__inner">
+            <div className="crm-logo">
+              <img className="crm-logo__img" src="/logo.png" alt="Академия Машрапова" />
+            </div>
+            <Sk w={180} h={36} r={999} style={{ opacity: 0.15 }} />
+          </div>
         </div>
+        <SkeletonPage />
       </div>
     );
   }
@@ -246,14 +258,7 @@ const Shell = () => {
       </div>
 
       <Suspense
-        fallback={
-          <div className="login-page">
-            <div className="login-card login-card--splash">
-              <BrandLogo size={56} />
-              <div className="login-card__title">{lang === "ru" ? "Загрузка..." : "Жүктөлүүдө..."}</div>
-            </div>
-          </div>
-        }
+        fallback={<SkeletonPage mobile={isPwaRole} />}
       >
         {isAdminLike && <AdminDashboard lang={lang} />}
         {user.role === "coach" && <CoachScreen lang={lang} />}

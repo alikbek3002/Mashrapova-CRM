@@ -6,6 +6,9 @@ import { useCoaches, useGroups, useCoachRates } from "../shared/api/queries";
 import { useAddCoachRate } from "../shared/api/mutations";
 import { Modal, Field } from "../shared/ui/Modal";
 import { Gate } from "../shared/auth/Gate";
+import { DateInput } from "../shared/ui/DateInput";
+import { SkeletonRows } from "../shared/ui/Skeleton";
+import { Select } from "../shared/ui/Select";
 
 const today = () => new Date().toISOString().slice(0, 10);
 
@@ -44,7 +47,7 @@ export const CoachRatesPage = ({ lang }: { lang: Lang }) => {
         {error ? (
           <EmptyState title={t("Ошибка", "Ката")} hint={(error as Error).message} />
         ) : isLoading ? (
-          <EmptyState title={t("Загрузка…", "Жүктөлүүдө…")} />
+          <SkeletonRows />
         ) : rates.length === 0 ? (
           <EmptyState
             title={t("Ставок пока нет", "Ставкалар жок")}
@@ -118,22 +121,22 @@ const AddRateModal = ({
   return (
     <Modal open={open} onClose={onClose} title={t("Новая ставка", "Жаңы ставка")}>
       <Field label={t("Тренер", "Тренер")}>
-        <select value={coach_id} onChange={(e) => setCoach(e.target.value)}>
+        <Select value={coach_id} onChange={(e) => setCoach(e.target.value)}>
           <option value="">{t("— выберите —", "— тандаңыз —")}</option>
           {coaches.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
-        </select>
+        </Select>
       </Field>
       <Field label={t("Группа", "Топ")}>
-        <select value={group_id} onChange={(e) => setGroup(e.target.value)}>
+        <Select value={group_id} onChange={(e) => setGroup(e.target.value)}>
           <option value="">{t("— выберите —", "— тандаңыз —")}</option>
           {groups.map((g) => (<option key={g.id} value={g.id}>{g.name}</option>))}
-        </select>
+        </Select>
       </Field>
       <Field label={t("Ставка за пришедшего ребёнка (с)", "Ставка (с)")}>
         <input type="number" min="0" value={rate} onChange={(e) => setRate(e.target.value)} />
       </Field>
       <Field label={t("Действует с", "Качандан")}>
-        <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+        <DateInput value={from} onChange={(e) => setFrom(e.target.value)} />
       </Field>
       <Field label={t("Комментарий", "Эскертүү")}>
         <input value={comment} onChange={(e) => setComment(e.target.value)} />

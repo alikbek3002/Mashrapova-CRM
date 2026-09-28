@@ -6,6 +6,8 @@ import { useGroups, useSections } from "../shared/api/queries";
 import { GroupDrawer } from "./GroupDrawer";
 import { AddGroupModal } from "../shared/ui/forms";
 import { Gate } from "../shared/auth/Gate";
+import { SkeletonRows, SkeletonText } from "../shared/ui/Skeleton";
+import { Select } from "../shared/ui/Select";
 
 export const GroupsPage = ({ lang }: { lang: Lang }) => {
   const t = (ru: string, ky: string) => (lang === "ru" ? ru : ky);
@@ -46,7 +48,7 @@ export const GroupsPage = ({ lang }: { lang: Lang }) => {
         title={t("Группы", "Топтор")}
         subtitle={
           isLoading
-            ? t("Загрузка…", "Жүктөлүүдө…")
+            ? <SkeletonText />
             : t(`${rows.length} групп · ${totalKids} детей`, `${rows.length} топ · ${totalKids} бала`)
         }
         actions={
@@ -82,7 +84,7 @@ export const GroupsPage = ({ lang }: { lang: Lang }) => {
       <div className="card">
         <div className="toolbar" style={{ flexWrap: "wrap", gap: 8 }}>
           <SearchBox value={q} onChange={setQ} placeholder={t("Поиск по названию группы…", "Топ атын издөө…")} />
-          <select
+          <Select
             value={sectionId}
             onChange={(e) => setSectionId(e.target.value)}
             style={{
@@ -95,13 +97,13 @@ export const GroupsPage = ({ lang }: { lang: Lang }) => {
             {sections.map((s) => (
               <option key={s.id} value={s.id}>{lang === "ru" ? s.name_ru : s.name_ky}</option>
             ))}
-          </select>
+          </Select>
         </div>
 
         {error ? (
           <EmptyState title={t("Ошибка загрузки", "Жүктөө катасы")} hint={error.message} />
         ) : isLoading ? (
-          <EmptyState title={t("Загрузка…", "Жүктөлүүдө…")} />
+          <SkeletonRows />
         ) : rows.length === 0 ? (
           <EmptyState
             title={t("Групп нет", "Топтор жок")}

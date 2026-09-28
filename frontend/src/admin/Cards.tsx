@@ -9,6 +9,9 @@ import { ChildDrawer } from "./ChildDrawer";
 import { Gate } from "../shared/auth/Gate";
 import { usePerm } from "../shared/auth/rbac";
 import type { CardStatus } from "../shared/types/database";
+import { DateInput } from "../shared/ui/DateInput";
+import { SkeletonRows, SkeletonText } from "../shared/ui/Skeleton";
+import { Select } from "../shared/ui/Select";
 
 const statusLbl: Record<string, { ru: string; ky: string }> = {
   active: { ru: "Активен", ky: "Активдүү" },
@@ -108,7 +111,7 @@ export const CardsPage = ({ lang }: { lang: Lang }) => {
         title={t("Абонементы", "Абонементтер")}
         subtitle={view === "plans"
           ? t("Виды абонементов — каталог для продажи", "Абонемент түрлөрү — сатуу каталогу")
-          : isLoading ? t("Загрузка…", "Жүктөлүүдө…") : t(`${activeCount} активных · ${formatCurrency(totalRevenue)} оборот`, `${activeCount} активдүү · ${formatCurrency(totalRevenue)}`)}
+          : isLoading ? <SkeletonText /> : t(`${activeCount} активных · ${formatCurrency(totalRevenue)} оборот`, `${activeCount} активдүү · ${formatCurrency(totalRevenue)}`)}
         actions={
           view === "sold" && (
             <Gate perm="sell_cards">
@@ -149,7 +152,7 @@ export const CardsPage = ({ lang }: { lang: Lang }) => {
                   </button>
                 ))}
               </div>
-              <select
+              <Select
                 value={managerId}
                 onChange={(e) => setManagerId(e.target.value)}
                 title={t("Фильтр по ответственному менеджеру", "Жооптуу менеджер боюнча")}
@@ -159,8 +162,8 @@ export const CardsPage = ({ lang }: { lang: Lang }) => {
                 {managers.map((m) => (
                   <option key={m.id} value={m.id}>{m.full_name}</option>
                 ))}
-              </select>
-              <select
+              </Select>
+              <Select
                 value={coachId}
                 onChange={(e) => setCoachId(e.target.value)}
                 title={t("Фильтр по тренеру (по активным группам ребёнка)", "Тренер боюнча")}
@@ -170,9 +173,9 @@ export const CardsPage = ({ lang }: { lang: Lang }) => {
                 {coaches.map((c) => (
                   <option key={c.id} value={c.id}>{c.full_name}</option>
                 ))}
-              </select>
+              </Select>
               <div style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                <select
+                <Select
                   value={dateMode}
                   onChange={(e) => setDateMode(e.target.value as "sold" | "start" | "end")}
                   title={t("К какой дате применяется период", "Мезгил кайсы күнгө колдонулат")}
@@ -181,10 +184,10 @@ export const CardsPage = ({ lang }: { lang: Lang }) => {
                   <option value="sold">{t("Дата продажи", "Сатуу күнү")}</option>
                   <option value="start">{t("Дата старта", "Башталуу күнү")}</option>
                   <option value="end">{t("Дата окончания", "Бүтүү күнү")}</option>
-                </select>
-                <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+                </Select>
+                <DateInput value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
                 <span style={{ color: "var(--muted)" }}>—</span>
-                <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+                <DateInput value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
               </div>
               {(managerId || coachId || dateFrom || dateTo) && (
                 <button
@@ -200,7 +203,7 @@ export const CardsPage = ({ lang }: { lang: Lang }) => {
         </div>
         {view === "plans" ? <CardPlansPanel lang={lang} /> :
           error ? <EmptyState title={t("Ошибка", "Ката")} hint={error.message} /> :
-          isLoading ? <EmptyState title={t("Загрузка…", "Жүктөлүүдө…")} /> :
+          isLoading ? <SkeletonRows /> :
           rows.length === 0 ? <EmptyState title={t("Абонементов нет", "Абонементтер жок")} /> : (
             <div className="table-scroll">
               <table className="admin-table">
