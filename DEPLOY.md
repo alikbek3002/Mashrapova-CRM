@@ -1,217 +1,293 @@
 # Production Deploy Guide — ERP «Академия Машрапова»
 
 > Движок форкнут из Uniqum Sport ERP и адаптирован под Академию Машрапова.
-> Имена репозиториев, проектов и бакетов ниже относятся к Машрапову.
 > Бизнес-правила — [docs/ТЗ_Академия_Машрапова.md](docs/ТЗ_Академия_Машрапова.md),
 > статус по разделам — [docs/План_адаптации_Машрапова.md](docs/План_адаптации_Машрапова.md).
 
 ## Архитектура прода
 
+Фронтенд и бэкенд — два сервиса в одном проекте Railway, данные и вход — в Supabase.
+
 ```
-┌─────────────────────────────┐         ┌────────────────────────┐
-│  https://*.vercel.app       │  HTTPS  │  https://*.railway.app │
-│  Frontend (React + Vite)    │ ──────► │  Backend (Fastify)     │
-│  - PWA installable          │         │  - Service role key    │
-│  - VITE_API_URL → backend   │         │  - Idempotency + audit │
-└─────────────────────────────┘         └───────────┬────────────┘
-              │                                     │
-              │  anon key                          │  service role key
-              ▼                                     ▼
-        ┌──────────────────────────────────────────────────┐
-        │  Supabase Cloud (Sydney ap-southeast-2)          │
-        │  - Postgres + RLS + Auth + Storage               │
-        └──────────────────────────────────────────────────┘
+┌─────────────── Railway · проект mashrapova-crm ───────────────┐
+│                                                               │
+│  frontend (статический SPA)        backend (Fastify)          │
+│  frontend-production-3a9f     ──►  backend-production-5907c   │
+│  .up.railway.app                   .up.railway.app            │
+│  - PWA                             - service role key         │
+│  - VITE_API_URL → backend          - идемпотентность, аудит   │
+│                                    - планировщик (lifecycle)  │
+└───────────┬───────────────────────────────────┬───────────────┘
+            │ publishable (anon) key            │ service role key
+            ▼                                   ▼
+      ┌──────────────────────────────────────────────────┐
+      │  Supabase Cloud — Postgres + RLS + Auth + Storage │
+      └──────────────────────────────────────────────────┘
 ```
 
----
+Фронтенд читает данные из Supabase напрямую под RLS, а в бэкенд ходит только за тем, чему
+нельзя доверять клиенту: деньги, возвраты, зарплаты, сотрудники, рассылки (см. `CLAUDE.md`).
 
-## Шаг 1 — GitHub репозиторий
+## Где что живёт
+
+Railway: команда «mrevieweroff's Projects», проект `mashrapova-crm`, окружение `production`.
+
+| Сервис | Адрес | Корневая папка | Сборка | Запуск |
+|---|---|---|---|---|
+| frontend | https://frontend-production-3a9f.up.railway.app | `/frontend` | Railpack: зависимости + `npm run build` | `npx --yes serve@14 -s dist -l $PORT` |
+| backend | https://backend-production-5907c.up.railway.app | `/backend` | `backend/Dockerfile` (`node:22-alpine`) | `node dist/server.js`, healthcheck `/health` |
+
+- `serve -s` отдаёт `index.html` на любой путь — без этого прямые ссылки вглубь SPA давали бы 404.
+- `HEALTHCHECK` внутри `backend/Dockerfile` смотрит на порт 3001, а Railway поднимает сервис на
+  своём `PORT`. Railway эту инструкцию не выполняет и проверяет здоровье сам по `/health`.
+- `vercel.json` в корне — остаток прежней схемы с фронтендом на Vercel. Railway его не читает.
+
+## Как выкатывается
+
+**Push в `main` деплоит сам.** Оба сервиса подключены к `alikbek3002/Mashrapova-CRM`, ветка
+`main`. У каждого свой `watchPatterns` (`/backend/**`, `/frontend/**`), поэтому пересобирается
+только тот сервис, чья папка изменилась.
+
+Изменения в `supabase/` и `docs/` ничего не деплоят: **миграции на боевую базу применяются
+руками** (см. ниже).
+
+Перед push:
 
 ```bash
-cd "<путь к репозиторию>"
-git init
-git add .
-git commit -m "Initial import"
-git branch -M main
-# Репозиторий: https://github.com/alikbek3002/Mashrapova-CRM (private)
-git remote add origin https://github.com/alikbek3002/Mashrapova-CRM.git
-git push -u origin main
+cd frontend && npm run build          # tsc -b + сборка
+cd backend  && npm run typecheck && npm run build
+cd supabase/test && npm run migrate && npm run smoke   # если трогали миграции или деньги
 ```
 
-⚠️ Перед push проверь что `.env` не в коммите: `git status`. Должны быть **только**:
-- `frontend/.env.example`
-- `backend/.env.example`
-
-Файлы `frontend/.env` и `backend/.env` блокируются `.gitignore`.
-
----
-
-## Шаг 2 — Создать Supabase prod проект
-
-Текущий `achvpwatdonjpqanzsgw` — это **dev**. Для прода создай **отдельный** проект:
-
-1. https://app.supabase.com/projects → New project
-2. Name: `mashrapova-prod`, Region: **Singapore** (`ap-southeast-1`) или **Frankfurt** (`eu-central-1`) — ближе к Бишкеку чем Sydney
-3. Создай DB пароль и **сохрани в надёжном месте**
-4. Дождись провижионинга (~2 мин)
-5. Settings → API → скопируй:
-   - Project URL → `SUPABASE_URL_PROD`
-   - `anon` `public` → `SUPABASE_ANON_KEY_PROD`
-   - `service_role` `secret` → `SUPABASE_SERVICE_ROLE_KEY_PROD`
-
-### Применить миграции на prod
+Работа с проектом из терминала (один раз `railway link` и выбрать `mashrapova-crm`):
 
 ```bash
-# Найди connection string: Project Settings → Database → Connection string → URI (Session pooler)
-# Подставь свой пароль
-export PROD_PG="host=aws-0-ap-southeast-1.pooler.supabase.com port=5432 user=postgres.<ref> dbname=postgres sslmode=require"
-export PGPASSWORD='<твой_DB_пароль>'
-
-cd "<путь к репозиторию>/supabase"
-for f in migrations/*.sql; do
-  echo "=== $f ==="
-  psql "$PROD_PG" -v ON_ERROR_STOP=1 -f "$f"
-done
+railway logs --service backend               # логи работы
+railway logs --service frontend --build      # лог сборки
+railway deployment list --service backend    # история деплоев
+railway redeploy --service frontend -y       # пересобрать, например после смены VITE_*
 ```
 
-### Создать первого admin-юзера на prod
+## Переменные окружения
 
-Не используй seed-test-users.mjs (он создаст тестовые аккаунты, которые не нужны на проде). Вместо этого:
+Секреты задавай через stdin, а не аргументом: так значение не попадёт в историю shell.
+
+```bash
+printf '%s' "$VALUE" | railway variable set SUPABASE_SERVICE_ROLE_KEY --stdin --service backend
+```
+
+### backend
+
+| Переменная | Значение |
+|---|---|
+| `SUPABASE_URL` | URL проекта Supabase |
+| `SUPABASE_ANON_KEY` | publishable / anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | service role key — **только здесь, никогда во фронтенде** |
+| `FRONTEND_ORIGINS` | `https://frontend-production-3a9f.up.railway.app`. Через запятую; каждая запись — точный origin или glob со `*` |
+| `NODE_ENV` | `production` |
+| `LOG_LEVEL` | `info` |
+| `SCHEDULER_ENABLED` | `true` — **только на этом инстансе**, см. «Планировщик» |
+| `SMS_PROVIDER` | `noop`, пока нет договора с провайдером (`smskg` + `SMS_*` из `backend/.env.example`) |
+| `SENTRY_DSN`, `MINIO_*` | необязательные |
+
+`PORT` не задавай: Railway назначает его сам.
+
+### frontend
+
+| Переменная | Значение |
+|---|---|
+| `VITE_SUPABASE_URL` | URL проекта Supabase |
+| `VITE_SUPABASE_ANON_KEY` | publishable / anon key |
+| `VITE_API_URL` | `https://backend-production-5907c.up.railway.app` |
+| `VITE_SENTRY_DSN` | необязательная |
+
+- `VITE_*` вшиваются в бандл при сборке. После изменения нужен `railway redeploy --service frontend`,
+  перезапуска мало.
+- ⚠️ **`VITE_DEMO_AUTH` на проде не задавать никогда.** Флаг включает вход по роли без пароля —
+  на боевой базе это доступ к данным клуба без авторизации.
+
+## Планировщик
+
+Бэкенд раз в интервал вызывает `refresh_lifecycle`, напоминания ПТ и продление расписания
+(`ensureLessonHorizon`). **Он должен работать ровно на одном инстансе:** второй разошлёт клиентам
+дубли. Поэтому `SCHEDULER_ENABLED=true` стоит только на Railway, а локальный бэкенд и любая другая
+копия, которая смотрит в боевую базу, запускаются с `SCHEDULER_ENABLED=false`.
+
+Если увеличиваешь число реплик бэкенда в Railway — планировщик надо вынести, иначе реплики
+продублируют друг друга.
+
+## Supabase
+
+### Миграции
+
+Railway их не применяет. Новые файлы из `supabase/migrations/` накатывай по одному, по порядку —
+через SQL Editor в панели Supabase или `psql`:
+
+```bash
+# Project Settings → Database → Connection string → URI (Session pooler)
+psql "<connection string>" -v ON_ERROR_STOP=1 -f supabase/migrations/<новая_миграция>.sql
+```
+
+Сначала прогони её на стенде (`supabase/test`, `npm run migrate && npm run smoke`). Одна версия —
+один файл: две миграции с одинаковым номером Supabase не примет.
+
+На проде **намеренно не применена** `20260926000017_mfa_optional.sql` (решение владельца,
+28.09.2026) — см. «Двухфакторный вход».
+
+### Auth
+
+- **Вход по телефону.** Логин — псевдо-email `996XXXXXXXXX@staff.mashrapov.local`
+  (`backend/src/lib/phone.ts`, `frontend/src/shared/auth/normalizePhone.ts`). Регистрации нет:
+  новых сотрудников заводит директор в разделе «Сотрудники».
+- **URL Configuration** (Authentication → URL Configuration): Site URL и Redirect URLs должны
+  указывать на `https://frontend-production-3a9f.up.railway.app`, иначе письма «Забыли пароль?»
+  поведут не туда. Вход по паролю от этого не зависит.
+
+### Двухфакторный вход (ТЗ §12.3)
+
+`profiles.mfa_required` выставляет триггер `sync_mfa_required` по роли — директору и
+управляющему `true`. Срабатывает он **только при создании профиля или смене роли**.
+
+На проде требование снято вручную (`mfa_required = false`) с демо-учёток директора и
+управляющего. Оно вернётся, если им поменять роль, и будет стоять у каждого нового директора или
+управляющего. Сделать 2FA настройкой клуба, а не правилом роли, — это миграция
+`20260926000017_mfa_optional.sql`.
+
+## Учётки на проде
+
+Для показа клиенту заведено по учётке на каждую роль:
+
+| Роль | Телефон |
+|---|---|
+| Директор | +996 700 000 000 |
+| Тренер | +996 700 000 001 |
+| Родитель | +996 700 000 002 |
+| Старший менеджер | +996 700 000 003 |
+| Менеджер | +996 700 000 004 |
+| Управляющий | +996 700 000 005 |
+| Ресепшен | +996 700 000 006 |
+
+Пароль общий, он у владельца и в репозитории не хранится. **После показа смени его.**
+
+Если директора в базе нет вовсе — завести его можно только сервисным ключом:
 
 ```bash
 cd backend
-# Положи временно SERVICE_ROLE_KEY от prod в env
-SUPABASE_URL="<prod url>" SUPABASE_SERVICE_ROLE_KEY="<prod service key>" node -e '
+SUPABASE_URL="<url>" SUPABASE_SERVICE_ROLE_KEY="<service key>" node -e '
 const { createClient } = require("@supabase/supabase-js");
 const sb = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 (async () => {
-  // 1. Создать организацию
-  const { data: org } = await sb.from("organizations").insert({
-    name: "Академия Машрапова",
-    timezone: "Asia/Bishkek"
-  }).select().single();
-  // 2. Создать admin auth-юзера
-  const { data: u } = await sb.auth.admin.createUser({
-    email: "<реальный email директора>",
+  const phone = "+996XXXXXXXXX";
+  const { data, error } = await sb.auth.admin.createUser({
+    email: `${phone.slice(1)}@staff.mashrapov.local`,
     password: "<надёжный пароль>",
-    email_confirm: true
+    email_confirm: true,
   });
-  // 3. Profile
-  await sb.from("profiles").insert({
-    id: u.user.id, organization_id: org.id, role: "admin",
-    full_name: "<ФИО директора>", email: u.user.email, is_active: true
+  if (error) throw error;
+  const { error: pErr } = await sb.from("profiles").insert({
+    id: data.user.id, organization_id: "00000000-0000-0000-0000-000000000001",
+    role: "director", full_name: "<ФИО>", email: data.user.email, phone, is_active: true,
   });
-  console.log("OK admin created. Login:", u.user.email);
+  if (pErr) throw pErr;
+  console.log("OK, вход по телефону", phone);
 })();
 '
 ```
 
----
+`backend/scripts/seed-test-users.mjs` на проде **не запускать**: кроме учёток он создаёт тестовых
+детей, группу, абонемент и платёж.
 
-## Шаг 3 — Railway (бэкенд)
+## Развернуть с нуля
 
-1. https://railway.com → New Project → Deploy from GitHub repo
-2. Выбери репо `Mashrapova-CRM`, root directory = `/backend`
-3. Settings → Networking → Generate Domain (получишь `https://mashrapova-crm-production.up.railway.app`)
-4. Settings → Healthcheck → Path `/health`
-5. **Variables** (Settings → Variables):
+Так проект поднимался 28.09.2026. Понадобится, если проект Railway потерян или переезжает.
+
+```bash
+railway login
+railway init -n mashrapova-crm -w "<команда Railway>"
+railway add --service backend
+railway add --service frontend
+railway service list                       # ID сервисов
+railway status --json                      # ID окружения production
+```
+
+Настройки сервисов задаются через API: в CLI 5.52 `railway environment edit --service-config`
+отвечает «No changes to apply» и ничего не сохраняет.
+
+```bash
+Q='mutation($s:String!,$e:String,$i:ServiceInstanceUpdateInput!){serviceInstanceUpdate(serviceId:$s,environmentId:$e,input:$i)}'
+railway api "$Q" --raw-var s=<backend-id> --raw-var e=<env-id> \
+  --var 'i={"rootDirectory":"/backend","healthcheckPath":"/health","watchPatterns":["/backend/**"]}'
+railway api "$Q" --raw-var s=<frontend-id> --raw-var e=<env-id> \
+  --var 'i={"rootDirectory":"/frontend","startCommand":"npx --yes serve@14 -s dist -l $PORT","watchPatterns":["/frontend/**"]}'
+railway environment config                 # проверить, что настройки на месте
+```
+
+Дальше:
+
+1. `railway domain --service backend` и `railway domain --service frontend` — публичные адреса.
+2. Переменные обоих сервисов (таблицы выше) с флагом `--skip-deploys`. `FRONTEND_ORIGINS` и
+   `VITE_API_URL` — это адреса из шага 1.
+3. Подключить репозиторий — это и запустит первую сборку:
+   ```bash
+   railway service source connect --repo alikbek3002/Mashrapova-CRM --branch main --service backend
+   railway service source connect --repo alikbek3002/Mashrapova-CRM --branch main --service frontend
    ```
-   SUPABASE_URL=<prod url>
-   SUPABASE_SERVICE_ROLE_KEY=<prod service key>
-   SUPABASE_ANON_KEY=<prod anon key>
-   FRONTEND_ORIGINS=https://mashrapova-crm.vercel.app
-   PORT=8080
-   NODE_ENV=production
-   LOG_LEVEL=info
-   SENTRY_DSN=<пока пусто, добавишь после Sentry setup>
-   ```
-6. Deploy → дождись green tick → проверь `https://<railway-url>/health` → должен вернуть `{"status":"ok","supabase":"connected"}`
+4. Проверить: `/health` бэкенда отвечает `{"status":"ok","supabase":"connected"}`, фронтенд
+   открывает экран входа, а CORS бэкенда пускает адрес фронтенда и не пускает чужие.
 
----
+## Sentry (опционально)
 
-## Шаг 4 — Vercel (фронт)
+1. https://sentry.io → free tier, два проекта: `mashrapova-frontend` (React) и `mashrapova-backend` (Node.js).
+2. `SENTRY_DSN` — в сервис backend, `VITE_SENTRY_DSN` — в сервис frontend.
+3. Frontend пересобрать (`railway redeploy --service frontend`), backend подхватит после перезапуска.
 
-1. https://vercel.com/new → импорт `Mashrapova-CRM`
-2. Framework: Vite, Root: `frontend`
-3. **Environment Variables**:
-   ```
-   VITE_SUPABASE_URL=<prod url>
-   VITE_SUPABASE_ANON_KEY=<prod anon key>
-   VITE_API_URL=https://mashrapova-crm-production.up.railway.app
-   VITE_SENTRY_DSN=<позже>
-   ```
-4. Deploy → дождись green → URL `https://mashrapova-crm.vercel.app`
-5. После первого деплоя обнови `FRONTEND_ORIGINS` на Railway, добавив `https://*-mashrapova-crm-<account>.vercel.app` для preview-деплоев.
+## Бэкапы
 
----
-
-## Шаг 5 — Sentry (опционально, рекомендуется)
-
-1. https://sentry.io/signup → free tier (5k events/мес)
-2. Create org → 2 проекта:
-   - `mashrapova-frontend` (platform: React)
-   - `mashrapova-backend` (platform: Node.js)
-3. Скопируй DSN из каждого
-4. Обнови env vars на Vercel (`VITE_SENTRY_DSN`) и Railway (`SENTRY_DSN`)
-5. Redeploy оба сервиса (push в main или Settings → Redeploy)
-
----
-
-## Шаг 6 — GitHub Actions secrets (для backup)
-
-Settings → Secrets and variables → Actions → New repository secret:
+`.github/workflows/backup.yml` — ночной дамп базы в Backblaze B2. Нужны секреты репозитория
+(Settings → Secrets and variables → Actions):
 
 | Name | Value |
 |---|---|
 | `SUPABASE_DB_HOST` | `aws-0-<region>.pooler.supabase.com` (из Connection string) |
-| `SUPABASE_DB_USER` | `postgres.<your-ref>` |
-| `SUPABASE_DB_PASSWORD` | DB пароль prod-проекта |
+| `SUPABASE_DB_USER` | `postgres.<project-ref>` |
+| `SUPABASE_DB_PASSWORD` | пароль базы |
 | `B2_KEY_ID` | Backblaze App Key ID |
-| `B2_APP_KEY` | Backblaze App Key (создай в B2: bucket `mashrapova-backups`, key с правами read/write на этот bucket) |
+| `B2_APP_KEY` | Backblaze App Key (bucket `mashrapova-backups`, права read/write на него) |
 | `B2_BUCKET` | `mashrapova-backups` |
 
-После добавления → запусти вручную: Actions → "Nightly Supabase backup" → Run workflow → проверь что файл появился в B2 bucket.
+После добавления: Actions → «Nightly Supabase backup» → Run workflow → убедиться, что файл
+появился в bucket.
 
----
+## Smoke test на проде
 
-## Шаг 7 — Smoke test на проде
+1. ✅ Открывается https://frontend-production-3a9f.up.railway.app, экран входа, демо-аккаунтов на нём нет
+2. ✅ Вход по телефону и паролю → дашборд
+3. ✅ Создание секции (Настройки → Секции → Новая)
+4. ✅ Создание тренера через «Сотрудники»
+5. ✅ Создание группы → расписание на 8 недель
+6. ✅ Ребёнок + продажа карты второму ребёнку семьи → авто-скидка 500 сом (ТЗ §3.3)
+7. ✅ Вход тренером с телефона → отметка посещения
+8. ✅ Вход родителем → ребёнок, баланс, заметки, кнопка WhatsApp
+9. ✅ Chrome на телефоне → «Добавить на главный экран» → запускается standalone
+10. ✅ Продажа карты через UI пишет запись в `audit_log`
 
-После деплоя залогинься admin-аккаунтом и проверь:
+## Откат
 
-1. ✅ Открывается https://mashrapova-crm.vercel.app, экран логина
-2. ✅ Логин email/пароль → попадаешь на дашборд
-3. ✅ Создание секции работает (Settings → Секции → Новая)
-4. ✅ Создание тренера через UI работает (Coaches → Добавить тренера) — проверь что присылается email юзеру (Supabase Auth настроен на confirm)
-5. ✅ Создание группы → авто-генерация расписания на 8 недель (Schedule → выбор группы из dropdown)
-6. ✅ Создание ребёнка + продажа карты второму ребёнку семьи → авто-скидка 500 сом (ТЗ §3.3)
-7. ✅ Логин тренером (тестового либо реального) на телефоне → отметка посещения
-8. ✅ Логин родителем → видит ребёнка, баланс, заметки, кнопка WhatsApp
-9. ✅ В Chrome на телефоне → «Добавить на главный экран» → запускается standalone
-10. ✅ Backend `/v1/cards/sell` через UI пишет в `audit_log` запись
-
----
-
-## Шаг 8 — Передача заказчику
-
-1. Loom-видео 5 минут с прохождением 10 пунктов smoke test
-2. PDF-инструкция «Как добавить тренера / семью / продать карту» (1 страница)
-3. URL прод-фронта + первичные admin-креды (передать через надёжный канал, не email)
-4. Контакт для багов: ссылка на GitHub issues (private repo)
-
----
-
-## Откат / Rollback
-
-- **Frontend**: Vercel → Deployments → Rollback к предыдущему успешному
-- **Backend**: Railway → Deployments → Promote previous
-- **DB**: восстановить из nightly B2 backup:
+- **Сервис**: Railway → сервис → Deployments → у предыдущего успешного деплоя «Rollback».
+  Либо `git revert` проблемного коммита и push в `main` — это выкатится само.
+- **База**: восстановить из ночного бэкапа B2:
   ```bash
-  # Скачать
-  aws --endpoint-url=https://s3.us-west-002.backblazeb2.com s3 cp s3://mashrapova-backups/mashrapova-prod-2026-05-06.sql.gz .
-  # Применить
-  gunzip mashrapova-prod-2026-05-06.sql.gz
-  PGPASSWORD=<prod_pwd> psql "$PROD_PG" -f mashrapova-prod-2026-05-06.sql
+  aws --endpoint-url=https://s3.us-west-002.backblazeb2.com s3 cp s3://mashrapova-backups/<файл>.sql.gz .
+  gunzip <файл>.sql.gz
+  PGPASSWORD=<пароль> psql "<connection string>" -f <файл>.sql
   ```
+
+## Передача заказчику
+
+1. Loom-видео на 5 минут: прохождение smoke test
+2. PDF-инструкция «Как добавить тренера / семью / продать карту» (1 страница)
+3. Адрес фронтенда + учётки (через надёжный канал, не email), пароли сменить после показа
+4. Контакт для багов: GitHub issues (private repo)
 
 ---
 
@@ -249,7 +325,8 @@ Settings → Secrets and variables → Actions → New repository secret:
    Уведомление внутри приложения родителя работает
 ❌ Мультифилиальность (§12.2) — по ТЗ не срочно, филиал один
 ❌ AmoCRM и онлайн-оплата MBank (§13) — версия 2.0
-❌ Свой домен — добавится по DNS-config, когда Академия определится
+❌ Свой домен — подключается в Railway (сервис → Settings → Networking → Custom Domain), когда
+   Академия определится; после этого обновить `FRONTEND_ORIGINS`, `VITE_API_URL` и URL в Supabase Auth
 
 Пропускной системы, турникетов и Face ID в продукте нет и не планируется: в ТЗ Академии их нет ни в
 §13, ни в плане версий §15. Код проходной удалён миграцией `20260924000001_drop_access_control.sql`.
