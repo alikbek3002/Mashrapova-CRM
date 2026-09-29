@@ -8,6 +8,7 @@ import type { Lang } from "./data";
 import { AuthProvider, useAuth } from "./shared/auth/AuthProvider";
 import { Login } from "./shared/auth/Login";
 import { MfaGate } from "./shared/auth/MfaGate";
+import { PasswordPrompt } from "./shared/auth/PasswordPrompt";
 // Офлайн-режим (ТЗ §12.4): очередь отложенных операций и её индикатор.
 import { startOutbox } from "./shared/offline/outbox";
 import { registerOutboxHandlers } from "./shared/offline/ops";
@@ -266,6 +267,8 @@ const Shell = () => {
       </Suspense>
     </div>
     <OfflineBar lang={lang} />
+    {/* Выданный администратором временный пароль — предлагаем сменить на свой. */}
+    <PasswordPrompt lang={lang} />
     </MfaGate>
   );
 };
