@@ -3,6 +3,7 @@ import { z } from "zod";
 import { authenticate, requireRole } from "../../middleware/auth.js";
 import { supabaseAdmin } from "../../lib/supabase.js";
 import { normalizeE164KG, phoneToPseudoEmail } from "../../lib/phone.js";
+import { TEMP_PASSWORD_META } from "../../lib/temp-password.js";
 
 // Роли, которые директор может создавать через эту ручку.
 // Coach создаётся через /v1/coaches (там ещё запись в coaches),
@@ -154,7 +155,7 @@ export const staffRoutes = async (app: FastifyInstance) => {
         email: pseudoEmail,
         password: input.password,
         email_confirm: true,
-        user_metadata: { full_name: input.full_name, phone: e164 },
+        user_metadata: { full_name: input.full_name, phone: e164, ...TEMP_PASSWORD_META },
       });
       if (authErr || !created?.user) {
         req.log.error({ err: authErr }, "staff_auth_create_failed");
@@ -402,8 +403,11 @@ export const staffRoutes = async (app: FastifyInstance) => {
         return reply.code(403).send({ error: "cannot_change_director_password" });
       }
 
+      // Пароль, заданный директором сотруднику, — временный. Себе директор
+      // задаёт его сам, предлагать смену тут нечего.
       const { error: updErr } = await supabaseAdmin.auth.admin.updateUserById(staffId, {
         password: parsed.data.password,
+        ...(staffId !== user.id ? { user_metadata: TEMP_PASSWORD_META } : {}),
       });
       if (updErr) {
         req.log.error({ err: updErr }, "staff_password_reset_failed");

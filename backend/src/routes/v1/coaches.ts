@@ -4,6 +4,7 @@ import { authenticate, requireRole } from "../../middleware/auth.js";
 import { supabaseAdmin } from "../../lib/supabase.js";
 import { coachCreateSchema } from "../../schemas/coaches.js";
 import { normalizeE164KG, phoneToPseudoEmail } from "../../lib/phone.js";
+import { TEMP_PASSWORD_META } from "../../lib/temp-password.js";
 
 export const coachesRoutes = async (app: FastifyInstance) => {
   app.post(
@@ -67,7 +68,7 @@ export const coachesRoutes = async (app: FastifyInstance) => {
         email: loginEmail,
         password: input.password,
         email_confirm: true,
-        user_metadata: { full_name: input.full_name, phone: e164 },
+        user_metadata: { full_name: input.full_name, phone: e164, ...TEMP_PASSWORD_META },
       });
 
       if (authErr || !created?.user) {
@@ -191,7 +192,12 @@ export const coachesRoutes = async (app: FastifyInstance) => {
       }
 
       // auth.users.email — реальный email если задан, иначе pseudo от телефона.
-      const authUpdate: { email?: string; password?: string; email_confirm?: boolean } = {};
+      const authUpdate: {
+        email?: string;
+        password?: string;
+        email_confirm?: boolean;
+        user_metadata?: typeof TEMP_PASSWORD_META;
+      } = {};
       if (input.email !== undefined || input.phone !== undefined) {
         const finalEmail = input.email && input.email.trim()
           ? input.email.trim()
@@ -204,6 +210,8 @@ export const coachesRoutes = async (app: FastifyInstance) => {
       }
       if (input.password !== undefined) {
         authUpdate.password = input.password;
+        // Пароль, заданный тренеру администратором, — временный.
+        if (coachId !== user.id) authUpdate.user_metadata = TEMP_PASSWORD_META;
       }
 
       if (Object.keys(authUpdate).length > 0) {
