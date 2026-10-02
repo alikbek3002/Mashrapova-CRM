@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Icon } from "../data";
 import type { Lang } from "../data";
 import { PageHeader, SearchBox, EmptyState } from "./common";
-import { useLeads, useGroups, useOrgSettings, useManagerKpi, type LeadWithSection, type ManagerKpiRow } from "../shared/api/queries";
+import { useLeads, useGroups, useOrgSettings, useManagerKpi, useKommoState, type LeadWithSection, type ManagerKpiRow } from "../shared/api/queries";
 import { useUpdateLead } from "../shared/api/mutations";
 import { AddLeadModal } from "../shared/ui/forms";
 import { Modal, Field } from "../shared/ui/Modal";
@@ -11,7 +11,7 @@ import { Gate } from "../shared/auth/Gate";
 import { usePerm } from "../shared/auth/rbac";
 import {
   FUNNEL_STAGES, DEAD_END_STAGES, DEFAULT_SLA,
-  stageLabel, stageTone, sourceLabel, leadTask, taskLabel, humanMinutes,
+  stageLabel, stageTone, sourceLabel, channelLabel, leadTask, taskLabel, humanMinutes,
   type LeadSla,
 } from "./leadFunnel";
 import { SkeletonRows, SkeletonText } from "../shared/ui/Skeleton";
@@ -170,9 +170,13 @@ export const LeadsPage = ({ lang }: { lang: Lang }) => {
     noShowHours: settings?.lead_no_show_hours ?? DEFAULT_SLA.noShowHours,
   }), [settings]);
 
+  // ТЗ §13: лиды из Kommo. Ссылка на сделку и граница загруженной истории.
+  const { data: kommo } = useKommoState();
+  const kommoHistoryBefore = kommo?.history_before ?? null;
+
   const tasks = useMemo(
-    () => new Map(leads.map((l) => [l.id, leadTask(l, sla, now)])),
-    [leads, sla, now],
+    () => new Map(leads.map((l) => [l.id, leadTask(l, sla, now, kommoHistoryBefore)])),
+    [leads, sla, now, kommoHistoryBefore],
   );
 
   const counts = useMemo(() => {
@@ -459,8 +463,23 @@ export const LeadsPage = ({ lang }: { lang: Lang }) => {
                             {l.phone ?? ""}
                             {l.instagram && <span> · @{l.instagram}</span>}
                           </div>
+                          {l.kommo_lead_id != null && kommo?.base_url && (
+                            <a
+                              href={`${kommo.base_url}/leads/detail/${l.kommo_lead_id}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              style={{ fontSize: 11 }}
+                            >
+                              {tt("Сделка в Kommo", "Kommo'догу бүтүм")} ↗
+                            </a>
+                          )}
                         </td>
-                        <td style={{ color: "var(--muted)", fontSize: 12 }}>{sourceLabel(l.source, ru)}</td>
+                        <td style={{ color: "var(--muted)", fontSize: 12 }}>
+                          {l.source || !l.channel ? sourceLabel(l.source, ru) : channelLabel(l.channel, ru)}
+                          {l.kommo_manager_tag && !l.responsible_manager_id && (
+                            <div style={{ fontSize: 11 }}>{l.kommo_manager_tag}</div>
+                          )}
+                        </td>
                         <td>
                           <span style={{
                             background: tone.bg, color: tone.fg, padding: "4px 10px",

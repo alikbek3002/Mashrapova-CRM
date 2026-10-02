@@ -6,7 +6,7 @@ import { useAuth } from "../auth/AuthProvider";
 import type {
   Child, Family, Profile, Section, Coach, Group, GroupSchedule,
   Lesson, ClubCard, Payment, Lead, Freeze, Attendance, ProgressNote, ChildCardBalance,
-  CardPlan,
+  CardPlan, KommoSyncState, KommoReport,
 } from "../types/database";
 
 export type EnrollmentBrief = {
@@ -695,13 +695,44 @@ export const useFreezes = () =>
 export const useLeads = () =>
   useQuery({
     queryKey: ["leads"],
-    queryFn: async (): Promise<LeadWithSection[]> => {
+    // Сделки из Kommo — тысячи строк: постранично, иначе PostgREST молча
+    // отрежет всё после первой тысячи. Удалённые в Kommo не показываем —
+    // фильтр на клиенте, а не в запросе: так страница работает и на базе,
+    // где миграция Kommo (20261001000001) ещё не применена.
+    queryFn: async (): Promise<LeadWithSection[]> =>
+      (await fetchAllRows<LeadWithSection>((from, to) =>
+        supabase
+          .from("leads")
+          .select("*, section:sections(*)")
+          .order("created_at", { ascending: false })
+          .order("id")
+          .range(from, to) as unknown as PagedResult<LeadWithSection>))
+        .filter((l) => !l.kommo_deleted_at),
+  });
+
+// ТЗ §13: состояние синхронизации с Kommo. Нет строки — интеграция не
+// подключена.
+export const useKommoState = () =>
+  useQuery({
+    queryKey: ["kommo_state"],
+    staleTime: 60_000,
+    queryFn: async (): Promise<KommoSyncState | null> => {
       const { data, error } = await supabase
-        .from("leads")
-        .select("*, section:sections(*)")
-        .order("created_at", { ascending: false });
+        .from("kommo_sync_state")
+        .select("organization_id, base_url, history_before, last_run_at, last_ok_at, last_error")
+        .maybeSingle();
       if (error) throw error;
-      return (data ?? []) as unknown as LeadWithSection[];
+      return (data ?? null) as KommoSyncState | null;
+    },
+  });
+
+export const useKommoReport = (from: string, to: string) =>
+  useQuery({
+    queryKey: ["kommo_report", from, to],
+    queryFn: async (): Promise<KommoReport> => {
+      const { data, error } = await supabase.rpc("kommo_report", { p_from: from, p_to: to });
+      if (error) throw error;
+      return data as KommoReport;
     },
   });
 

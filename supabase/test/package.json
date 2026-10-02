@@ -8,6 +8,7 @@
     "migrate": "node run-migrations.mjs ../migrations",
     "smoke": "node smoke.mjs",
     "tariffs": "node tariffs.mjs",
+    "kommo": "node kommo.mjs",
     "demo": "node demo-data.mjs"
   },
   "dependencies": {

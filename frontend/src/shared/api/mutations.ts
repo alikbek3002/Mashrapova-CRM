@@ -836,6 +836,21 @@ export const useUpdateLead = () => {
   });
 };
 
+// ============ Kommo: синхронизация вручную (ТЗ §13) ============
+export const useKommoSync = () => {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { full?: boolean } = {}) =>
+      apiPost<{ ok: boolean; result: { leads: number; events: number; duration_ms: number } }>("/v1/kommo/sync", input),
+    onSuccess: () => {
+      for (const key of ["leads", "kommo_report", "kommo_state", "manager_kpi", "stats"]) {
+        qc.invalidateQueries({ queryKey: [key] });
+      }
+    },
+    onError: (e: Error) => toast.err("Kommo: " + e.message),
+  });
+};
+
 // ============ Bulk-generate lessons from group_schedule ============
 export const useBulkGenerateLessons = () => {
   const qc = useQueryClient();

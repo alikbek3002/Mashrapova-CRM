@@ -47,6 +47,16 @@ export const stageTone = (s: LeadStage): { bg: string; fg: string } => {
   }
 };
 
+/** Канал первого обращения у сделок Kommo (leads.channel). */
+export const channelLabel = (c: string | null, ru: boolean): string => {
+  switch (c) {
+    case "whatsapp": return "WhatsApp";
+    case "instagram": return "Instagram";
+    case "manual": return ru ? "Заведён вручную" : "Кол менен киргизилген";
+    default: return ru ? "Другое" : "Башка";
+  }
+};
+
 export const sourceLabel = (s: string | null, ru: boolean): string => {
   switch (s) {
     case "target":   return ru ? "Таргет Instagram" : "Instagram таргет";
@@ -90,9 +100,21 @@ const minutesSince = (iso: string, now: number) => (now - new Date(iso).getTime(
  * Задача по лиду на момент `now`, или null если делать нечего.
  * Правила — ТЗ §8.2 и §8.3.
  */
-export const leadTask = (l: Lead, sla: LeadSla, now: number): LeadTask | null => {
+export const leadTask = (
+  l: Lead,
+  sla: LeadSla,
+  now: number,
+  // Сделки Kommo, созданные до первой синхронизации, загружены задним
+  // числом: просрочка первого контакта и «предложить абонемент» по ним —
+  // уже не задача, а история (сервер по ним тоже не уведомлял).
+  kommoHistoryBefore?: string | null,
+): LeadTask | null => {
+  const history = l.kommo_lead_id != null && !!kommoHistoryBefore
+    && new Date(l.created_at).getTime() < new Date(kommoHistoryBefore).getTime();
+
   // §8.3 — первый контакт не позже 10 минут; через 30 минут эскалация.
   if (l.stage === "new" && !l.first_contact_at) {
+    if (history) return null;
     const age = minutesSince(l.created_at, now);
     if (age >= sla.firstContactMin) {
       return {
@@ -119,6 +141,7 @@ export const leadTask = (l: Lead, sla: LeadSla, now: number): LeadTask | null =>
 
   // §8.2 — после пробной позвонить и предложить абонемент.
   if (l.stage === "trial_attended") {
+    if (history) return null;
     return { kind: "conversion_call", overdueMin: minutesSince(l.created_at, now), escalated: false };
   }
 

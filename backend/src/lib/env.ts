@@ -25,6 +25,17 @@ const schema = z.object({
   SMS_PASSWORD: z.string().optional(),
   SMS_SENDER: z.string().optional(),
 
+  // Kommo CRM (ТЗ §13). Приватная интеграция с долгосрочным токеном:
+  // KOMMO_BASE_URL — https://<поддомен>.kommo.com. Без адреса и токена
+  // синхронизация выключена, маршруты /v1/kommo/* отвечают 503.
+  KOMMO_BASE_URL: z.string().url().optional(),
+  KOMMO_TOKEN: z.string().min(20).optional(),
+  // Организация ERP, в которую пишутся сделки. Пусто — единственная в базе.
+  KOMMO_ORGANIZATION_ID: z.string().uuid().optional(),
+  KOMMO_SYNC_INTERVAL_MIN: z.coerce.number().int().min(1).max(1440).default(5),
+  // Секрет в адресе вебхука: Kommo вебхуки не подписывает.
+  KOMMO_WEBHOOK_SECRET: z.string().min(16).optional(),
+
   // MinIO / S3-compatible storage (avatars, photos).
   // Работает с MinIO, Tigris (t3.storageapi.dev), R2, AWS S3 и т.д.
   // Все необязательные — если не заданы, /v1/uploads/* возвращают 503.

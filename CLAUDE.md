@@ -51,6 +51,7 @@ cd backend && npm run build && npm start
 cd supabase/test && npm run migrate   # apply every migration in order
 cd supabase/test && npm run smoke     # spec calculations (payroll, refunds, freeze quota, ...)
 cd supabase/test && npm run tariffs   # per-tariff lesson share and coach pay
+cd supabase/test && npm run kommo     # Kommo sync SQL: stage mapping, first contact, SLA, report
 ```
 
 There is no unit-test framework. `supabase/test/` is the only automated check — run `npm run migrate`
@@ -108,10 +109,11 @@ longer a mock-data module — live data comes from Supabase.
 **Backend** — `backend/src/` (Fastify + TypeScript, `service_role` Supabase client). Handles only
 what cannot be trusted to the client: card sales, payments, refunds, deposits, freezes approval,
 payroll, bulk schedule operations, notifications dispatch/broadcast, staff management, uploads,
-and `POST /v1/lifecycle/refresh` (the §4.5 and §8.3 scheduler entry point). Everything else reads
+`POST /v1/lifecycle/refresh` (the §4.5 and §8.3 scheduler entry point), and the Kommo CRM sync
+(`lib/kommo*.ts`: one-way Kommo → `leads`/`kommo_events` every 5 min, see DEPLOY.md «Kommo»). Everything else reads
 from Supabase directly under RLS. Idempotency via the `Idempotency-Key` header on money routes.
 
-**Database** — `supabase/migrations/` (95 migrations). Business calculations live in SQL as the
+**Database** — `supabase/migrations/` (98 migrations). Business calculations live in SQL as the
 single source of truth: `v_child_card_balance`, `v_payroll_attendance`, `section_price()`,
 `manager_kpi()`, `director_dashboard()`, `refresh_card_notices()`, `refresh_lead_sla()`,
 `refresh_lifecycle()`, plus report functions. Do not reimplement these on the client.

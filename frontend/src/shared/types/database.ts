@@ -350,6 +350,59 @@ export type Lead = {
   conversion_task_at: string | null;
   lost_reason: string | null;
   converted_child_id: string | null;
+  // ТЗ §13 — сделка в Kommo. Поля обновляет синхронизация, ERP их не правит.
+  kommo_lead_id: number | null;
+  kommo_contact_id: number | null;
+  kommo_pipeline_id: number | null;
+  kommo_status_id: number | null;
+  kommo_updated_at: string | null;
+  kommo_price: number | null;
+  kommo_manager_tag: string | null;
+  kommo_section: string | null;
+  kommo_coach_name: string | null;
+  kommo_deleted_at: string | null;
+  channel: LeadChannel | null;
+  trial_booked_at: string | null;
+};
+
+export type LeadChannel = "whatsapp" | "instagram" | "manual" | "other";
+
+export type KommoSyncState = {
+  organization_id: string;
+  base_url: string | null;
+  history_before: string | null;
+  last_run_at: string | null;
+  last_ok_at: string | null;
+  last_error: string | null;
+};
+
+type KommoResponseStats = {
+  talks: number;
+  answered: number;
+  no_reply: number;
+  median_min: number | null;
+  p75_min: number | null;
+  within_10_min: number;
+  within_30_min: number;
+  over_3_hours: number;
+};
+
+/** kommo_report(): статистика Kommo за период. */
+export type KommoReport = {
+  period: { from: string; to: string };
+  response: Partial<Record<"all" | "work_hours" | "off_hours" | "whatsapp" | "instagram", KommoResponseStats>>;
+  by_hour: number[];
+  funnel: {
+    leads: number; unsorted: number; contacted: number; trial_booked: number; trial_attended: number;
+    converted: number; lost: number; lost_with_reason: number; revenue: number; avg_check: number | null;
+    with_manager: number;
+  };
+  by_channel: Record<string, number>;
+  by_status: { pipeline: string; status: string; stage: LeadStage; leads: number }[];
+  by_manager: { manager: string; leads: number; converted: number; revenue: number }[];
+  by_section: { section: string; leads: number; converted: number }[];
+  backlog: { unsorted_total: number; replied: number; never_replied: number; older_than_7_days: number };
+  sync: { last_ok_at?: string | null; last_run_at?: string | null; last_error?: string | null; base_url?: string | null };
 };
 
 export type ChildDeposit = {

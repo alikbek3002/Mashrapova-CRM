@@ -12,6 +12,7 @@ import { usePerm } from "../shared/auth/rbac";
 import { DateInput } from "../shared/ui/DateInput";
 import { SkeletonRows } from "../shared/ui/Skeleton";
 import { SkeletonText } from "../shared/ui/Skeleton";
+import { KommoTab } from "./KommoReport";
 
 const ymd = (d: Date) => d.toISOString().slice(0, 10);
 
@@ -25,7 +26,7 @@ const downloadCsv = (rows: string[][], filename: string) => {
   URL.revokeObjectURL(url);
 };
 
-type TabId = "sales" | "payroll" | "ops";
+type TabId = "sales" | "payroll" | "ops" | "kommo";
 
 // ТЗ §11.4: «Статус: начислено / аванс выдан / выплачено».
 const STATUS_LBL: Record<string, { ru: string; ky: string }> = {
@@ -69,6 +70,7 @@ export const ReportsPage = ({ lang }: { lang: Lang }) => {
     { id: "sales",   label: t("Продажи", "Сатуулар") },
     { id: "payroll", label: t("Зарплаты", "Эмгек акы") },
     { id: "ops",     label: t("Посещаемость и карты", "Катышуу жана карталар") },
+    { id: "kommo",   label: "Kommo" },
   ];
 
   return (
@@ -96,6 +98,7 @@ export const ReportsPage = ({ lang }: { lang: Lang }) => {
           {tab === "sales" && <SalesTab lang={lang} />}
           {tab === "payroll" && <PayrollTab lang={lang} />}
           {tab === "ops" && <OpsTab lang={lang} />}
+          {tab === "kommo" && <KommoTab lang={lang} />}
         </div>
       </div>
     </>

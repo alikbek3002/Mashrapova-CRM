@@ -28,6 +28,9 @@ import { payrollRoutes } from "./routes/v1/payroll.js";
 import { refundsRoutes } from "./routes/v1/refunds.js";
 import { depositsRoutes } from "./routes/v1/deposits.js";
 import { ptRoutes } from "./routes/v1/pt.js";
+import { kommoRoutes } from "./routes/v1/kommo.js";
+import { kommoConfigured } from "./lib/kommo.js";
+import { syncKommo } from "./lib/kommo-sync.js";
 
 initSentry();
 
@@ -83,6 +86,7 @@ await app.register(parentsRoutes);
 await app.register(staffRoutes);
 await app.register(lifecycleRoutes);
 await app.register(uploadsRoutes);
+await app.register(kommoRoutes);
 
 // Lightweight in-process scheduler — runs refresh_lifecycle() every hour.
 // This is the fallback when pg_cron is not available on the Supabase plan.
@@ -142,6 +146,18 @@ if (env.SCHEDULER_ENABLED) {
   setInterval(runLifecycle, LIFECYCLE_INTERVAL_MS);
 } else {
   app.log.warn("scheduler_disabled (SCHEDULER_ENABLED=false) — lifecycle/reminders не запускаются на этом инстансе");
+}
+
+// Kommo CRM (ТЗ §13): опрос изменений раз в KOMMO_SYNC_INTERVAL_MIN минут.
+// Тот же единственный инстанс, что и планировщик: два параллельных опроса
+// удвоили бы нагрузку на лимит Kommo (7 запросов в секунду на IP).
+const runKommoSync = () =>
+  syncKommo({ log: app.log }).catch((e) => app.log.warn({ err: e }, "kommo_sync_tick_failed"));
+if (env.SCHEDULER_ENABLED && kommoConfigured) {
+  setTimeout(runKommoSync, 60_000);
+  setInterval(runKommoSync, env.KOMMO_SYNC_INTERVAL_MIN * 60_000);
+} else if (!kommoConfigured) {
+  app.log.info("kommo_disabled (нет KOMMO_BASE_URL/KOMMO_TOKEN)");
 }
 await app.register(payrollRoutes);
 await app.register(refundsRoutes);
