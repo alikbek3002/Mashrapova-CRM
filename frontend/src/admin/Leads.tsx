@@ -2,7 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Icon } from "../data";
 import type { Lang } from "../data";
 import { PageHeader, SearchBox, EmptyState } from "./common";
-import { useLeads, useGroups, useOrgSettings, useManagerKpi, useKommoState, type LeadWithSection, type ManagerKpiRow } from "../shared/api/queries";
+import { useLeads, useGroups, useOrgSettings, useManagerKpi, useKommoState, useKommoStatuses, type LeadWithSection, type ManagerKpiRow } from "../shared/api/queries";
+import { LeadsBoard } from "./LeadsBoard";
 import { useUpdateLead } from "../shared/api/mutations";
 import { AddLeadModal } from "../shared/ui/forms";
 import { Modal, Field } from "../shared/ui/Modal";
@@ -148,6 +149,15 @@ export const LeadsPage = ({ lang }: { lang: Lang }) => {
   const tt = (r: string, k: string) => (ru ? r : k);
   const [q, setQ] = useState("");
   const [filter, setFilter] = useState<"all" | "todo" | LeadStage>("todo");
+  // Канбан по воронкам Kommo (как в amoCRM) или таблица с действиями ERP.
+  const [view, setView] = useState<"board" | "list">(() => {
+    try { return localStorage.getItem("leads_view") === "list" ? "list" : "board"; } catch { return "board"; }
+  });
+  const pickView = (v: "board" | "list") => {
+    setView(v);
+    try { localStorage.setItem("leads_view", v); } catch { /* приватный режим — не запоминаем */ }
+  };
+  const { data: kommoStatuses = [] } = useKommoStatuses();
   const [open, setOpen] = useState(false);
   const [booking, setBooking] = useState<LeadWithSection | null>(null);
   const [losing, setLosing] = useState<LeadWithSection | null>(null);
@@ -233,6 +243,19 @@ export const LeadsPage = ({ lang }: { lang: Lang }) => {
       salesPerDay: sales / days,
     };
   }, [kpiRows, period]);
+
+  // Канбану нужен только поиск: этапы — это его колонки.
+  const searched = useMemo(() => {
+    const qq = q.trim().toLowerCase();
+    if (!qq) return leads;
+    return leads.filter((l) =>
+      (l.child_name ?? "").toLowerCase().includes(qq) ||
+      (l.parent_name ?? "").toLowerCase().includes(qq) ||
+      (l.phone ?? "").includes(qq) ||
+      (l.instagram ?? "").toLowerCase().includes(qq) ||
+      (l.kommo_manager_tag ?? "").toLowerCase().includes(qq)
+    );
+  }, [q, leads]);
 
   const rows = useMemo(() => {
     let list = leads;
@@ -321,7 +344,7 @@ export const LeadsPage = ({ lang }: { lang: Lang }) => {
       />
 
       {/* KPI менеджеров ТЗ §7.4 — шесть метрик за текущий месяц */}
-      <div className="card" style={{ marginBottom: 12 }}>
+      <div className="card" style={{ marginBottom: 12, padding: "16px 20px" }}>
         <div style={{
           fontSize: 11, color: "var(--muted)", textTransform: "uppercase",
           letterSpacing: 0.04, marginBottom: 10,
@@ -402,7 +425,15 @@ export const LeadsPage = ({ lang }: { lang: Lang }) => {
       <div className="card">
         <div className="toolbar">
           <SearchBox value={q} onChange={setQ} placeholder={tt("Имя, телефон, Instagram…", "Аты, телефон, Instagram…")} />
-          <div className="tabs" style={{ flexWrap: "wrap" }}>
+          <div className="tabs">
+            <button className={`tabs__btn ${view === "board" ? "is-active" : ""}`} onClick={() => pickView("board")}>
+              {tt("Канбан", "Канбан")}
+            </button>
+            <button className={`tabs__btn ${view === "list" ? "is-active" : ""}`} onClick={() => pickView("list")}>
+              {tt("Список", "Тизме")}
+            </button>
+          </div>
+          {view === "list" && <div className="tabs" style={{ flexWrap: "wrap" }}>
             <button className={`tabs__btn ${filter === "todo" ? "is-active" : ""}`} onClick={() => setFilter("todo")}>
               {tt("Требуют действия", "Аракет керек")}{counts.todo ? ` · ${counts.todo}` : ""}
             </button>
@@ -414,11 +445,20 @@ export const LeadsPage = ({ lang }: { lang: Lang }) => {
                 {stageLabel(f, ru)}{counts[f] ? ` · ${counts[f]}` : ""}
               </button>
             ))}
-          </div>
+          </div>}
         </div>
 
         {error ? <EmptyState title={tt("Ошибка", "Ката")} hint={error.message} /> :
           isLoading ? <SkeletonRows /> :
+          view === "board" ? (
+            <LeadsBoard
+              leads={searched}
+              statuses={kommoStatuses}
+              tasks={tasks}
+              kommoBaseUrl={kommo?.base_url ?? null}
+              lang={lang}
+            />
+          ) :
           rows.length === 0 ? (
             <EmptyState
               title={filter === "todo" ? tt("Всё отработано", "Баары аткарылды") : tt("Лидов нет", "Арыздар жок")}

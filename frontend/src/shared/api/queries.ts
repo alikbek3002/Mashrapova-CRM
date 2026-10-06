@@ -6,7 +6,7 @@ import { useAuth } from "../auth/AuthProvider";
 import type {
   Child, Family, Profile, Section, Coach, Group, GroupSchedule,
   Lesson, ClubCard, Payment, Lead, Freeze, Attendance, ProgressNote, ChildCardBalance,
-  CardPlan, KommoSyncState, KommoReport,
+  CardPlan, KommoSyncState, KommoReport, KommoStatus,
 } from "../types/database";
 
 export type EnrollmentBrief = {
@@ -723,6 +723,23 @@ export const useKommoState = () =>
         .maybeSingle();
       if (error) throw error;
       return (data ?? null) as KommoSyncState | null;
+    },
+  });
+
+// Этапы воронок Kommo — колонки канбана лидов.
+export const useKommoStatuses = () =>
+  useQuery({
+    queryKey: ["kommo_statuses"],
+    staleTime: 5 * 60_000,
+    queryFn: async (): Promise<KommoStatus[]> => {
+      const { data, error } = await supabase
+        .from("kommo_statuses")
+        .select("pipeline_id, status_id, pipeline_name, status_name, sort, is_unsorted, stage")
+        .order("pipeline_id")
+        .order("sort");
+      // Миграция Kommo не применена — канбан строится по этапам ERP.
+      if (error) return [];
+      return (data ?? []) as KommoStatus[];
     },
   });
 

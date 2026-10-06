@@ -367,6 +367,17 @@ export type Lead = {
 
 export type LeadChannel = "whatsapp" | "instagram" | "manual" | "other";
 
+/** kommo_statuses: этап воронки Kommo и его соответствие этапу ERP. */
+export type KommoStatus = {
+  pipeline_id: number;
+  status_id: number;
+  pipeline_name: string;
+  status_name: string;
+  sort: number;
+  is_unsorted: boolean;
+  stage: LeadStage;
+};
+
 export type KommoSyncState = {
   organization_id: string;
   base_url: string | null;

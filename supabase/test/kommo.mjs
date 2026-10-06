@@ -128,7 +128,10 @@ check("после синхронизации SMS не прибавилось", a
 
 console.log("\n── KPI §7.4 и отчёт ──");
 const kpi = await q(`select * from manager_kpi(current_date - 60, current_date) where manager_id = $1`, [mgr.id]);
-check("manager_kpi: записанных на пробную у Марлена", kpi[0]?.trial_booked_total, 1);
+// Накопительно (20261006000001): 1001 записана, 1003 купила минуя запись —
+// обе прошли этап записи. Пришедших не может быть больше записанных.
+check("manager_kpi: записанных на пробную у Марлена", kpi[0]?.trial_booked_total, 2);
+check("manager_kpi: пришедших не больше записанных", Number(kpi[0]?.trial_attended_total) <= Number(kpi[0]?.trial_booked_total), true);
 const [{ r }] = await q(`select kommo_report(current_date - 60, current_date, $1) as r`, [ORG]);
 check("отчёт: бесед", r.response.all.talks, 2);
 check("отчёт: без ответа", r.response.all.no_reply, 1);
