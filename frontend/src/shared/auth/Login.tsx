@@ -173,23 +173,6 @@ export const Login = ({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => voi
           ))}
         </div>
         <div className="auth__panel">
-          <div className="auth__tabs">
-            <button
-              type="button"
-              className={`auth__tab ${mode === "login" ? "is-active" : ""}`}
-              onClick={() => switchMode("login")}
-            >
-              {t.tabLogin}
-            </button>
-            <button
-              type="button"
-              className={`auth__tab ${mode === "register" ? "is-active" : ""}`}
-              onClick={() => switchMode("register")}
-            >
-              {t.tabRegister}
-            </button>
-          </div>
-
           {mode === "login" ? (
             <form onSubmit={submitLogin}>
               <h1 className="auth__h1">{t.loginTitle}</h1>

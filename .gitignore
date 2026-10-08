@@ -128,3 +128,9 @@ backend/scripts/data/
 *.sqlite
 *.sqlite3
 *.sql.bak
+
+# ----- Локальные артефакты (не в репозиторий) -----
+ДОСТУПЫ.md
+обучающие-видео/
+brag-output/
+*.env.cloud-backup
