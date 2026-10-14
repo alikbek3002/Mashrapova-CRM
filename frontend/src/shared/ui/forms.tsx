@@ -34,6 +34,53 @@ type FamilyInitial = {
   responsible_manager_id?: string | null;
 };
 
+// Пароль для родителя: строчные буквы и цифры без похожих (i/j/l/1, o/0).
+// Пароли со смешанным регистром родители переписывали с ошибками
+// («qQ2vGJ2LLY2v» → «qQ2vGJLLY2v») и не могли войти.
+const genParentPassword = () => {
+  const chars = "abcdefghkmnpqrstuvwxyz23456789";
+  const rnd = crypto.getRandomValues(new Uint32Array(10));
+  return Array.from(rnd, (n) => chars[n % chars.length]).join("");
+};
+
+// Чей телефон станет логином родителя. Раньше молча брался телефон отца,
+// если он заполнен: мама со своего номера войти не могла, а когда номер
+// отца уже занят другим аккаунтом (например, сотрудником), вход не
+// создавался вовсе.
+type LoginWho = "father" | "mother";
+const pickLoginSide = (who: LoginWho, fatherPhone: string, motherPhone: string): LoginWho =>
+  who === "mother" ? (motherPhone ? "mother" : "father") : (fatherPhone ? "father" : "mother");
+
+const LoginPhonePick = ({
+  side, onChange, fatherPhone, motherPhone, disabled, lang,
+}: {
+  side: LoginWho; onChange: (w: LoginWho) => void;
+  fatherPhone: string; motherPhone: string; disabled?: boolean; lang: Lang;
+}) => {
+  const t = (ru: string, ky: string) => (lang === "ru" ? ru : ky);
+  // Выбирать есть из чего только когда заполнены оба телефона.
+  if (!fatherPhone || !motherPhone) return null;
+  const opt = (w: LoginWho, label: string, phone: string) => (
+    <button
+      type="button"
+      className={`btn ${side === w ? "btn--primary" : ""}`}
+      style={{ padding: "5px 10px", fontSize: 12 }}
+      onClick={() => onChange(w)}
+      disabled={disabled}
+      aria-pressed={side === w}
+    >
+      {label} · {phone}
+    </button>
+  );
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", width: "100%" }}>
+      <span style={{ fontSize: 12, color: "var(--muted)" }}>{t("Логином станет телефон:", "Логин — кимдин телефону:")}</span>
+      {opt("mother", t("мамы", "энесинин"), motherPhone)}
+      {opt("father", t("папы", "атасынын"), fatherPhone)}
+    </div>
+  );
+};
+
 export const AddFamilyModal = ({
   open, onClose, lang, initial,
 }: { open: boolean; onClose: () => void; lang: Lang; initial?: FamilyInitial }) => {
@@ -111,9 +158,17 @@ export const AddFamilyModal = ({
 
   // Какой телефон используется как login для PWA. Backend требует phone
   // и сам конвертирует его в pseudo-email (phoneToPseudoEmail).
-  const parentLoginPhone = fatherPhone || motherPhone;
+  const [loginWho, setLoginWho] = useState<LoginWho>("father");
+  const loginSide = pickLoginSide(loginWho, fatherPhone, motherPhone);
+  const parentLoginPhone = loginSide === "father" ? fatherPhone : motherPhone;
   // Дефолтное ФИО для login — имя того родителя, чей телефон уйдёт в auth.
-  const defaultLoginName = fatherPhone ? father : (motherPhone ? mother : (father || mother));
+  const defaultLoginName = (loginSide === "father" ? father : mother) || father || mother;
+  const changeLoginWho = (w: LoginWho) => {
+    // Имя, подставленное от другого родителя, меняем вместе с телефоном.
+    const prevName = (loginSide === "father" ? father : mother).trim();
+    if (!parentName.trim() || parentName.trim() === prevName) setParentName((w === "father" ? father : mother) || "");
+    setLoginWho(w);
+  };
 
   // Edit-mode «выдать доступ»: автоподстановка ФИО из данных семьи при
   // включении чекбокса (если пользователь ещё ничего не ввёл вручную).
@@ -125,12 +180,7 @@ export const AddFamilyModal = ({
     if (fallback) setParentName(fallback);
   }, [withLogin, isEdit, defaultLoginName, parentName]);
 
-  const generateParentPassword = () => {
-    const chars = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    let s = "";
-    for (let i = 0; i < 12; i++) s += chars[Math.floor(Math.random() * chars.length)];
-    setParentPassword(s);
-  };
+  const generateParentPassword = () => setParentPassword(genParentPassword());
 
   const submit = async () => {
     setErr(null);
@@ -191,7 +241,7 @@ export const AddFamilyModal = ({
           email: parentEmail.trim() || null,
           password: parentPassword,
           full_name: parentName.trim(),
-          phone: fatherPhone || motherPhone || null,
+          phone: parentLoginPhone || null,
         });
         setPwChangedValue(parentPassword);
         setPwChangedOpen(true);
@@ -269,6 +319,9 @@ export const AddFamilyModal = ({
               "Родитель входит по номеру телефона. Пароль нужно придумать и передать семье лично.",
               "Ата-эне телефон номери менен кирет. Сырсөздү ойлоп таап, үй-бүлөгө жеке бериңиз.",
             )}
+          </div>
+          <div style={{ marginBottom: 8 }}>
+            <LoginPhonePick side={loginSide} onChange={changeLoginWho} fatherPhone={fatherPhone} motherPhone={motherPhone} disabled={busy} lang={lang} />
           </div>
           <div style={{
             fontSize: 12, padding: "6px 10px", marginBottom: 10,
@@ -349,6 +402,7 @@ export const AddFamilyModal = ({
           )}
           {withLogin && (
             <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+              <LoginPhonePick side={loginSide} onChange={changeLoginWho} fatherPhone={fatherPhone} motherPhone={motherPhone} disabled={busy} lang={lang} />
               <div style={{
                 fontSize: 12, padding: "6px 10px",
                 background: "var(--green-50)", color: "var(--green)",
@@ -655,6 +709,7 @@ export const AddFamilyModal = ({
         lang={lang}
         password={pwChangedValue}
         who={parentProfile?.full_name ?? parentName ?? undefined}
+        login={parentProfile?.phone ?? parentLoginPhone ?? undefined}
       />
     </Modal>
   );
@@ -869,34 +924,46 @@ export const AddChildModal = ({
   const [grantName, setGrantName] = useState("");
   const [grantPw, setGrantPw] = useState("");
   const [grantDone, setGrantDone] = useState("");
-  const genGrantPw = () => {
-    const chars = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    let s = "";
-    for (let i = 0; i < 12; i++) s += chars[Math.floor(Math.random() * chars.length)];
-    setGrantPw(s);
+  const [grantLogin, setGrantLogin] = useState("");
+  const [grantErr, setGrantErr] = useState<string | null>(null);
+  const [grantWho, setGrantWho] = useState<LoginWho>("father");
+  const grantSide = pickLoginSide(grantWho, fatherPhone, motherPhone);
+  const grantPhone = grantSide === "father" ? fatherPhone : motherPhone;
+  const genGrantPw = () => setGrantPw(genParentPassword());
+  const changeGrantWho = (w: LoginWho) => {
+    const prevName = (grantSide === "father" ? father : mother).trim();
+    if (grantName.trim() && grantName.trim() === prevName) setGrantName((w === "father" ? father : mother) || "");
+    setGrantWho(w);
   };
   const grantAccess = async () => {
-    setErr(null);
-    const phone = fatherPhone || motherPhone;
-    if (!phone) {
-      setErr(t("Укажите телефон отца или матери — по нему родитель будет входить в приложение", "Атасынын же энесинин телефонун жазыңыз — ата-эне тиркемеге ошол номер менен кирет"));
+    setGrantErr(null);
+    if (!grantPhone) {
+      setGrantErr(t("Укажите телефон отца или матери — по нему родитель будет входить в приложение", "Атасынын же энесинин телефонун жазыңыз — ата-эне тиркемеге ошол номер менен кирет"));
       return;
     }
-    const name = grantName.trim() || (fatherPhone ? father : mother) || father || mother;
-    if (!name) { setErr(t("Укажите имя родителя", "Ата-эненин атын жазыңыз")); return; }
-    if (grantPw.length < 8) { setErr(t("Пароль — не менее 8 символов", "Сырсөз кеминде 8 белги")); return; }
-    // Сначала сохраняем текущие телефоны в семью — логин делается из них.
-    await updFamily.mutateAsync({
-      id: familyId,
-      father_name: father || null, father_phone: fatherPhone || null,
-      mother_name: mother || null, mother_phone: motherPhone || null,
-    });
-    await createParentAcct.mutateAsync({
-      family_id: familyId,
-      password: grantPw,
-      full_name: name,
-      phone,
-    });
+    const name = grantName.trim() || (grantSide === "father" ? father : mother) || father || mother;
+    if (!name) { setGrantErr(t("Укажите имя родителя", "Ата-эненин атын жазыңыз")); return; }
+    if (grantPw.length < 8) { setGrantErr(t("Пароль — не менее 8 символов", "Сырсөз кеминде 8 белги")); return; }
+    // Ошибку показываем здесь же: всплывашка исчезала, а «ещё не выдан»
+    // оставался — менеджеры думали, что вход создан.
+    try {
+      // Сначала сохраняем текущие телефоны в семью — логин делается из них.
+      await updFamily.mutateAsync({
+        id: familyId,
+        father_name: father || null, father_phone: fatherPhone || null,
+        mother_name: mother || null, mother_phone: motherPhone || null,
+      });
+      await createParentAcct.mutateAsync({
+        family_id: familyId,
+        password: grantPw,
+        full_name: name,
+        phone: grantPhone,
+      });
+    } catch (e: unknown) {
+      setGrantErr(friendlyAuthError((e as Error).message));
+      return;
+    }
+    setGrantLogin(grantPhone);
     setGrantDone(grantPw);
     setGrantOpen(false);
   };
@@ -1054,8 +1121,8 @@ export const AddChildModal = ({
                     </>
                   ) : grantDone ? (
                     <span style={{ color: "var(--green, #1a7f37)", fontWeight: 600 }}>
-                      {t(`Готово. Логин — телефон родителя, пароль: ${grantDone}. Передайте его лично.`,
-                         `Даяр. Логин — ата-эненин телефону, сырсөз: ${grantDone}. Жеке бериңиз.`)}
+                      {t(`Готово. Логин: ${grantLogin}, пароль: ${grantDone}. Передайте их родителю лично.`,
+                         `Даяр. Логин: ${grantLogin}, сырсөз: ${grantDone}. Ата-энеге жеке бериңиз.`)}
                     </span>
                   ) : (
                     <>
@@ -1076,6 +1143,7 @@ export const AddChildModal = ({
                 </div>
                 {grantOpen && !parentAccount && !grantDone && (
                   <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 8 }}>
+                    <LoginPhonePick side={grantSide} onChange={changeGrantWho} fatherPhone={fatherPhone} motherPhone={motherPhone} disabled={createParentAcct.isPending} lang={lang} />
                     <input
                       value={grantName}
                       onChange={(e) => setGrantName(e.target.value)}
@@ -1100,9 +1168,13 @@ export const AddChildModal = ({
                     >
                       {createParentAcct.isPending ? t("Создаём…", "Түзүлүүдө…") : t("Создать вход", "Кирүүнү түзүү")}
                     </button>
+                    {grantErr && <div className="field__error" style={{ width: "100%" }}>{grantErr}</div>}
                     <div style={{ fontSize: 11.5, color: "var(--muted)", width: "100%" }}>
-                      {t("Логином станет телефон отца или матери. Пароль передайте родителю лично.",
-                         "Логин — атасынын же энесинин телефону. Сырсөздү ата-энеге жеке бериңиз.")}
+                      {grantPhone
+                        ? t(`Логин: ${grantPhone}. Пароль передайте родителю лично.`,
+                            `Логин: ${grantPhone}. Сырсөздү ата-энеге жеке бериңиз.`)
+                        : t("Логином станет телефон отца или матери. Пароль передайте родителю лично.",
+                            "Логин — атасынын же энесинин телефону. Сырсөздү ата-энеге жеке бериңиз.")}
                     </div>
                   </div>
                 )}

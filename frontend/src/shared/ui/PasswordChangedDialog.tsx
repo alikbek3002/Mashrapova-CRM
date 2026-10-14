@@ -12,12 +12,15 @@ export const PasswordChangedDialog = ({
   lang,
   password,
   who,
+  login,
 }: {
   open: boolean;
   onClose: () => void;
   lang: Lang;
   password: string;
   who?: string;
+  /** Телефон, по которому входить. Без него неясно, чей номер стал логином. */
+  login?: string;
 }) => {
   const t = (ru: string, ky: string) => (lang === "ru" ? ru : ky);
   const [copied, setCopied] = useState(false);
@@ -61,6 +64,12 @@ export const PasswordChangedDialog = ({
             : t("Пароль обновлён", "Сырсөз жаңыланды")}
         </span>
       </div>
+
+      {login && (
+        <Field label={t("Логин (телефон)", "Логин (телефон)")}>
+          <input type="text" readOnly value={login} style={{ fontFamily: "var(--font-mono)" }} onFocus={(e) => e.currentTarget.select()} />
+        </Field>
+      )}
 
       <Field
         label={t("Новый пароль", "Жаңы сырсөз")}
