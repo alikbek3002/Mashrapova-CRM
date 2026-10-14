@@ -7,13 +7,13 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: "autoUpdate",
-      includeAssets: ["favicon.png", "logo.png", "icon-192.png", "icon-512.png"],
+      includeAssets: ["favicon.svg", "favicon.png", "icon-192.png", "icon-512.png", "brand/*"],
       manifest: {
-        name: "Академия Машрапова",
+        name: "Машрапов · единоборства & фитнесс",
         short_name: "Машрапов",
-        description: "ERP-система зала единоборств «Академия Машрапова»",
-        theme_color: "#0D0B0B",
-        background_color: "#0D0B0B",
+        description: "CRM зала «Машрапов · единоборства & фитнесс»",
+        theme_color: "#000000",
+        background_color: "#000000",
         display: "standalone",
         orientation: "portrait",
         scope: "/",

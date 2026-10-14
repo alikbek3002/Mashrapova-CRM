@@ -5,12 +5,11 @@ import type { Lang } from "../../data";
 import { phoneToPseudoEmail } from "./normalizePhone";
 import { useAuth, DEMO_ACCOUNTS } from "./AuthProvider";
 import { Select } from "../ui/Select";
+import { BrandLogo } from "../ui/BrandLogo";
 
 const T = {
   ru: {
     city: "Ош · Кыргызстан",
-    heroA: "Академия",
-    heroB: "ММА",
     rights: "Академия Машрапова",
     tabLogin: "Вход",
     tabRegister: "Регистрация",
@@ -44,8 +43,6 @@ const T = {
   },
   ky: {
     city: "Ош · Кыргызстан",
-    heroA: "ММА",
-    heroB: "академиясы",
     rights: "Машрапов академиясы",
     tabLogin: "Кирүү",
     tabRegister: "Катталуу",
@@ -80,9 +77,6 @@ const T = {
 } as const;
 
 type Mode = "login" | "register";
-
-// Фото — Unsplash (бесплатная лицензия). Заменить на фото зала, когда будут.
-const HERO_PHOTO = "https://images.unsplash.com/photo-1591117207239-788bf8de6c3b?w=1600&q=75&auto=format&fit=crop";
 
 // +996700000000 → «+996 700 00 00 00»
 const fmtDemoPhone = (e164: string) => e164.replace(/^\+996(\d{3})(\d{2})(\d{2})(\d{2})$/, "+996 $1 $2 $3 $4");
@@ -148,20 +142,15 @@ export const Login = ({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => voi
   return (
     <div className="auth">
       <aside className="auth__hero">
-        <div className="auth__photo" style={{ backgroundImage: `url(${HERO_PHOTO})` }} />
+        {/* Постер из брендбука: на нём уже есть надпись «Машрапов». На телефоне
+            постер не помещается — там красно-чёрный градиент и логотип. */}
+        <div className="auth__photo" />
         <div className="auth__shade" />
-        <div className="auth__logo">
-          <img className="auth__logo-img" src="/logo.png" alt="Академия Машрапова" />
-          MASHRAPOVA
-        </div>
-        <div className="auth__hero-body">
+        <BrandLogo className="auth__logo" variant="full" tone="white" height={52} />
+        <div className="auth__hero-foot">
           <div className="auth__kicker">{t.city}</div>
-          <h2 className="auth__title">
-            <span>{t.heroA}</span>
-            <span className="auth__title-accent">{t.heroB}</span>
-          </h2>
+          <div className="auth__copy">© {new Date().getFullYear()} {t.rights}</div>
         </div>
-        <div className="auth__copy">© {new Date().getFullYear()} {t.rights}</div>
       </aside>
 
       <main className="auth__side">

@@ -405,9 +405,9 @@ const ParentCard = ({ lang, t, kid }: { lang: Lang; t: ParentT; kid: any }) => {
 
       {activeFreeze && (
         <div style={{
-          background: "oklch(0.94 0.06 25)",
-          border: "1px solid oklch(0.78 0.10 25)",
-          color: "oklch(0.35 0.12 25)",
+          background: "var(--ice-50)",
+          border: "1px solid var(--ice-100)",
+          color: "var(--ice-ink)",
           borderRadius: "var(--r-md)",
           padding: "10px 14px",
           margin: "8px 0",

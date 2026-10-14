@@ -328,8 +328,3 @@ export const Medal = ({ variant = "gold", size = 48 }: MedalProps): ReactElement
   );
 };
 
-export const BrandLogo = ({ size = 34 }: { size?: number }): ReactElement => (
-  <div className="brand__mark" style={{ height: size }} aria-label="Академия Машрапова">
-    <img src="/logo.png" alt="Академия Машрапова" style={{ height: size, width: size, display: "block" }} />
-  </div>
-);
