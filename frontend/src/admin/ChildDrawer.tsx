@@ -34,6 +34,7 @@ import { DateInput } from "../shared/ui/DateInput";
 import { SkeletonRows } from "../shared/ui/Skeleton";
 import { Select } from "../shared/ui/Select";
 import { sourceText } from "../shared/sources";
+import { enrollmentEndFor } from "../shared/api/enrollmentEnd";
 
 type Role = "admin" | "coach" | "parent";
 type TabId = "subs" | "att" | "pay" | "deposit" | "freezes" | "notes" | "comments" | "group" | "pt";
@@ -1640,12 +1641,12 @@ const GroupTab = ({ childId, childName, lang }: { childId: string; childName: st
     setAddDate(def);
   };
 
-  // Шаг 2: подтверждение — окно записи от выбранной даты до конца
-  // абонемента: ребёнок в группе, пока абонемент действует.
+  // Шаг 2: подтверждение — окно записи от выбранной даты (правило конца
+  // окна — enrollmentEndFor: пакет до конца абонемента, разовое — до занятия).
   const handleAdd = async () => {
     if (!addTarget || !addDate) return;
     const card = activeCards.find((c) => c.section_id && c.section_id === addTarget.section_id);
-    const end_date: string | null = card?.end_date ?? null;
+    const end_date = card ? await enrollmentEndFor(card, addTarget.id, addDate) : null;
     await addEnroll.mutateAsync({
       child_id: childId, group_id: addTarget.id,
       start_date: card ? addDate : null, end_date,

@@ -86,14 +86,18 @@ export const KidsPage = ({ lang }: { lang: Lang }) => {
         lang={lang}
         onCreated={(childId, training) => { if (training) setSellFor({ childId, ...training }); }}
       />
-      <SellCardModal
-        open={!!sellFor}
-        onClose={() => setSellFor(null)}
-        lang={lang}
-        presetChildId={sellFor?.childId}
-        initialSectionId={sellFor?.sectionId}
-        initialGroupId={sellFor?.groupId || undefined}
-      />
+      {/* Монтируем только по требованию: продажа грузит все абонементы,
+          а самой странице «Клиенты» они не нужны. */}
+      {sellFor && (
+        <SellCardModal
+          open
+          onClose={() => setSellFor(null)}
+          lang={lang}
+          presetChildId={sellFor.childId}
+          initialSectionId={sellFor.sectionId}
+          initialGroupId={sellFor.groupId || undefined}
+        />
+      )}
       {activeChildId && (
         <ChildDrawer
           childId={activeChildId}

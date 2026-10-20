@@ -2785,18 +2785,21 @@ export const SellCardModal = ({
 
   const lessonCount = Number(total) || 0;
   const hasWindow = !!groupId && groupSchedule.length > 0;
-  // Срок абонемента календарный: «1 месяц» — с 13 октября по 13 ноября
-  // (ТЗ §4.1, просьба офиса 2026-10-20). Раньше конец ставился на дату
-  // N-го занятия по расписанию, и месячный выходил на 3–4 недели.
-  // Пакеты в месяцах считаем месяцами, остальное — днями тарифа.
+  // Срок пакета в месяцах — календарный: «1 месяц» = с 13 октября по
+  // 13 ноября (ТЗ §4.1, просьба офиса 2026-10-20). Раньше конец ставился
+  // на дату N-го занятия по расписанию, и месячный выходил на 3–4 недели.
   const cardStart = hasWindow ? firstLessonDate : today;
   const months = CARD_MONTHS[type];
   const periodEnd = months ? addMonthsIso(cardStart, months) : addDaysIso(cardStart, periodDays);
-  // Редкое расписание (две тренировки в неделю на 12 занятий): все занятия
-  // в месяц не помещаются — тогда срок тянется до N-го занятия, иначе
-  // оплаченные занятия сгорят.
   const nthLesson = hasWindow ? computeWindowEnd(firstLessonDate, lessonCount, groupSchedule) : null;
-  const cardEnd = nthLesson && nthLesson > periodEnd ? nthLesson : periodEnd;
+  // Пакет: календарный срок, но если по расписанию N занятий в него не
+  // помещаются (две тренировки в неделю на 12 занятий) — до N-го занятия,
+  // иначе оплаченное сгорит. Разовое, пробное, персональное — как раньше:
+  // до даты N-го занятия, а без расписания — дни тарифа. Иначе ребёнок с
+  // пробной висел бы в составе группы весь срок тарифа (30 дней).
+  const cardEnd = months
+    ? (nthLesson && nthLesson > periodEnd ? nthLesson : periodEnd)
+    : (nthLesson ?? periodEnd);
   // Окно записи в группу (ростер и табель) совпадает со сроком абонемента.
   // Без группы с расписанием окно открытое (null/null).
   const windowStart = hasWindow ? cardStart : null;
@@ -3080,7 +3083,7 @@ export const SellCardModal = ({
             {t("Срок", "Мөөнөтү")}: <b>{fmtPeriod(cardStart, cardEnd, lang)}</b>
             {lessonCount > 0 ? ` · ${lessonsText(lessonCount, lang)}` : ""}
             {scheduleDays ? ` · ${scheduleDays}` : ""}
-            {cardEnd !== periodEnd ? ` · ${t("по расписанию занятия не помещаются в срок — продлён до последнего", "жадыбал боюнча сабактар мөөнөткө батпайт — акыркысына чейин узартылды")}` : ""}
+            {months && cardEnd !== periodEnd ? ` · ${t("по расписанию занятия не помещаются в срок — продлён до последнего", "жадыбал боюнча сабактар мөөнөткө батпайт — акыркысына чейин узартылды")}` : ""}
           </span>
         </div>
       )}
