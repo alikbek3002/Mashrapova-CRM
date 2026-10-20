@@ -3,7 +3,7 @@ import { Icon } from "../data";
 import type { Lang } from "../data";
 import { PageHeader, SearchBox, EmptyState, initialsOf } from "./common";
 import { useChildren, useSections, useGroups } from "../shared/api/queries";
-import { AddChildModal } from "../shared/ui/forms";
+import { AddChildModal, SellCardModal } from "../shared/ui/forms";
 import { ChildAvatar } from "../shared/ui/ChildAvatar";
 import { ChildDrawer } from "./ChildDrawer";
 import { Gate } from "../shared/auth/Gate";
@@ -25,6 +25,8 @@ export const KidsPage = ({ lang }: { lang: Lang }) => {
   const [noGroupOnly, setNoGroupOnly] = useState(false);
   const [activeChildId, setActiveChildId] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
+  // Новый клиент с выбранными секцией и группой — сразу продажа абонемента.
+  const [sellFor, setSellFor] = useState<{ childId: string; sectionId: string; groupId: string } | null>(null);
   const { data: kids = [], isLoading, error } = useChildren();
   const { data: sections = [] } = useSections();
   const { data: groups = [] } = useGroups();
@@ -78,7 +80,20 @@ export const KidsPage = ({ lang }: { lang: Lang }) => {
         }
       />
 
-      <AddChildModal open={addOpen} onClose={() => setAddOpen(false)} lang={lang} />
+      <AddChildModal
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
+        lang={lang}
+        onCreated={(childId, training) => { if (training) setSellFor({ childId, ...training }); }}
+      />
+      <SellCardModal
+        open={!!sellFor}
+        onClose={() => setSellFor(null)}
+        lang={lang}
+        presetChildId={sellFor?.childId}
+        initialSectionId={sellFor?.sectionId}
+        initialGroupId={sellFor?.groupId || undefined}
+      />
       {activeChildId && (
         <ChildDrawer
           childId={activeChildId}

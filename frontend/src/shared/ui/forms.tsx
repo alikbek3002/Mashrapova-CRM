@@ -10,6 +10,7 @@ import { resolveAvatarUrl } from "../api/avatar";
 import { SOURCE_OPTIONS } from "../sources";
 import { computeWindowEnd, scheduleDaysText } from "../lib/enrollmentWindow";
 import { CARD_MONTHS, cardLabel, lessonsText } from "../lib/cards";
+import { groupOptionLabel, type GroupForLabel } from "../lib/groups";
 import { fmtD, fmtPeriod, addMonthsIso, addDaysIso } from "../lib/dates";
 import { useAuth } from "../auth/AuthProvider";
 import { usePerm } from "../auth/rbac";
@@ -847,10 +848,14 @@ export const AddChildModal = ({
   onClose: () => void;
   lang: Lang;
   initial?: ChildInitial;
-  onCreated?: (childId: string) => void;
+  // training — секция и группа, выбранные в блоке «Тренировки»: по ним
+  // сразу открывают продажу абонемента (в группу без абонемента не записать).
+  onCreated?: (childId: string, training?: { sectionId: string; groupId: string }) => void;
 }) => {
   const t = (ru: string, ky: string) => (lang === "ru" ? ru : ky);
   const { data: families = [] } = useFamilies();
+  const { data: trainSections = [] } = useSections();
+  const { data: trainGroupsAll = [] } = useGroupsQ();
   // Дети — для поиска семьи по имени ребёнка (режим «Существующая семья»).
   const { data: kidsForFamilies = [] } = useChildren();
   const { data: managers = [] } = useManagers();
@@ -883,6 +888,14 @@ export const AddChildModal = ({
   // ТЗ §3.3 «Приведи друга»: кто привёл этого клиента. Бонус −300 сом
   // начисляется рефереру и применяется к его следующему абонементу.
   const [referredBy, setReferredBy] = useState(initial?.referred_by_child_id ?? "");
+  // Вид спорта и группа (время + тренер) прямо при добавлении клиента —
+  // раньше их выбирали отдельным шагом после сохранения (просьба 2026-10-21).
+  const [trainSectionId, setTrainSectionId] = useState("");
+  const [trainGroupId, setTrainGroupId] = useState("");
+  const trainGroups = trainSectionId
+    ? (trainGroupsAll as Array<{ id: string; section_id: string | null } & GroupForLabel>).filter((g) => g.section_id === trainSectionId)
+    : [];
+  const canSell = usePerm("sell_cards");
   const [managerId, setManagerId] = useState<string>(
     initial?.responsible_manager_id
       ?? (currentUserIsManagerLike ? (user?.id ?? "") : ""),
@@ -1028,10 +1041,14 @@ export const AddChildModal = ({
         referred_by_child_id: referredBy || null,
       });
       if (onCreated && created && (created as { id?: string }).id) {
-        onCreated((created as { id: string }).id);
+        onCreated(
+          (created as { id: string }).id,
+          trainSectionId ? { sectionId: trainSectionId, groupId: trainGroupId } : undefined,
+        );
       }
       onClose();
       setFullName(""); setBirth(""); setCard(""); setSource(""); setReferredBy("");
+      setTrainSectionId(""); setTrainGroupId("");
       setFather(""); setFatherPhone("");
       setMother(""); setMotherPhone("");
       setFamilyComment("");
@@ -1236,6 +1253,43 @@ export const AddChildModal = ({
                "300 сом бонус ал кийинки абонементинен кемийт.")}
           </div>
         </Field>
+      )}
+
+      {/* Вид спорта, время и тренер — сразу при добавлении клиента */}
+      {!isEdit && canSell && onCreated && (
+        <>
+          <div className="form-sec">{t("Тренировки", "Машыгуулар")}</div>
+          <Field label={t("Вид спорта", "Спорттун түрү")}>
+            <Select
+              value={trainSectionId}
+              onChange={(e) => { setTrainSectionId(e.target.value); setTrainGroupId(""); }}
+              disabled={busy}
+            >
+              <option value="">{t("— выбрать позже —", "— кийин тандоо —")}</option>
+              {trainSections.map((s) => (
+                <option key={s.id} value={s.id}>{lang === "ru" ? s.name_ru : s.name_ky}</option>
+              ))}
+            </Select>
+          </Field>
+          {trainSectionId && (
+            <Field
+              label={t("Группа: дни, время, тренер", "Топ: күндөр, убакыт, тренер")}
+              hint={t(
+                "После сохранения откроется продажа абонемента с этой секцией и группой — в группу ребёнок попадёт вместе с абонементом.",
+                "Сактагандан кийин ушул секция жана топ менен абонемент сатуу ачылат — бала топко абонемент менен кошо кирет.",
+              )}
+            >
+              <Select value={trainGroupId} onChange={(e) => setTrainGroupId(e.target.value)} disabled={busy || trainGroups.length === 0}>
+                <option value="">
+                  {trainGroups.length === 0
+                    ? t("— в секции пока нет групп —", "— секцияда азырынча топ жок —")
+                    : t("— без группы —", "— топсуз —")}
+                </option>
+                {trainGroups.map((g) => <option key={g.id} value={g.id}>{groupOptionLabel(g, lang)}</option>)}
+              </Select>
+            </Field>
+          )}
+        </>
       )}
 
       {err && <div className="field__error" style={{ marginTop: 8 }}>{err}</div>}
@@ -2535,7 +2589,7 @@ export const AddLeadModal = ({ open, onClose, lang }: { open: boolean; onClose: 
 // селект и кнопка «новый ребёнок» прячутся, отображается имя read-only.
 // =============================================================
 export const SellCardModal = ({
-  open, onClose, lang, presetChildId, presetSectionId, presetGroupId,
+  open, onClose, lang, presetChildId, presetSectionId, presetGroupId, initialSectionId, initialGroupId,
 }: {
   open: boolean;
   onClose: () => void;
@@ -2545,6 +2599,9 @@ export const SellCardModal = ({
   // секция и группа фиксируются read-only.
   presetSectionId?: string;
   presetGroupId?: string;
+  // Подстановка из формы нового клиента — менеджер может поменять.
+  initialSectionId?: string;
+  initialGroupId?: string;
 }) => {
   const t = (ru: string, ky: string) => (lang === "ru" ? ru : ky);
   const { data: kids = [] } = useChildren();
@@ -2622,10 +2679,10 @@ export const SellCardModal = ({
       setErr(null);
     } else {
       if (presetChildId) setChildId(presetChildId);
-      if (presetSectionId) setSectionId(presetSectionId);
-      if (presetGroupId) setGroupId(presetGroupId);
+      if (presetSectionId || initialSectionId) setSectionId(presetSectionId ?? initialSectionId ?? "");
+      if (presetGroupId || initialGroupId) setGroupId(presetGroupId ?? initialGroupId ?? "");
     }
-  }, [open, presetChildId, presetSectionId, presetGroupId]);
+  }, [open, presetChildId, presetSectionId, presetGroupId, initialSectionId, initialGroupId]);
 
   // При смене ребёнка сбрасываем сумму с депозита: у нового ребёнка свой баланс.
   useEffect(() => {
@@ -2859,7 +2916,10 @@ export const SellCardModal = ({
           open={newChildOpen}
           onClose={() => setNewChildOpen(false)}
           lang={lang}
-          onCreated={(newId) => setChildId(newId)}
+          onCreated={(newId, training) => {
+            setChildId(newId);
+            if (training) { setSectionId(training.sectionId); setGroupId(training.groupId); }
+          }}
         />
       )}
 
@@ -2904,8 +2964,8 @@ export const SellCardModal = ({
               disabled={!sectionId || groupsForSection.length === 0}
             >
               <option value="">— {t("не выбирать", "тандабоо")} —</option>
-              {groupsForSection.map((g: { id: string; name: string }) => (
-                <option key={g.id} value={g.id}>{g.name}</option>
+              {(groupsForSection as Array<{ id: string } & GroupForLabel>).map((g) => (
+                <option key={g.id} value={g.id}>{groupOptionLabel(g, lang)}</option>
               ))}
             </Select>
           )}

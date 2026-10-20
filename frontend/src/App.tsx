@@ -55,7 +55,7 @@ const ParentScreen = lazyWithRetry(() =>
 //
 // Если меняешь форму данных в queries.ts (типы, ключи), бамп BUSTER —
 // иначе пользователи прочитают «древний» кэш и упадут на runtime.
-const QUERY_CACHE_BUSTER = "v1";
+const QUERY_CACHE_BUSTER = "v2"; // v2: у групп появилось расписание (schedule)
 const QUERY_CACHE_MAX_AGE = 24 * 60 * 60_000; // 24h
 
 // JSON.stringify теряет Map/Set. У нас табели (coach_tabel, group_tabel)
