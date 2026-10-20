@@ -14,7 +14,6 @@ import {
   useBulkGenerateLessons,
 } from "../shared/api/mutations";
 import { supabase } from "../shared/api/supabase";
-import { computeWindowEnd } from "../shared/lib/enrollmentWindow";
 import { toast } from "../shared/ui/toast";
 import { initialsOf } from "./common";
 import { SellCardModal } from "../shared/ui/forms";
@@ -342,17 +341,10 @@ const KidsTab = ({ group, enrollments, lang }: { group: any; enrollments: any[];
 
   const handleAdd = async () => {
     if (isFull || !addTarget || !addDate) return;
-    // Окно записи от выбранной даты: конец = N-е занятие по расписанию
-    // группы (N = total_lessons карты) — как при продаже абонемента.
+    // Окно записи от выбранной даты до конца абонемента — как при продаже:
+    // ребёнок в группе, пока абонемент действует.
     const card = (cardsByChild.get(addTarget.id) ?? []).find((c: ActiveCard) => c.section_id === group.section_id);
-    let end_date: string | null = null;
-    if (card) {
-      const { data: schedule } = await supabase
-        .from("group_schedule")
-        .select("day_of_week, start_time")
-        .eq("group_id", group.id);
-      end_date = computeWindowEnd(addDate, card.total_lessons ?? 0, schedule ?? []) ?? card.end_date ?? null;
-    }
+    const end_date: string | null = card?.end_date ?? null;
     await addEnroll.mutateAsync({
       child_id: addTarget.id, group_id: group.id,
       start_date: card ? addDate : null, end_date,
@@ -401,14 +393,8 @@ const KidsTab = ({ group, enrollments, lang }: { group: any; enrollments: any[];
         .eq("child_id", transferTarget.childId)
         .in("status", ["active", "ending"]);
       const card = ((cards ?? []) as any[]).find((c) => c.section_id === target?.section_id) ?? null;
-      let end_date: string | null = null;
-      if (card) {
-        const { data: schedule } = await supabase
-          .from("group_schedule")
-          .select("day_of_week, start_time")
-          .eq("group_id", transferGroupId);
-        end_date = computeWindowEnd(transferDate, card.total_lessons ?? 0, schedule ?? []) ?? card.end_date ?? null;
-      }
+      // В новой группе — до конца того же абонемента.
+      const end_date: string | null = card?.end_date ?? null;
       await addEnroll.mutateAsync({
         child_id: transferTarget.childId, group_id: transferGroupId,
         start_date: card ? transferDate : null, end_date,

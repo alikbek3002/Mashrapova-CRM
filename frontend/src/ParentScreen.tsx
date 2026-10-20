@@ -18,6 +18,7 @@ import { ChildDrawer } from "./admin/ChildDrawer";
 import { Shell } from "./shared/ui/Shell";
 import { ChildAvatar, EditableChildAvatar } from "./shared/ui/ChildAvatar";
 import { SkeletonRows } from "./shared/ui/Skeleton";
+import { cardTypeText, cardStatusText } from "./shared/lib/cards";
 
 type ParentT = (typeof I18N)["ru"]["parent"];
 
@@ -431,9 +432,9 @@ const ParentCard = ({ lang, t, kid }: { lang: Lang; t: ParentT; kid: any }) => {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                 <div>
                   <div style={{ fontSize: 12, color: "var(--muted)", textTransform: "uppercase", letterSpacing: 0.5 }}>{tt("Тип", "Түрү")}</div>
-                  <div style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 700, marginTop: 2 }}>{c.type}</div>
+                  <div style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 700, marginTop: 2 }}>{cardTypeText(c.type, lang)}</div>
                 </div>
-                <span className={`pill pill--${c.status}`}>{c.status}</span>
+                <span className={`pill pill--${c.status}`}>{cardStatusText(c.status, lang)}</span>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
@@ -519,7 +520,7 @@ const ParentCard = ({ lang, t, kid }: { lang: Lang; t: ParentT; kid: any }) => {
             {historyCards.map((c) => (
               <div key={c.club_card_id} style={{ background: "#fff", border: "1px solid var(--line)", borderRadius: "var(--r-md)", padding: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>{c.type}</div>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{cardTypeText(c.type, lang)}</div>
                   <div style={{ fontSize: 11, color: "var(--muted)" }}>{fmtDate(c.start_date)} — {fmtDate(c.end_date)}</div>
                 </div>
                 <span className={`pill pill--${c.status}`}>{c.status}</span>

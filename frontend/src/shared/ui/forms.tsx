@@ -8,8 +8,9 @@ import { toast } from "./toast";
 import { useFamilies, useSections, useChildren, useCoaches, useCards, useFreezableCards, useGroups as useGroupsQ, useManagers, useGroupSchedule, useProfile, useCoachSections, useChildActiveCards, useDepositBalance, useOrgSettings, useChildEnrollments, useCardPlans } from "../api/queries";
 import { resolveAvatarUrl } from "../api/avatar";
 import { SOURCE_OPTIONS } from "../sources";
-import { computeWindowEnd, formatWindow } from "../lib/enrollmentWindow";
-import { fmtD } from "../lib/dates";
+import { computeWindowEnd, scheduleDaysText } from "../lib/enrollmentWindow";
+import { CARD_MONTHS, cardLabel, lessonsText } from "../lib/cards";
+import { fmtD, fmtPeriod, addMonthsIso, addDaysIso } from "../lib/dates";
 import { useAuth } from "../auth/AuthProvider";
 import { usePerm } from "../auth/rbac";
 import { normalizeE164KG, isValidPhoneInput } from "../auth/normalizePhone";
@@ -2721,22 +2722,29 @@ export const SellCardModal = ({
   const debtAfterSale = Math.max(0, cashDue - cashAmount);
 
   const today = new Date().toISOString().slice(0, 10);
-  const inDays = (n: number) => {
-    const d = new Date(); d.setDate(d.getDate() + n);
-    return d.toISOString().slice(0, 10);
-  };
   // Срок карты: из тарифа; при ручном вводе — фолбэк по типу.
   const periodDays = plan?.duration_days
     ?? (type === "quarterly" ? 90 : type === "half_year" ? 180 : type === "annual" ? 360 : type === "nine_month" ? 270 : 30);
 
-  // Окно записи: считаем только если выбрана группа с расписанием.
-  // Иначе окно открытое (null/null) и карта живёт по обычному периоду.
-  // Окно задаём только когда посчитали дату конца — без half-open окон.
   const lessonCount = Number(total) || 0;
   const hasWindow = !!groupId && groupSchedule.length > 0;
-  const windowEnd = hasWindow ? computeWindowEnd(firstLessonDate, lessonCount, groupSchedule) : null;
-  const windowStart = windowEnd ? firstLessonDate : null;
-  const windowLabel = windowEnd ? formatWindow(lang, firstLessonDate, windowEnd, groupSchedule, lessonCount) : null;
+  // Срок абонемента календарный: «1 месяц» — с 13 октября по 13 ноября
+  // (ТЗ §4.1, просьба офиса 2026-10-20). Раньше конец ставился на дату
+  // N-го занятия по расписанию, и месячный выходил на 3–4 недели.
+  // Пакеты в месяцах считаем месяцами, остальное — днями тарифа.
+  const cardStart = hasWindow ? firstLessonDate : today;
+  const months = CARD_MONTHS[type];
+  const periodEnd = months ? addMonthsIso(cardStart, months) : addDaysIso(cardStart, periodDays);
+  // Редкое расписание (две тренировки в неделю на 12 занятий): все занятия
+  // в месяц не помещаются — тогда срок тянется до N-го занятия, иначе
+  // оплаченные занятия сгорят.
+  const nthLesson = hasWindow ? computeWindowEnd(firstLessonDate, lessonCount, groupSchedule) : null;
+  const cardEnd = nthLesson && nthLesson > periodEnd ? nthLesson : periodEnd;
+  // Окно записи в группу (ростер и табель) совпадает со сроком абонемента.
+  // Без группы с расписанием окно открытое (null/null).
+  const windowStart = hasWindow ? cardStart : null;
+  const windowEnd = hasWindow ? cardEnd : null;
+  const scheduleDays = hasWindow ? scheduleDaysText(lang, groupSchedule) : "";
 
   const submit = async () => {
     setErr(null);
@@ -2773,10 +2781,6 @@ export const SellCardModal = ({
       setErr(t("Сумма с депозита превышает доступный баланс", "Депозиттен суммасы балансты ашат"));
       return;
     }
-    if (hasWindow && lessonCount > 0 && !windowEnd) {
-      setErr(t("Не удалось рассчитать окно по расписанию группы", "Топтун жадыбалы боюнча терезе эсептелген жок"));
-      return;
-    }
     try {
       await sell.mutateAsync({
         child_id: childId, type, total_lessons: Number(total),
@@ -2786,10 +2790,9 @@ export const SellCardModal = ({
         freeze_quota: plan?.freeze_quota ?? 0,
         price: Number(price), discount_pct: pctNum,
         discount_reason: discountReason.trim() || null,
-        // При окне: карта стартует с первой тренировки и «действует до»
-        // даты N-го занятия (совпадает с окном ростера). Иначе — обычный период.
-        start_date: windowStart ?? today,
-        end_date: windowEnd ?? inDays(periodDays),
+        // С группой карта стартует с первой тренировки, без группы — сегодня.
+        start_date: cardStart,
+        end_date: cardEnd,
         payment_method: method,
         section_id: sectionId,
         group_id: groupId || null,
@@ -3004,19 +3007,25 @@ export const SellCardModal = ({
         </Field>
       )}
 
-      {/* Окно записи: дата первой тренировки → дата N-го занятия */}
+      {/* Срок абонемента; с группой это же окно записи в табель */}
+      {sectionId && (!groupId || hasWindow) && (
+        <div style={{
+          marginTop: 4, marginBottom: 4, padding: "8px 12px",
+          background: "var(--blue-50)", border: "1px solid var(--blue-100)",
+          color: "var(--blue-ink)", borderRadius: "var(--r-sm)", fontSize: 12,
+          display: "flex", alignItems: "center", gap: 8,
+        }}>
+          <Icon name="calendar" size={14} />
+          <span>
+            {t("Срок", "Мөөнөтү")}: <b>{fmtPeriod(cardStart, cardEnd, lang)}</b>
+            {lessonCount > 0 ? ` · ${lessonsText(lessonCount, lang)}` : ""}
+            {scheduleDays ? ` · ${scheduleDays}` : ""}
+            {cardEnd !== periodEnd ? ` · ${t("по расписанию занятия не помещаются в срок — продлён до последнего", "жадыбал боюнча сабактар мөөнөткө батпайт — акыркысына чейин узартылды")}` : ""}
+          </span>
+        </div>
+      )}
       {groupId && (
-        windowLabel ? (
-          <div style={{
-            marginTop: 4, marginBottom: 4, padding: "8px 12px",
-            background: "var(--blue-50)", border: "1px solid var(--blue-100)",
-            color: "var(--blue-ink)", borderRadius: "var(--r-sm)", fontSize: 12,
-            display: "flex", alignItems: "center", gap: 8,
-          }}>
-            <Icon name="calendar" size={14} />
-            <span>{t("Окно записи", "Жазылуу терезеси")}: <b>{windowLabel}</b></span>
-          </div>
-        ) : groupSchedule.length === 0 ? (
+        groupSchedule.length === 0 ? (
           <div style={{
             marginTop: 4, marginBottom: 4, padding: "8px 12px",
             background: "var(--bg-soft)", border: "1px solid var(--line)",
@@ -3314,8 +3323,7 @@ export const CreateFreezeModal = ({ open, onClose, lang }: { open: boolean; onCl
           <option value="">— {t("выбрать", "тандоо")} —</option>
           {shown.map((c) => (
             <option key={c.id} value={c.id}>
-              {c.child?.full_name ?? c.id.slice(0, 8)} · {c.type}
-              {c.total_lessons ? ` · ${c.total_lessons}` : ""} · {fmtD(c.start_date)} → {fmtD(c.end_date)} · {c.status}
+              {c.child?.full_name ?? c.id.slice(0, 8)} · {cardLabel(c, lang)}
             </option>
           ))}
         </Select>

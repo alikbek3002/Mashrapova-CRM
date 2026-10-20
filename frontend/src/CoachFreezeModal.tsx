@@ -13,6 +13,7 @@ import { useCreateFreeze } from "./shared/api/mutations";
 import { Select } from "./shared/ui/Select";
 import { DateInput } from "./shared/ui/DateInput";
 import { SkeletonText } from "./shared/ui/Skeleton";
+import { cardLabel } from "./shared/lib/cards";
 
 const ymd = (d: Date) => {
   const y = d.getFullYear();
@@ -117,7 +118,7 @@ export const CoachFreezeModal = ({
                 <option value="">—</option>
                 {cards.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.type} · {c.start_date} — {c.end_date}
+                    {cardLabel(c, lang)}
                   </option>
                 ))}
               </Select>

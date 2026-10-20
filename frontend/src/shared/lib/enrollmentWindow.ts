@@ -55,30 +55,13 @@ export const computeWindowEnd = (
   return null;
 };
 
-const ddmm = (s: string): string => {
-  const [, m, d] = parseYmd(s);
-  return `${String(d).padStart(2, "0")}.${String(m).padStart(2, "0")}`;
-};
-
 /**
- * Превью окна для кассы: «12 занятий · Пн/Ср/Пт · 21.05 → 13.06».
+ * Дни тренировок группы для кассы: «Пн/Ср/Пт».
  */
-export const formatWindow = (
-  lang: Lang,
-  start: string,
-  end: string | null,
-  schedule: ScheduleSlot[],
-  count: number,
-): string => {
+export const scheduleDaysText = (lang: Lang, schedule: ScheduleSlot[]): string => {
   const wd = I18N[lang].weekdays; // с понедельника
-  const days = Array.from(new Set(schedule.map((s) => s.day_of_week)))
+  return Array.from(new Set(schedule.map((s) => s.day_of_week)))
     .sort((a, b) => weekdayIdx(a) - weekdayIdx(b))
     .map((dow) => wd[weekdayIdx(dow)])
     .join("/");
-  const lessonsWord = lang === "ru" ? "занятий" : "сабак";
-  const range = end ? `${ddmm(start)} → ${ddmm(end)}` : ddmm(start);
-  const parts = [`${count} ${lessonsWord}`];
-  if (days) parts.push(days);
-  parts.push(range);
-  return parts.join(" · ");
 };
