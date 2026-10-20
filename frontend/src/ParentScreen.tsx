@@ -161,6 +161,7 @@ const ParentHome = ({ lang, t, kid, onOpenCard }: { lang: Lang; t: ParentT; kid:
   const { data: notes = [] } = useProgressNotes(kid.id);
   const { data: manager } = useProfile(kid.responsible_manager_id ?? null);
   const { data: primaryCoach } = useChildPrimaryCoach(kid.id);
+  const { data: org } = useOrganization();
 
   const pct = balance && balance.total_lessons ? Math.round(((balance.remaining ?? 0) / balance.total_lessons) * 100) : 0;
   const next = lessons[0];
@@ -214,7 +215,7 @@ const ParentHome = ({ lang, t, kid, onOpenCard }: { lang: Lang; t: ParentT; kid:
           icon="user"
           label={tt("Менеджер", "Менеджер")}
           name={manager?.full_name}
-          phone={manager?.phone ?? null}
+          {...managerContact(org, manager, tt)}
           empty={tt("не назначен", "дайындалган эмес")}
         />
         <ContactRow
@@ -972,13 +973,33 @@ const NotePhoto = ({ path }: { path: string }) => {
 };
 
 // Контактная строка (менеджер/тренер) в Home
+// Родителю звонят на рабочий номер академии, а не на личный телефон
+// менеджера, который завёл ученика (просьба клиента 2026-10-21). Номер —
+// «Телефон клуба» в Настройках; пока он пуст, остаётся номер менеджера.
+const managerContact = (
+  org: { phone?: string | null; whatsapp_number?: string | null } | null | undefined,
+  manager: { phone?: string | null } | null | undefined,
+  tt: (ru: string, ky: string) => string,
+): { phone: string | null; whatsapp: string | null; note?: string } =>
+  org?.phone
+    ? {
+        phone: org.phone,
+        whatsapp: org.whatsapp_number || org.phone,
+        note: tt(`${org.phone} · рабочий номер академии`, `${org.phone} · академиянын жумушчу номери`),
+      }
+    : { phone: manager?.phone ?? null, whatsapp: manager?.phone ?? null };
+
 const ContactRow = ({
-  icon, label, name, phone, empty,
+  icon, label, name, phone, whatsapp, note, empty,
 }: {
   icon: string;
   label: string;
   name: string | null | undefined;
   phone: string | null | undefined;
+  /** Номер для WhatsApp, если отличается от телефона. */
+  whatsapp?: string | null;
+  /** Строка под именем — например, чей это номер. */
+  note?: string;
   empty: string;
 }) => (
   <div style={{
@@ -997,6 +1018,7 @@ const ContactRow = ({
       <div style={{ fontWeight: 600, fontSize: 14, marginTop: 2 }}>
         {name ?? <span style={{ color: "var(--muted)", fontWeight: 400 }}>{empty}</span>}
       </div>
+      {note && <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>{note}</div>}
     </div>
     {phone && (
       <>
@@ -1004,7 +1026,7 @@ const ContactRow = ({
           <Icon name="phone" size={16} />
         </a>
         <a
-          href={`https://wa.me/${phone.replace(/[^0-9]/g, "")}`}
+          href={`https://wa.me/${(whatsapp || phone).replace(/[^0-9]/g, "")}`}
           target="_blank" rel="noreferrer"
           className="icon-btn"
           title="WhatsApp"
@@ -1355,7 +1377,7 @@ const ParentProfile = ({ lang, kid }: { lang: Lang; t?: ParentT; kid?: any }) =>
               icon="user"
               label={tt("Менеджер", "Менеджер")}
               name={manager?.full_name}
-              phone={manager?.phone ?? null}
+              {...managerContact(org, manager, tt)}
               empty={tt("не назначен", "дайындалган эмес")}
             />
             <ContactRow
