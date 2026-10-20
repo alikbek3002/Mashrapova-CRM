@@ -3357,23 +3357,29 @@ button.journal-mark:not(:disabled):active { transform: scale(0.92); }
 .journal-picker__btn.jp-absent .journal-picker__icon {
   background: oklch(0.68 0.18 25); color: #fff;
 }
+/* Второстепенное действие под отметкой. Раньше красный пунктир на розовом
+   («синий» в теме — бренд-красный) читался как незаполненное обязательное
+   поле, и тренеры думали, что без заметки отметку не поставить. */
 .journal-picker__note-btn {
   width: 100%;
-  display: flex; align-items: center; justify-content: center; gap: 10px;
-  padding: 14px;
-  background: var(--blue-50);
-  color: var(--blue-ink);
-  border: 1.5px dashed var(--blue);
-  border-radius: 14px;
-  font-weight: 700;
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  padding: 12px;
+  background: var(--surface);
+  color: var(--ink-2);
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  font-weight: 600;
   font-size: 14px;
   cursor: pointer;
-  min-height: 50px;
+  min-height: 46px;
 }
+.journal-picker__note-btn:not(:disabled):hover { background: var(--bg-soft); }
 .journal-picker__note-btn:not(:disabled):active {
   transform: scale(0.98);
-  background: var(--blue-100);
+  background: var(--bg-soft);
 }
+.journal-picker__note-opt { color: var(--muted); font-weight: 500; }
+.journal-picker__hint { margin: -2px 0 10px; font-size: 12.5px; color: var(--muted); text-align: center; }
 .journal-picker__cancel {
   margin-top: 10px;
   width: 100%;

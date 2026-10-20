@@ -781,6 +781,12 @@ const CoachTabel = ({ lang, t, coachId }: { lang: Lang; t: CoachT; coachId: stri
                 })}
               </div>
             )}
+            {!picker.isFuture && !picker.isClosed && (
+              <div className="journal-picker__hint">
+                {tt("Отметка сохраняется сразу. Заметка родителю — по желанию.",
+                    "Белги дароо сакталат. Ата-энеге эскертүү — каалоо боюнча.")}
+              </div>
+            )}
             <button
               type="button"
               className="journal-picker__note-btn"
@@ -795,7 +801,8 @@ const CoachTabel = ({ lang, t, coachId }: { lang: Lang; t: CoachT; coachId: stri
               style={picker.isFuture ? { opacity: 0.4, cursor: "not-allowed" } : undefined}
             >
               <Icon name="note" size={16} stroke={2.25} />
-              {tt("Написать заметку родителю", "Ата-энеге эскертүү жазуу")}
+              {tt("Заметка родителю", "Ата-энеге эскертүү")}
+              <span className="journal-picker__note-opt">{tt("· необязательно", "· милдеттүү эмес")}</span>
             </button>
             <button
               type="button"
