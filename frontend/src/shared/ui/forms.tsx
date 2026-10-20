@@ -7,6 +7,7 @@ import { useAddChild, useAddFamily, useAddSection, useAddGroup, useAddLead, useS
 import { toast } from "./toast";
 import { useFamilies, useSections, useChildren, useCoaches, useCards, useFreezableCards, useGroups as useGroupsQ, useManagers, useGroupSchedule, useProfile, useCoachSections, useChildActiveCards, useDepositBalance, useOrgSettings, useChildEnrollments, useCardPlans } from "../api/queries";
 import { resolveAvatarUrl } from "../api/avatar";
+import { SOURCE_OPTIONS } from "../sources";
 import { computeWindowEnd, formatWindow } from "../lib/enrollmentWindow";
 import { fmtD } from "../lib/dates";
 import { useAuth } from "../auth/AuthProvider";
@@ -1216,9 +1217,7 @@ export const AddChildModal = ({
       <Field label={t("Источник клиента", "Кардардын булагы")}>
         <Select value={source} onChange={(e) => setSource(e.target.value as ClientSource | "")} disabled={busy}>
           <option value="">{t("— не указан —", "— көрсөтүлгөн эмес —")}</option>
-          <option value="target">{t("Таргет (Instagram)", "Таргет (Instagram)")}</option>
-          <option value="referral">{t("Рекомендация", "Сунуштама")}</option>
-          <option value="other">{t("Другое", "Башка")}</option>
+          {SOURCE_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o[lang]}</option>)}
         </Select>
       </Field>
 
@@ -2507,10 +2506,7 @@ export const AddLeadModal = ({ open, onClose, lang }: { open: boolean; onClose: 
         </Field>
         <Field label={t("Источник", "Булак")}>
           <Select value={source} onChange={(e) => setSource(e.target.value as LeadSource)}>
-            <option value="target">{t("Таргет Instagram", "Instagram таргет")}</option>
-            <option value="referral">{t("Рекомендация", "Сунуштама")}</option>
-            <option value="direct">{t("Прямое обращение", "Түз кайрылуу")}</option>
-            <option value="other">{t("Другое", "Башка")}</option>
+            {SOURCE_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o[lang]}</option>)}
           </Select>
         </Field>
         <Field label={t("Instagram", "Instagram")}>

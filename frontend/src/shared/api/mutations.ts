@@ -10,7 +10,7 @@ import { writeAttendanceMarks } from "../offline/ops";
 const formatSum = (n: number): string => `${Math.round(n).toLocaleString("ru-RU")} сом`;
 import { toast } from "../ui/toast";
 import { useAuth } from "../auth/AuthProvider";
-import type { CardType, PaymentMethod, LeadStage, LeadSource, Lead, AttendanceStatus, SectionCategory, LessonFault } from "../types/database";
+import type { CardType, PaymentMethod, LeadStage, LeadSource, ClientSource, Lead, AttendanceStatus, SectionCategory, LessonFault } from "../types/database";
 
 // Парсит сырое сообщение из apiPost/apiPatch (формат "API 409: {\"error\":\"code\"}")
 // и возвращает понятный русский текст. Если код не распознан — возвращает
@@ -140,7 +140,7 @@ export const useAddChild = () => {
       card_number?: string | null;
       responsible_manager_id?: string | null;
       amo_url?: string | null;
-      source?: "target" | "referral" | "other" | null;
+      source?: ClientSource | null;
       // ТЗ §3.3: кто привёл клиента — основание для бонуса «Приведи друга».
       referred_by_child_id?: string | null;
     }) => {

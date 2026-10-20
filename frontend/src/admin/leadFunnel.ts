@@ -7,6 +7,7 @@
 // Инбокс показывает уже зафиксированные события, воронка — текущую
 // просрочку в минутах. Источник правды для срока один: org_settings.
 import type { Lead, LeadStage } from "../shared/types/database";
+import { sourceText } from "../shared/sources";
 
 export const FUNNEL_STAGES: LeadStage[] = [
   "new",
@@ -57,15 +58,7 @@ export const channelLabel = (c: string | null, ru: boolean): string => {
   }
 };
 
-export const sourceLabel = (s: string | null, ru: boolean): string => {
-  switch (s) {
-    case "target":   return ru ? "Таргет Instagram" : "Instagram таргет";
-    case "referral": return ru ? "Рекомендация" : "Сунуштама";
-    case "direct":   return ru ? "Прямое обращение" : "Түз кайрылуу";
-    case "other":    return ru ? "Другое" : "Башка";
-    default:         return "—";
-  }
-};
+export const sourceLabel = (s: string | null, ru: boolean): string => sourceText(s, ru ? "ru" : "ky");
 
 // Что именно требует действия прямо сейчас. Порядок = приоритет:
 // первым идёт то, что просрочено дольше всего по нормативу.

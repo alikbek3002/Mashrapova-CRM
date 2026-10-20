@@ -34,6 +34,7 @@ import { freezeOutcome, type CardType, type AttendanceStatus, type PaymentMethod
 import { DateInput } from "../shared/ui/DateInput";
 import { SkeletonRows } from "../shared/ui/Skeleton";
 import { Select } from "../shared/ui/Select";
+import { sourceText } from "../shared/sources";
 
 type Role = "admin" | "coach" | "parent";
 type TabId = "subs" | "att" | "pay" | "deposit" | "freezes" | "notes" | "comments" | "group" | "pt";
@@ -66,11 +67,6 @@ const CARD_STATUS_LABEL: Record<string, { ru: string; ky: string }> = {
   archived: { ru: "в архиве", ky: "архивде" },
 };
 
-const SOURCE_LABEL: Record<"target" | "referral" | "other", { ru: string; ky: string }> = {
-  target: { ru: "таргет (Instagram)", ky: "таргет (Instagram)" },
-  referral: { ru: "рекомендация", ky: "сунуштама" },
-  other: { ru: "другое", ky: "башка" },
-};
 
 const ageFromDob = (dob: string): number => {
   const d = new Date(dob); const now = new Date();
@@ -177,7 +173,7 @@ export const ChildDrawer = ({
               <span>
                 📣 {t("Источник", "Булагы")}:{" "}
                 {child.source
-                  ? <b>{SOURCE_LABEL[child.source][lang]}</b>
+                  ? <b>{sourceText(child.source, lang)}</b>
                   : <span style={{ color: "var(--muted)" }}>{t("не указан", "көрсөтүлгөн эмес")}</span>}
               </span>
             </div>
