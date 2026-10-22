@@ -975,7 +975,8 @@ const NotePhoto = ({ path }: { path: string }) => {
 // Контактная строка (менеджер/тренер) в Home
 // Родителю звонят на рабочий номер академии, а не на личный телефон
 // менеджера, который завёл ученика (просьба клиента 2026-10-21). Номер —
-// «Телефон клуба» в Настройках; пока он пуст, остаётся номер менеджера.
+// «Телефон клуба» в Настройках; пока он пуст, кнопок звонка нет совсем:
+// личный номер менеджера родителю не показываем.
 const managerContact = (
   org: { phone?: string | null; whatsapp_number?: string | null } | null | undefined,
   manager: { phone?: string | null } | null | undefined,
@@ -987,7 +988,7 @@ const managerContact = (
         whatsapp: org.whatsapp_number || org.phone,
         note: tt(`${org.phone} · рабочий номер академии`, `${org.phone} · академиянын жумушчу номери`),
       }
-    : { phone: manager?.phone ?? null, whatsapp: manager?.phone ?? null };
+    : { phone: null, whatsapp: null };
 
 const ContactRow = ({
   icon, label, name, phone, whatsapp, note, empty,
