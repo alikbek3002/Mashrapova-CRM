@@ -22,6 +22,14 @@ import { cardTypeText, cardStatusText } from "./shared/lib/cards";
 
 type ParentT = (typeof I18N)["ru"]["parent"];
 
+const KID_STATUS: Record<string, { ru: string; ky: string }> = {
+  active: { ru: "Занимается", ky: "Катышат" },
+  frozen: { ru: "Заморозка", ky: "Тындырылган" },
+  debtor: { ru: "Есть долг", ky: "Карызы бар" },
+  expired: { ru: "Абонемент закончился", ky: "Абонемент бүткөн" },
+  archived: { ru: "В архиве", ky: "Архивде" },
+};
+
 const initialsOf = (name: string) =>
   name.split(" ").map((w) => w[0]).join("").slice(0, 2).toUpperCase();
 const ageFromDob = (dob: string) => {
@@ -206,7 +214,7 @@ const ParentHome = ({ lang, t, kid, onOpenCard }: { lang: Lang; t: ParentT; kid:
           <div className="kid-hero__stat">
             <div className="kid-hero__stat-label">{tt("Статус", "Абалы")}</div>
             <div className="kid-hero__stat-value" style={{ fontSize: 18 }}>
-              <span className={`pill pill--${kid.status}`}>{kid.status}</span>
+              <span className={`pill pill--${kid.status}`}>{KID_STATUS[kid.status as string]?.[lang] ?? kid.status}</span>
             </div>
           </div>
         </div>

@@ -1,6 +1,6 @@
-import { useEffect, useState, lazy, Suspense } from "react";
+import { useEffect, useRef, useState, lazy, Suspense } from "react";
 import type { ComponentType } from "react";
-import { QueryClient } from "@tanstack/react-query";
+import { QueryClient, useIsRestoring } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
 import { I18N } from "./data";
@@ -83,6 +83,11 @@ const persister = createAsyncStoragePersister({
   deserialize,
 });
 
+// Чей кэш лежит в localStorage. Кэш запросов переживает выход из системы,
+// и следующий вошедший на этом же устройстве видел чужие данные: директор
+// после демо-клиента получал список «Дети» из одного человека.
+const CACHE_OWNER_KEY = "uq-query-cache-owner";
+
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -119,6 +124,19 @@ const readLang = (): Lang => {
 
 const Shell = () => {
   const { user, loading, profileError, signOut } = useAuth();
+  // Пока кэш поднимается из localStorage, проверять владельца рано: восстановление
+  // вернуло бы чужие данные поверх очистки.
+  const isRestoring = useIsRestoring();
+  const ownerChecked = useRef<string | null>(null);
+  if (user && !isRestoring && ownerChecked.current !== user.id) {
+    ownerChecked.current = user.id;
+    let owner: string | null = null;
+    try { owner = localStorage.getItem(CACHE_OWNER_KEY); } catch {}
+    if (owner !== user.id) {
+      queryClient.clear();
+      try { localStorage.setItem(CACHE_OWNER_KEY, user.id); } catch {}
+    }
+  }
   const [lang, setLang] = useState<Lang>(readLang);
 
   useEffect(() => {
@@ -186,7 +204,7 @@ const Shell = () => {
   }, [user?.id, user?.role]);
 
   // Проверка сессии: скелетон интерфейса вместо надписи «Загрузка…».
-  if (loading) {
+  if (loading || (user && isRestoring)) {
     return (
       <div className="cards-bordered">
         <div className="app-chrome">
