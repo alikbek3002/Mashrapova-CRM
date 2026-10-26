@@ -4693,6 +4693,10 @@ select.sel-native.is-open { border-color: var(--ink) !important; box-shadow: 0 0
 .lead-card:hover, .lead-card:focus-visible { border-color: var(--blue); outline: none; }
 .lead-card__top { display: flex; justify-content: space-between; gap: 8px; font-size: 11px; color: var(--muted); }
 .lead-card__channel { font-weight: 600; color: var(--ink-2); }
+/* Канал обращения — цветом, чтобы WhatsApp и Instagram различались с одного взгляда. */
+.lead-card__channel--whatsapp { color: #128c4b; }
+.lead-card__channel--instagram { color: #c13584; }
+.lead-channels .tabs__btn { display: inline-flex; align-items: center; gap: 5px; }
 .lead-card__name {
   font-weight: 700;
   font-size: 13.5px;

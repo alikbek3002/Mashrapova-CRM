@@ -260,6 +260,7 @@ export const Icon = ({ name, size = 18, stroke = 1.75, className = "", style }: 
     case "plus": return (<svg viewBox="0 0 24 24" style={s} className={className}><path d="M12 5v14M5 12h14" {...p}/></svg>);
     case "search": return (<svg viewBox="0 0 24 24" style={s} className={className}><circle cx="11" cy="11" r="7" {...p}/><path d="m20 20-3.5-3.5" {...p}/></svg>);
     case "phone": return (<svg viewBox="0 0 24 24" style={s} className={className}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.86.31 1.7.58 2.51a2 2 0 0 1-.45 2.11L8 9.5a16 16 0 0 0 6 6l1.16-1.16a2 2 0 0 1 2.11-.45c.81.27 1.65.46 2.51.58A2 2 0 0 1 22 16.92z" {...p}/></svg>);
+    case "instagram": return (<svg viewBox="0 0 24 24" style={s} className={className}><rect x="3" y="3" width="18" height="18" rx="5" {...p}/><circle cx="12" cy="12" r="4" {...p}/><circle cx="17.5" cy="6.5" r="0.8" {...p}/></svg>);
     case "whatsapp": return (<svg viewBox="0 0 24 24" style={s} className={className}><path d="M3 21l1.6-5A8.5 8.5 0 1 1 8 19.4L3 21z" {...p}/><path d="M8.5 9c.5 1.5 1.5 2.5 3 3.5 1 .7 2 .5 2.5 0l.8-.8 2 1.2" {...p}/></svg>);
     case "voice": return (<svg viewBox="0 0 24 24" style={s} className={className}><rect x="9" y="3" width="6" height="12" rx="3" {...p}/><path d="M5 11a7 7 0 0 0 14 0" {...p}/><path d="M12 18v3" {...p}/></svg>);
     case "check": return (<svg viewBox="0 0 24 24" style={s} className={className}><path d="m5 12 5 5L20 7" {...p}/></svg>);
