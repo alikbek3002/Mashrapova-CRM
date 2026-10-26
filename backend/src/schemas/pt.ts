@@ -46,7 +46,7 @@ export const ptSellSchema = z.object({
   service_id: z.string().uuid(),
   coach_id: z.string().uuid(),
   group_name: z.string().max(200).nullable().optional(),
-  payment_method: z.enum(["cash", "terminal"]).default("cash"),
+  payment_method: z.enum(["cash", "terminal", "transfer"]).default("cash"),
   items: z
     .array(
       z.object({
@@ -65,7 +65,7 @@ export const ptSellSchema = z.object({
 export const ptPaySchema = z.object({
   amount: z.number().nonnegative().default(0),
   use_deposit: z.number().nonnegative().default(0),
-  method: z.enum(["cash", "terminal"]).default("cash"),
+  method: z.enum(["cash", "terminal", "transfer"]).default("cash"),
   comment: z.string().max(500).nullable().optional(),
 });
 
@@ -81,7 +81,7 @@ export const ptRefundSchema = z.object({
   amount: z.number().positive(),
   reason: z.string().min(1).max(500),
   to_deposit: z.boolean().default(true),
-  method: z.enum(["cash", "terminal"]).default("cash"),
+  method: z.enum(["cash", "terminal", "transfer"]).default("cash"),
 });
 
 export const ptChangeCoachSchema = z.object({
@@ -96,7 +96,7 @@ export const ptAddParticipantSchema = z.object({
   pay_deposit: z.number().nonnegative().default(0),
   in_debt: z.boolean().default(false),
   debt_comment: z.string().max(500).nullable().optional(),
-  payment_method: z.enum(["cash", "terminal"]).default("cash"),
+  payment_method: z.enum(["cash", "terminal", "transfer"]).default("cash"),
 });
 
 // §5/§18 Запись на тренировку

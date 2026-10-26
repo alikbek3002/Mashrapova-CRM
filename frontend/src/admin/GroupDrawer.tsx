@@ -453,7 +453,7 @@ const KidsTab = ({ group, enrollments, lang }: { group: any; enrollments: any[];
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div className="cell-main" style={{ color: "var(--blue-600, var(--blue))" }}>{child.full_name}</div>
                     <div className="cell-sub" style={{ fontSize: 11 }}>
-                      {ageFromDob(child.birth_date)} {t("лет", "жаш")}
+                      {child.birth_date ? `${ageFromDob(child.birth_date)} ${t("лет", "жаш")}` : t("возраст не указан", "жашы көрсөтүлгөн эмес")}
                       {child.card_number ? ` · ${child.card_number}` : ""}
                     </div>
                   </div>
@@ -686,7 +686,7 @@ const KidsTab = ({ group, enrollments, lang }: { group: any; enrollments: any[];
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div className="cell-main" style={{ fontSize: 13 }}>{k.full_name}</div>
                         <div className="cell-sub" style={{ fontSize: 11 }}>
-                          {ageFromDob(k.birth_date)} {t("лет", "жаш")}
+                          {k.birth_date ? `${ageFromDob(k.birth_date)} ${t("лет", "жаш")}` : t("возраст не указан", "жашы көрсөтүлгөн эмес")}
                           {groupBadges ? ` · ${groupBadges}` : ` · ${t("нет группы", "топсуз")}`}
                         </div>
                         {blocked && (

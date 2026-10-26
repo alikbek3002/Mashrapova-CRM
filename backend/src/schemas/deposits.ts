@@ -3,7 +3,7 @@ import { z } from "zod";
 export const depositTopUpSchema = z.object({
   child_id: z.string().uuid(),
   amount: z.number().positive(),
-  method: z.enum(["cash", "terminal"]),
+  method: z.enum(["cash", "terminal", "transfer"]),
   comment: z.string().max(500).optional(),
 });
 export type DepositTopUpInput = z.infer<typeof depositTopUpSchema>;

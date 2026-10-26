@@ -19,7 +19,7 @@ export const cardSellSchema = z
     discount_reason: z.string().trim().min(1).nullable().optional(),
     start_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     end_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    payment_method: z.enum(["cash", "terminal"]),
+    payment_method: z.enum(["cash", "terminal", "transfer"]),
     // Секция, для которой продан абонемент (для отчётов и продления).
     section_id: z.string().uuid().nullable().optional(),
     // Опциональная группа: если задана, ребёнок сразу зачислится в неё.

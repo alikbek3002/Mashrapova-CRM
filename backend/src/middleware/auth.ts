@@ -8,7 +8,9 @@ export type AppRole =
   | "manager"
   | "cashier"
   | "coach"
-  | "parent";
+  | "parent"
+  // Взрослый клиент: сам себе «родитель» — права те же, что у parent.
+  | "client";
 
 export type AuthUser = {
   id: string;

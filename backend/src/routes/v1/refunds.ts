@@ -132,7 +132,9 @@ export const refundsRoutes = async (app: FastifyInstance) => {
         .order("paid_at", { ascending: true })
         .limit(1)
         .maybeSingle();
-      const method = (origPayment?.method as "cash" | "terminal") ?? "cash";
+      // У истории из Excel способ бывает «не указан» — возврат тогда наличными.
+      const orig = origPayment?.method as "cash" | "terminal" | "transfer" | "unknown" | undefined;
+      const method = orig && orig !== "unknown" ? orig : "cash";
 
       // Атомарно: refund + payment(-amount) + deposit_tx(+amount) + archive card.
       const { data, error: rpcErr } = await supabaseAdmin.rpc("create_refund_with_deposit", {

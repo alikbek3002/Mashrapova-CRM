@@ -656,6 +656,27 @@ export const usePayments = () =>
     },
   });
 
+// Платежи за период — для отчётов. usePayments отдаёт только последние 200,
+// а за месяц у Академии их ~600: итоги «Финансов» считались бы по обрывку.
+export const usePaymentsInRange = (from: string, to: string) =>
+  useQuery({
+    queryKey: ["payments", "range", from, to],
+    enabled: !!from && !!to,
+    queryFn: async (): Promise<PaymentWithChild[]> => {
+      const start = new Date(`${from}T00:00:00`).toISOString();
+      const end = new Date(`${to}T23:59:59.999`).toISOString();
+      return fetchAllRows<PaymentWithChild>((a, b) =>
+        supabase
+          .from("payments")
+          .select("*, child:children(full_name), receiver:profiles!received_by(full_name)")
+          .gte("paid_at", start)
+          .lte("paid_at", end)
+          .order("paid_at", { ascending: false })
+          .order("id")
+          .range(a, b) as unknown as PagedResult<PaymentWithChild>);
+    },
+  });
+
 // Платежи одного ребёнка — для карточки ребёнка (PayTab). Раньше там грузились
 // последние 200 платежей клуба и фильтровались по child_id на клиенте.
 export const usePaymentsForChild = (childId?: string) =>
@@ -2650,7 +2671,7 @@ export const useOutboundMessages = (limit = 200) =>
 export type ChildForParent = {
   id: string;
   full_name: string;
-  birth_date: string;
+  birth_date: string | null;
   status: string;
   responsible_manager_id: string | null;
   family_id: string;
@@ -2660,7 +2681,7 @@ export const useMyChildren = () => {
   const { user } = useAuth();
   return useQuery({
     queryKey: ["my_children", user?.id],
-    enabled: !!user?.id && user?.role === "parent",
+    enabled: !!user?.id && (user?.role === "parent" || user?.role === "client"),
     // Состав детей у родителя меняется только когда менеджер сам
     // добавляет/архивирует. Раз в 10 мин — с запасом.
     staleTime: 10 * 60_000,

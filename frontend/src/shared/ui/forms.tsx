@@ -775,7 +775,7 @@ type ChildInitial = {
   id?: string;
   family_id?: string;
   full_name?: string;
-  birth_date?: string;
+  birth_date?: string | null;
   card_number?: string | null;
   responsible_manager_id?: string | null;
   amo_url?: string | null;
@@ -866,6 +866,10 @@ export const AddChildModal = ({
   const { data: parentAccount } = useProfile(isEdit ? selectedFamily?.parent_user_id ?? null : null);
   const createParentAcct = useCreateParentAccount();
   const [grantOpen, setGrantOpen] = useState(false);
+  // Кому выдаём вход: родителю или самому клиенту, если он взрослый и
+  // занимается сам (просьба Академии 2026-10-26).
+  const [grantRole, setGrantRole] = useState<"parent" | "client">("parent");
+  const [grantPhone, setGrantPhone] = useState("");
   const [grantName, setGrantName] = useState("");
   const [grantPw, setGrantPw] = useState("");
   const [grantDone, setGrantDone] = useState("");
@@ -877,13 +881,21 @@ export const AddChildModal = ({
   };
   const grantAccess = async () => {
     setErr(null);
-    const phone = fatherPhone || motherPhone;
+    const self = grantRole === "client";
+    const phone = self ? (grantPhone.trim() || fatherPhone || motherPhone) : (fatherPhone || motherPhone);
     if (!phone) {
-      setErr(t("Укажите телефон отца или матери — по нему родитель будет входить в приложение", "Атасынын же энесинин телефонун жазыңыз — ата-эне тиркемеге ошол номер менен кирет"));
+      setErr(self
+        ? t("Укажите телефон клиента — по нему он будет входить в приложение", "Кардардын телефонун жазыңыз — тиркемеге ошол номер менен кирет")
+        : t("Укажите телефон отца или матери — по нему родитель будет входить в приложение", "Атасынын же энесинин телефонун жазыңыз — ата-эне тиркемеге ошол номер менен кирет"));
       return;
     }
-    const name = grantName.trim() || (fatherPhone ? father : mother) || father || mother;
-    if (!name) { setErr(t("Укажите имя родителя", "Ата-эненин атын жазыңыз")); return; }
+    const name = self
+      ? (grantName.trim() || fullName.trim())
+      : (grantName.trim() || (fatherPhone ? father : mother) || father || mother);
+    if (!name) {
+      setErr(self ? t("Укажите имя клиента", "Кардардын атын жазыңыз") : t("Укажите имя родителя", "Ата-эненин атын жазыңыз"));
+      return;
+    }
     if (grantPw.length < 8) { setErr(t("Пароль — не менее 8 символов", "Сырсөз кеминде 8 белги")); return; }
     // Сначала сохраняем текущие телефоны в семью — логин делается из них.
     await updFamily.mutateAsync({
@@ -896,6 +908,7 @@ export const AddChildModal = ({
       password: grantPw,
       full_name: name,
       phone,
+      role: grantRole,
     });
     setGrantDone(grantPw);
     setGrantOpen(false);
@@ -909,7 +922,7 @@ export const AddChildModal = ({
           id: initial!.id!,
           family_id: familyId || initial?.family_id,
           full_name: fullName,
-          birth_date: birth,
+          birth_date: birth || null,
           card_number: card || null,
           responsible_manager_id: managerId || null,
           amo_url: amoUrl.trim() || null,
@@ -951,7 +964,7 @@ export const AddChildModal = ({
       const created = await addChild.mutateAsync({
         family_id: fid,
         full_name: fullName,
-        birth_date: birth,
+        birth_date: birth || null,
         card_number: card || null,
         responsible_manager_id: managerId || null,
         amo_url: amoUrl.trim() || null,
@@ -1045,17 +1058,23 @@ export const AddChildModal = ({
               <div className="form-access">
                 <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
                   <Icon name="user" size={13} />
-                  <b>{t("Вход в приложение для родителя:", "Ата-эненин тиркемеге кирүүсү:")}</b>
+                  <b>{t("Вход в приложение:", "Тиркемеге кирүү:")}</b>
                   {parentAccount ? (
                     <>
                       <span>{parentAccount.full_name}</span>
+                      <span style={{ color: "var(--muted)" }}>
+                        ({parentAccount.role === "client" ? t("сам клиент", "кардардын өзү") : t("родитель", "ата-эне")})
+                      </span>
                       {parentAccount.phone && <a href={`tel:${parentAccount.phone}`} style={{ color: "var(--blue)" }}>{parentAccount.phone}</a>}
                       {parentAccount.email && <span style={{ color: "var(--muted)" }}>{parentAccount.email}</span>}
                     </>
                   ) : grantDone ? (
                     <span style={{ color: "var(--green, #1a7f37)", fontWeight: 600 }}>
-                      {t(`Готово. Логин — телефон родителя, пароль: ${grantDone}. Передайте его лично.`,
-                         `Даяр. Логин — ата-эненин телефону, сырсөз: ${grantDone}. Жеке бериңиз.`)}
+                      {grantRole === "client"
+                        ? t(`Готово. Логин — телефон клиента, пароль: ${grantDone}. Передайте его лично.`,
+                            `Даяр. Логин — кардардын телефону, сырсөз: ${grantDone}. Жеке бериңиз.`)
+                        : t(`Готово. Логин — телефон родителя, пароль: ${grantDone}. Передайте его лично.`,
+                            `Даяр. Логин — ата-эненин телефону, сырсөз: ${grantDone}. Жеке бериңиз.`)}
                     </span>
                   ) : (
                     <>
@@ -1076,10 +1095,34 @@ export const AddChildModal = ({
                 </div>
                 {grantOpen && !parentAccount && !grantDone && (
                   <div style={{ display: "flex", gap: 8, alignItems: "center", flexWrap: "wrap", marginTop: 8 }}>
+                    <div className="seg" style={{ width: "100%" }}>
+                      <button type="button" className={`seg__btn ${grantRole === "parent" ? "is-active" : ""}`} onClick={() => setGrantRole("parent")}>
+                        {t("Родителю", "Ата-энеге")}
+                      </button>
+                      <button
+                        type="button"
+                        className={`seg__btn ${grantRole === "client" ? "is-active" : ""}`}
+                        onClick={() => { setGrantRole("client"); if (!grantPhone) setGrantPhone(fatherPhone || motherPhone); }}
+                      >
+                        {t("Самому клиенту (взрослый)", "Кардардын өзүнө (чоң киши)")}
+                      </button>
+                    </div>
+                    {grantRole === "client" && (
+                      <input
+                        type="tel"
+                        inputMode="tel"
+                        value={grantPhone}
+                        onChange={(e) => setGrantPhone(e.target.value)}
+                        placeholder={t("Телефон клиента", "Кардардын телефону")}
+                        style={{ height: 34, padding: "0 10px", border: "1px solid var(--line)", borderRadius: "var(--r-sm)", fontSize: 13, width: 150 }}
+                      />
+                    )}
                     <input
                       value={grantName}
                       onChange={(e) => setGrantName(e.target.value)}
-                      placeholder={t("Имя родителя (по умолчанию из семьи)", "Ата-эненин аты (демейки үй-бүлөдөн)")}
+                      placeholder={grantRole === "client"
+                        ? t("Имя (по умолчанию — ФИО клиента)", "Аты (демейки — кардардын аты-жөнү)")
+                        : t("Имя родителя (по умолчанию из семьи)", "Ата-эненин аты (демейки үй-бүлөдөн)")}
                       style={{ height: 34, padding: "0 10px", border: "1px solid var(--line)", borderRadius: "var(--r-sm)", fontSize: 13, flex: 1, minWidth: 150 }}
                     />
                     <input
@@ -1101,8 +1144,11 @@ export const AddChildModal = ({
                       {createParentAcct.isPending ? t("Создаём…", "Түзүлүүдө…") : t("Создать вход", "Кирүүнү түзүү")}
                     </button>
                     <div style={{ fontSize: 11.5, color: "var(--muted)", width: "100%" }}>
-                      {t("Логином станет телефон отца или матери. Пароль передайте родителю лично.",
-                         "Логин — атасынын же энесинин телефону. Сырсөздү ата-энеге жеке бериңиз.")}
+                      {grantRole === "client"
+                        ? t("Клиент будет входить сам и видеть свой абонемент, расписание и посещения. Пароль передайте ему лично.",
+                            "Кардар өзү кирип, абонементин, жадыбалын жана катышуусун көрөт. Сырсөздү ага жеке бериңиз.")
+                        : t("Логином станет телефон отца или матери. Пароль передайте родителю лично.",
+                            "Логин — атасынын же энесинин телефону. Сырсөздү ата-энеге жеке бериңиз.")}
                     </div>
                   </div>
                 )}
@@ -3098,6 +3144,7 @@ export const SellCardModal = ({
             >
               <option value="cash">{t("Наличные", "Накта")}</option>
               <option value="terminal">{t("Терминал", "Терминал")}</option>
+              <option value="transfer">{t("Перевод (MBank и др.)", "Которуу (MBank ж.б.)")}</option>
             </Select>
           </label>
         </div>
@@ -3448,6 +3495,7 @@ export const AcceptPaymentModal = ({
           <Select value={method} onChange={(e) => setMethod(e.target.value as PaymentMethod)} disabled={amountNum <= 0}>
             <option value="cash">{t("Наличные", "Накта")}</option>
             <option value="terminal">{t("Терминал", "Терминал")}</option>
+            <option value="transfer">{t("Перевод (MBank и др.)", "Которуу (MBank ж.б.)")}</option>
           </Select>
         </Field>
       </div>
@@ -3555,6 +3603,7 @@ export const TopUpDepositModal = ({
           <Select value={method} onChange={(e) => setMethod(e.target.value as PaymentMethod)}>
             <option value="cash">{t("Наличные", "Накта")}</option>
             <option value="terminal">{t("Терминал", "Терминал")}</option>
+            <option value="transfer">{t("Перевод (MBank и др.)", "Которуу (MBank ж.б.)")}</option>
           </Select>
         </Field>
       </div>

@@ -176,7 +176,7 @@ export const KidsPage = ({ lang }: { lang: Lang }) => {
                         </div>
                       </td>
                       <td>
-                        {ageFromDob(k.birth_date)} {t("лет", "жаш")}
+                        {k.birth_date ? `${ageFromDob(k.birth_date)} ${t("лет", "жаш")}` : t("возраст не указан", "жашы көрсөтүлгөн эмес")}
                       </td>
                       <td>
                         <span className={`pill pill--${k.status}`}>{k.status}</span>

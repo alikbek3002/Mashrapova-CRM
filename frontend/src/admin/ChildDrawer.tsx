@@ -90,7 +90,8 @@ export const ChildDrawer = ({
 }) => {
   const t = (ru: string, ky: string) => (lang === "ru" ? ru : ky);
   const { user } = useAuth();
-  const role: Role = (user?.role === "coach" ? "coach" : user?.role === "parent" ? "parent" : "admin");
+  // Взрослый клиент смотрит свою карточку так же, как родитель — карточку ребёнка.
+  const role: Role = (user?.role === "coach" ? "coach" : user?.role === "parent" || user?.role === "client" ? "parent" : "admin");
   const { data: manager } = useProfile(child?.responsible_manager_id ?? null);
   const { data: primaryCoach } = useChildPrimaryCoach(childId);
   // Полная карточка: учётка родителя и активные группы прямо в шапке.
@@ -138,7 +139,7 @@ export const ChildDrawer = ({
           <div style={{ flex: 1, minWidth: 0 }}>
             <div className="child-hero__name">{child.full_name}</div>
             <div className="child-hero__meta">
-              {ageFromDob(child.birth_date)} {t("лет", "жаш")} ({fmtD(child.birth_date)}) · {t("карта", "карта")} {child.card_number ?? "—"} · <span className={`pill pill--${child.status}`}>{STATUS_LABEL[child.status]?.[lang] ?? child.status}</span>
+              {child.birth_date ? `${ageFromDob(child.birth_date)} ${t("лет", "жаш")} (${fmtD(child.birth_date)})` : t("возраст не указан", "жашы көрсөтүлгөн эмес")} · {t("карта", "карта")} {child.card_number ?? "—"} · <span className={`pill pill--${child.status}`}>{STATUS_LABEL[child.status]?.[lang] ?? child.status}</span>
             </div>
             {child.family && (
               <div className="child-hero__family">
@@ -848,6 +849,7 @@ const AddLessonsModal = ({ open, onClose, lang, childId, card }: {
           <Select value={method} onChange={(e) => setMethod(e.target.value as PaymentMethod)} disabled={cashNum <= 0}>
             <option value="cash">{t("Наличные", "Накта")}</option>
             <option value="terminal">{t("Терминал", "Терминал")}</option>
+            <option value="transfer">{t("Перевод (MBank и др.)", "Которуу (MBank ж.б.)")}</option>
           </Select>
         </Field>
       </div>
@@ -1170,7 +1172,7 @@ const PayTab = ({ childId, lang }: { childId: string; lang: Lang }) => {
                     {card?.type ? (CARD_TYPE_LABEL[card.type]?.[lang] ?? card.type) : "—"}
                     {card?.section && <span style={{ color: "var(--muted)" }}> · {lang === "ru" ? card.section.name_ru : card.section.name_ky}</span>}
                   </td>
-                  <td style={{ color: "var(--muted)" }}>{p.method === "cash" ? t("Наличные", "Накта") : p.method === "terminal" ? t("Терминал", "Терминал") : p.method}</td>
+                  <td style={{ color: "var(--muted)" }}>{p.method === "cash" ? t("Наличные", "Накта") : p.method === "terminal" ? t("Терминал", "Терминал") : p.method === "transfer" ? t("Перевод", "Которуу") : p.method === "unknown" ? t("не указан", "көрсөтүлгөн эмес") : p.method}</td>
                   <td style={{ fontSize: 12 }}>{p.receiver?.full_name ?? "—"}</td>
                   <td style={{ color: "var(--muted)", fontSize: 12 }}>{p.comment ?? "—"}</td>
                   <td className="num">{formatCurrency(Number(p.amount))}</td>

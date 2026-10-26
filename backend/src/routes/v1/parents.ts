@@ -16,6 +16,9 @@ const parentCreateSchema = z.object({
   password: z.string().min(8),
   full_name: z.string().min(1),
   phone: z.string().min(7),
+  // client — взрослый, который занимается сам: вход выдаётся ему, а не
+  // родителю. Права одинаковые, отличается подача в приложении.
+  role: z.enum(["parent", "client"]).default("parent"),
 
   // Either link to an existing family
   family_id: z.string().uuid().optional(),
@@ -91,7 +94,7 @@ export const parentsRoutes = async (app: FastifyInstance) => {
       const { error: profErr } = await supabaseAdmin.from("profiles").insert({
         id: newUserId,
         organization_id: user.organization_id,
-        role: "parent",
+        role: input.role,
         full_name: input.full_name,
         phone: e164,
         email: input.email && input.email.trim() ? input.email.trim() : null,
@@ -195,7 +198,7 @@ export const parentsRoutes = async (app: FastifyInstance) => {
       if (tErr || !target) {
         return reply.code(404).send({ error: "parent_not_found" });
       }
-      if (target.role !== "parent" || target.organization_id !== user.organization_id) {
+      if ((target.role !== "parent" && target.role !== "client") || target.organization_id !== user.organization_id) {
         return reply.code(403).send({ error: "not_a_parent_in_org" });
       }
 

@@ -5,7 +5,7 @@ export const paymentCreateSchema = z
     child_id: z.string().uuid(),
     club_card_id: z.string().uuid().optional(),
     amount: z.number().nonnegative(),
-    method: z.enum(["cash", "terminal"]),
+    method: z.enum(["cash", "terminal", "transfer"]),
     // Сколько списать с депозита одновременно с приёмом платежа.
     // Используется в AcceptPaymentModal для разовых услуг с комбинированной оплатой.
     use_deposit: z.number().nonnegative().default(0),

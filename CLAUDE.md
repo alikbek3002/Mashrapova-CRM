@@ -113,7 +113,7 @@ payroll, bulk schedule operations, notifications dispatch/broadcast, staff manag
 (`lib/kommo*.ts`: one-way Kommo → `leads`/`kommo_events` every 5 min, see DEPLOY.md «Kommo»). Everything else reads
 from Supabase directly under RLS. Idempotency via the `Idempotency-Key` header on money routes.
 
-**Database** — `supabase/migrations/` (98 migrations). Business calculations live in SQL as the
+**Database** — `supabase/migrations/` (101 migrations). Business calculations live in SQL as the
 single source of truth: `v_child_card_balance`, `v_payroll_attendance`, `section_price()`,
 `manager_kpi()`, `director_dashboard()`, `refresh_card_notices()`, `refresh_lead_sla()`,
 `refresh_lifecycle()`, plus report functions. Do not reimplement these on the client.

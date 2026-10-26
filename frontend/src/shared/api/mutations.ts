@@ -136,7 +136,7 @@ export const useAddChild = () => {
     mutationFn: async (input: {
       family_id: string;
       full_name: string;
-      birth_date: string;
+      birth_date: string | null;
       card_number?: string | null;
       responsible_manager_id?: string | null;
       amo_url?: string | null;
@@ -1838,12 +1838,14 @@ export const useCreateParentAccount = () => {
       father_name?: string | null; father_phone?: string | null;
       mother_name?: string | null; mother_phone?: string | null;
       comment?: string | null;
+      // client — вход выдаётся самому взрослому клиенту, а не родителю.
+      role?: "parent" | "client";
     }) => apiPost<{ ok: boolean; parent_id: string; family_id: string }>("/v1/parents", input),
-    onSuccess: () => {
+    onSuccess: (_data, input) => {
       qc.invalidateQueries({ queryKey: ["families"] });
       qc.invalidateQueries({ queryKey: ["users"] });
       qc.invalidateQueries({ queryKey: ["stats"] });
-      toast.ok("Родитель создан, доступ выдан");
+      toast.ok(input.role === "client" ? "Доступ клиенту выдан" : "Родитель создан, доступ выдан");
     },
     onError: (e: Error) => toast.err(friendlyAuthError(e.message)),
   });

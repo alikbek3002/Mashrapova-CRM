@@ -13,12 +13,14 @@ import { SkeletonRows, SkeletonText } from "../shared/ui/Skeleton";
 const methodLabel: Record<string, { ru: string; ky: string }> = {
   cash: { ru: "Наличные", ky: "Накта" },
   terminal: { ru: "Терминал", ky: "Терминал" },
+  transfer: { ru: "Перевод", ky: "Которуу" },
+  unknown: { ru: "Не указан", ky: "Көрсөтүлгөн эмес" },
 };
 
 export const PaymentsPage = ({ lang }: { lang: Lang }) => {
   const t = (ru: string, ky: string) => (lang === "ru" ? ru : ky);
   const [q, setQ] = useState("");
-  const [filter, setFilter] = useState<"all" | "cash" | "terminal">("all");
+  const [filter, setFilter] = useState<"all" | "cash" | "terminal" | "transfer">("all");
   // Фильтр по периоду: включительно с обеих сторон, пусто = без границы.
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
@@ -30,8 +32,10 @@ export const PaymentsPage = ({ lang }: { lang: Lang }) => {
   // помечается в комментарии платежа и в audit_log.
   const canCorrect = usePerm("correct_payments");
   const changeMethod = useChangePaymentMethod();
+  // Наличные → терминал → перевод → наличные; «не указан» (история) — в наличные.
+  const nextMethod = (from: string) => (from === "cash" ? "terminal" : from === "terminal" ? "transfer" : "cash");
   const correct = (id: string, from: string) => {
-    const to = from === "cash" ? "terminal" : "cash";
+    const to = nextMethod(from);
     const reason = prompt(t(
       `Исправить способ оплаты: ${methodLabel[from]?.ru ?? from} → ${methodLabel[to]?.ru ?? to}. Причина (необязательно):`,
       `Төлөм ыкмасын оңдоо: ${methodLabel[from]?.ky ?? from} → ${methodLabel[to]?.ky ?? to}. Себеби:`,
@@ -65,12 +69,13 @@ export const PaymentsPage = ({ lang }: { lang: Lang }) => {
   const total30 = payments.filter((p) => Date.now() - new Date(p.paid_at).getTime() < 30 * 86400000).reduce((s, p) => s + Number(p.amount), 0);
   const cashCount = payments.filter((p) => p.method === "cash").length;
   const termCount = payments.filter((p) => p.method === "terminal").length;
+  const transferCount = payments.filter((p) => p.method === "transfer").length;
 
   return (
     <>
       <PageHeader
         title={t("Платежи", "Төлөмдөр")}
-        subtitle={isLoading ? <SkeletonText /> : t(`${formatCurrency(total30)} за 30 дней · наличные ${cashCount} · терминал ${termCount}`, `${formatCurrency(total30)} 30 күндө`)}
+        subtitle={isLoading ? <SkeletonText /> : t(`${formatCurrency(total30)} за 30 дней · наличные ${cashCount} · терминал ${termCount} · перевод ${transferCount}`, `${formatCurrency(total30)} 30 күндө`)}
         actions={
           <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
             <Gate perm="receive_payment">
@@ -100,7 +105,7 @@ export const PaymentsPage = ({ lang }: { lang: Lang }) => {
         <div className="toolbar" style={{ flexWrap: "wrap", gap: 8 }}>
           <SearchBox value={q} onChange={setQ} placeholder={t("Поиск по ребёнку…", "Бала боюнча…")} />
           <div className="tabs">
-            {(["all", "cash", "terminal"] as const).map((f) => (
+            {(["all", "cash", "terminal", "transfer"] as const).map((f) => (
               <button key={f} className={`tabs__btn ${filter === f ? "is-active" : ""}`} onClick={() => setFilter(f)}>
                 {f === "all" ? t("Все", "Баары") : methodLabel[f][lang]}
               </button>
@@ -179,7 +184,7 @@ export const PaymentsPage = ({ lang }: { lang: Lang }) => {
                             disabled={changeMethod.isPending}
                             title={t("Исправить способ оплаты (сверка по кассе)", "Төлөм ыкмасын оңдоо")}
                           >
-                            → {p.method === "cash" ? methodLabel.terminal[lang] : methodLabel.cash[lang]}
+                            → {methodLabel[nextMethod(p.method)][lang]}
                           </button>
                         </td>
                       )}

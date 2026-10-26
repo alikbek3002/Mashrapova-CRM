@@ -8,7 +8,9 @@ export type UserRole =
   | "manager"
   | "cashier"
   | "coach"
-  | "parent";
+  | "parent"
+  // Взрослый клиент: вход выдан ему самому, права как у parent.
+  | "client";
 export type ChildStatus = "active" | "frozen" | "expired" | "debtor" | "archived";
 // therapy/developmental добавлены в 20260514000006; special — legacy.
 // gymnastics/special/therapy/developmental — наследие движка Uniqum, в UI
@@ -25,7 +27,9 @@ export type CardStatus = "active" | "ending" | "frozen" | "expired" | "debt" | "
 export type AttendanceStatus = "present" | "absent" | "excused" | "late" | "makeup";
 export type FreezeStatus = "pending" | "approved" | "rejected";
 export type FreezeInitiatorRole = "coach" | "manager";
-export type PaymentMethod = "cash" | "terminal";
+// transfer — перевод MBank/Optima (ТЗ §7.2); unknown — история из Excel,
+// где способ не записан (в формах продажи его нет).
+export type PaymentMethod = "cash" | "terminal" | "transfer" | "unknown";
 // Этапы воронки ТЗ §8.2. `waiting` — лист ожидания из движка Uniqum,
 // оставлен, чтобы не потерять уже заведённые лиды.
 export type LeadStage =
@@ -105,7 +109,8 @@ export type Child = Timestamps & {
   organization_id: string;
   family_id: string;
   full_name: string;
-  birth_date: string;
+  // В отчётах Академии даты рождения нет — у загруженной истории пусто.
+  birth_date: string | null;
   photo_path: string | null;
   card_number: string | null;
   status: ChildStatus;

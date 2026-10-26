@@ -82,7 +82,7 @@ export const uploadsRoutes = async (app: FastifyInstance) => {
     {
       preHandler: [
         authenticate,
-        requireRole("director", "fitness_director", "senior_manager", "manager", "coach", "parent"),
+        requireRole("director", "fitness_director", "senior_manager", "manager", "coach", "parent", "client"),
       ],
     },
     async (req, reply) => {
@@ -112,7 +112,7 @@ export const uploadsRoutes = async (app: FastifyInstance) => {
       }
 
       // Родитель — только для своего ребёнка (family.parent_user_id === user.id).
-      if (user.role === "parent") {
+      if (user.role === "parent" || user.role === "client") {
         const { data: fam } = await supabaseAdmin
           .from("families")
           .select("id")
