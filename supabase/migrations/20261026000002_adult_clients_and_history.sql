@@ -13,6 +13,7 @@
 
 create or replace function is_parent() returns boolean
 language sql stable security definer
+set search_path = public
 as $$
   select coalesce(auth_role() in ('parent', 'client'), false)
 $$;

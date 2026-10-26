@@ -114,6 +114,7 @@ export const parentsRoutes = async (app: FastifyInstance) => {
           .from("families")
           .select("parent_user_id")
           .eq("id", familyId)
+          .eq("organization_id", user.organization_id)
           .maybeSingle();
         if (famGetErr || !famRow) {
           await supabaseAdmin.from("profiles").delete().eq("id", newUserId);
@@ -130,6 +131,7 @@ export const parentsRoutes = async (app: FastifyInstance) => {
           .from("families")
           .update({ parent_user_id: newUserId })
           .eq("id", familyId)
+          .eq("organization_id", user.organization_id)
           .is("parent_user_id", null); // double-check: prevents race overwrite
         if (linkErr) {
           req.log.error({ err: linkErr }, "parent_family_link_failed");

@@ -113,14 +113,9 @@ const SalesTab = ({ lang }: { lang: Lang }) => {
   const [to, setTo] = useState(ymd(new Date()));
   const { data: payments = [] } = usePaymentsInRange(from, to);
 
-  const filtered = useMemo(() => {
-    const f = new Date(from).getTime();
-    const tEnd = new Date(to).getTime() + 86399999;
-    return payments.filter((p) => {
-      const d = new Date(p.paid_at).getTime();
-      return d >= f && d <= tEnd;
-    });
-  }, [payments, from, to]);
+  // Период уже отфильтрован запросом (границы — местное время). Прежний
+  // фильтр здесь брал полночь UTC и терял оплаты с 00:00 до 06:00 по Бишкеку.
+  const filtered = payments;
 
   const total = filtered.reduce((s, p) => s + Number(p.amount), 0);
   const cash = filtered.filter((p) => p.method === "cash").reduce((s, p) => s + Number(p.amount), 0);
