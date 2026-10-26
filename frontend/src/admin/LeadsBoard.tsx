@@ -19,6 +19,18 @@ const ERP_PIPELINE = "erp";
 
 type Column = { key: string; title: string; stage: LeadStage; leads: LeadWithSection[] };
 
+// Канал первого обращения (leads.channel из событий Kommo). «Вручную» —
+// сделку менеджер завёл сам, переписки в Kommo нет: звонок, визит, личный номер.
+type ChannelKey = "all" | "whatsapp" | "instagram" | "manual";
+const channelOf = (l: LeadWithSection): Exclude<ChannelKey, "all"> =>
+  l.channel === "whatsapp" ? "whatsapp" : l.channel === "instagram" ? "instagram" : "manual";
+const CHANNEL_TABS: { key: ChannelKey; ru: string; ky: string; icon?: string }[] = [
+  { key: "all", ru: "Все каналы", ky: "Бардык каналдар" },
+  { key: "whatsapp", ru: "WhatsApp", ky: "WhatsApp", icon: "whatsapp" },
+  { key: "instagram", ru: "Instagram", ky: "Instagram", icon: "instagram" },
+  { key: "manual", ru: "Вручную / звонок", ky: "Кол менен / чалуу" },
+];
+
 const pipelineTitle = (name: string, ru: boolean) =>
   name === "Pipeline" ? (ru ? "Основная воронка" : "Негизги воронка") : name;
 
@@ -80,7 +92,7 @@ const LeadCard = ({
     >
       <div className="lead-card__top">
         <span className="lead-card__date">{shortDate(l.created_at, ru)}</span>
-        {l.channel && <span className="lead-card__channel">{channelLabel(l.channel, ru)}</span>}
+        {l.channel && <span className={`lead-card__channel lead-card__channel--${channelOf(l)}`}>{channelLabel(l.channel, ru)}</span>}
       </div>
       <div className="lead-card__name">{name}</div>
       {kid && <div className="lead-card__sub">{kid}</div>}
@@ -115,7 +127,7 @@ const LeadCard = ({
 };
 
 export const LeadsBoard = ({
-  leads, statuses, tasks, kommoBaseUrl, lang,
+  leads: allLeads, statuses, tasks, kommoBaseUrl, lang,
 }: {
   leads: LeadWithSection[];
   statuses: KommoStatus[];
@@ -124,6 +136,11 @@ export const LeadsBoard = ({
   lang: Lang;
 }) => {
   const ru = lang === "ru";
+  const [channel, setChannel] = useState<ChannelKey>("all");
+  const leads = useMemo(
+    () => (channel === "all" ? allLeads : allLeads.filter((l) => channelOf(l) === channel)),
+    [allLeads, channel],
+  );
 
   // Воронки Kommo в их порядке + «Без Kommo» для лидов, заведённых в ERP.
   const pipelines = useMemo(() => {
@@ -144,6 +161,15 @@ export const LeadsBoard = ({
   const [picked, setPicked] = useState<string | null>(null);
   const pipeline = pipelines.find((p) => p.key === picked) ?? pipelines[0];
   const [shown, setShown] = useState<Record<string, number>>({});
+  // Счётчики каналов — в выбранной воронке, чтобы вкладки сходились с колонками.
+  const channelCounts = useMemo(() => {
+    const inPipe = !pipeline ? allLeads
+      : pipeline.key === ERP_PIPELINE ? allLeads.filter((l) => l.kommo_lead_id == null)
+      : allLeads.filter((l) => l.kommo_pipeline_id === Number(pipeline.key));
+    const c = { all: inPipe.length, whatsapp: 0, instagram: 0, manual: 0 };
+    for (const l of inPipe) c[channelOf(l)]++;
+    return c;
+  }, [allLeads, pipeline]);
 
   const columns: Column[] = useMemo(() => {
     if (!pipeline) return [];
@@ -179,6 +205,14 @@ export const LeadsBoard = ({
           ))}
         </div>
       )}
+      <div className="tabs lead-channels" style={{ margin: "0 16px 12px" }}>
+        {CHANNEL_TABS.map((c) => (
+          <button key={c.key} className={`tabs__btn ${channel === c.key ? "is-active" : ""}`}
+            onClick={() => { setChannel(c.key); setShown({}); }}>
+            {c.icon && <Icon name={c.icon} size={13} />} {ru ? c.ru : c.ky} · {channelCounts[c.key]}
+          </button>
+        ))}
+      </div>
       <div className="lead-board">
         {columns.map((c) => {
           const limit = shown[c.key] ?? PAGE;
