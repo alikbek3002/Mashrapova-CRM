@@ -18,8 +18,22 @@ const ageFromDob = (dob: string): number => {
   return Math.max(0, a);
 };
 
+const STATUS_LABEL: Record<string, { ru: string; ky: string }> = {
+  active: { ru: "Занимается", ky: "Катышат" },
+  frozen: { ru: "Заморозка", ky: "Тындырылган" },
+  debtor: { ru: "Должник", ky: "Карыздар" },
+  expired: { ru: "Абонемент закончился", ky: "Абонемент бүткөн" },
+  archived: { ru: "В архиве", ky: "Архивде" },
+};
+
+// По умолчанию — те, кто занимается сейчас. После загрузки истории из Excel
+// в базе ~4 000 клиентов за 15 месяцев, и бывшие заслоняли текущих.
+type StatusFilter = "current" | "former" | "all";
+const isCurrent = (status: string) => status === "active" || status === "frozen" || status === "debtor";
+
 export const KidsPage = ({ lang }: { lang: Lang }) => {
   const [q, setQ] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("current");
   const [sectionId, setSectionId] = useState<string>("all");
   const [groupId, setGroupId] = useState<string>("all");
   const [noGroupOnly, setNoGroupOnly] = useState(false);
@@ -29,10 +43,13 @@ export const KidsPage = ({ lang }: { lang: Lang }) => {
   const { data: sections = [] } = useSections();
   const { data: groups = [] } = useGroups();
 
+  // Для текущих клиентов — только работающие группы; архивные (бывшие тренеры)
+  // нужны, только когда смотрим бывших.
   const groupsForSection = useMemo(() => {
-    if (sectionId === "all") return groups;
-    return groups.filter((g: any) => g.section_id === sectionId);
-  }, [groups, sectionId]);
+    const pool = statusFilter === "current" ? groups.filter((g: any) => g.is_active) : groups;
+    if (sectionId === "all") return pool;
+    return pool.filter((g: any) => g.section_id === sectionId);
+  }, [groups, sectionId, statusFilter]);
 
   // Поиск по ТЗ §3.1: ФИО ученика, ФИО родителя, телефон, номер карты / ID.
   const rows = useMemo(() => {
@@ -42,6 +59,9 @@ export const KidsPage = ({ lang }: { lang: Lang }) => {
     const qPhone = qDigits.length >= 3 ? qDigits.slice(-9) : "";
     const phoneMatch = (ph?: string | null) => !!ph && !!qPhone && ph.replace(/\D/g, "").includes(qPhone);
     return kids.filter((k) => {
+      // Поиск идёт по всей базе: бывшего клиента находят по имени или телефону.
+      if (!qq && statusFilter === "current" && !isCurrent(k.status)) return false;
+      if (!qq && statusFilter === "former" && isCurrent(k.status)) return false;
       if (qq) {
         const f = k.family;
         const hit =
@@ -55,12 +75,15 @@ export const KidsPage = ({ lang }: { lang: Lang }) => {
         if (!hit) return false;
       }
       const active = (k.enrollments ?? []).filter((e) => e.archived_at == null);
+      // Бывших ищем и по прошлым группам — иначе «бывшие у Тургунова» не найти.
+      const pool = statusFilter === "current" ? active : (k.enrollments ?? []);
       if (noGroupOnly && active.length > 0) return false;
-      if (sectionId !== "all" && !active.some((e) => e.group?.section_id === sectionId)) return false;
-      if (groupId !== "all" && !active.some((e) => e.group_id === groupId)) return false;
+      if (sectionId !== "all" && !pool.some((e) => e.group?.section_id === sectionId)) return false;
+      if (groupId !== "all" && !pool.some((e) => e.group_id === groupId)) return false;
       return true;
     });
-  }, [q, kids, sectionId, groupId, noGroupOnly]);
+  }, [q, kids, sectionId, groupId, noGroupOnly, statusFilter]);
+  const currentCount = useMemo(() => kids.filter((k) => isCurrent(k.status)).length, [kids]);
 
   const t = (ru: string, ky: string) => (lang === "ru" ? ru : ky);
 
@@ -68,7 +91,10 @@ export const KidsPage = ({ lang }: { lang: Lang }) => {
     <>
       <PageHeader
         title={t("Дети", "Балдар")}
-        subtitle={isLoading ? <SkeletonText /> : t(`${kids.length} активных в системе`, `${kids.length} активдүү бала`)}
+        subtitle={isLoading ? <SkeletonText /> : t(
+          `${currentCount} занимаются сейчас · всего в базе ${kids.length}`,
+          `${currentCount} азыр катышат · базада бардыгы ${kids.length}`,
+        )}
         actions={
           <Gate perm="edit_kids">
             <button className="btn btn--primary" onClick={() => setAddOpen(true)}>
@@ -91,6 +117,21 @@ export const KidsPage = ({ lang }: { lang: Lang }) => {
 
       <div className="card">
         <div className="toolbar" style={{ flexWrap: "wrap", gap: 8 }}>
+          <div className="tabs">
+            {([
+              ["current", t("Занимаются", "Катышат")],
+              ["former", t("Бывшие", "Мурунку")],
+              ["all", t("Все", "Баары")],
+            ] as const).map(([id, label]) => (
+              <button
+                key={id}
+                className={`tabs__btn ${statusFilter === id ? "is-active" : ""}`}
+                onClick={() => { setStatusFilter(id); setGroupId("all"); }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
           <SearchBox value={q} onChange={setQ} placeholder={t("Имя ребёнка или родителя, телефон, номер карты…", "Баланын же ата-эненин аты, телефон, карта номери…")} />
           <Select
             value={sectionId}
@@ -117,7 +158,7 @@ export const KidsPage = ({ lang }: { lang: Lang }) => {
           >
             <option value="all">{t("Все группы", "Бардык топтор")}</option>
             {groupsForSection.map((g: any) => (
-              <option key={g.id} value={g.id}>{g.name}</option>
+              <option key={g.id} value={g.id}>{g.name}{g.is_active ? "" : t(" (архив)", " (архив)")}</option>
             ))}
           </Select>
           <label className="check" style={{ margin: 0 }}>
@@ -152,13 +193,22 @@ export const KidsPage = ({ lang }: { lang: Lang }) => {
               <tbody>
                 {rows.map((k) => {
                   const family = k.family;
+                  // У загруженных из Excel имён родителей нет — показываем телефон.
                   const familyLabel = family
-                    ? [family.father_name, family.mother_name].filter(Boolean).join(" / ") || "—"
+                    ? [family.father_name, family.mother_name].filter(Boolean).join(" / ")
+                      || [family.father_phone, family.mother_phone].filter(Boolean).join(", ")
+                      || "—"
                     : "—";
                   const activeEnroll = (k.enrollments ?? []).filter((e) => e.archived_at == null);
-                  const groupsLabel = activeEnroll.length === 0
-                    ? "—"
-                    : activeEnroll.map((e) => e.group?.name).filter(Boolean).join(", ");
+                  // Нет текущей группы — показываем последнюю, где занимался.
+                  const lastEnroll = activeEnroll.length === 0
+                    ? [...(k.enrollments ?? [])].sort((a, b) => (b.archived_at ?? "").localeCompare(a.archived_at ?? ""))[0]
+                    : undefined;
+                  const groupsLabel = activeEnroll.length > 0
+                    ? activeEnroll.map((e) => e.group?.name).filter(Boolean).join(", ")
+                    : lastEnroll?.group?.name
+                      ? `${t("был:", "болгон:")} ${lastEnroll.group.name}`
+                      : "—";
                   return (
                     <tr key={k.id} onClick={() => setActiveChildId(k.id)}>
                       <td>
@@ -176,10 +226,10 @@ export const KidsPage = ({ lang }: { lang: Lang }) => {
                         </div>
                       </td>
                       <td>
-                        {k.birth_date ? `${ageFromDob(k.birth_date)} ${t("лет", "жаш")}` : t("возраст не указан", "жашы көрсөтүлгөн эмес")}
+                        {k.birth_date ? `${ageFromDob(k.birth_date)} ${t("лет", "жаш")}` : <span style={{ color: "var(--muted-2)" }}>—</span>}
                       </td>
                       <td>
-                        <span className={`pill pill--${k.status}`}>{k.status}</span>
+                        <span className={`pill pill--${k.status}`}>{STATUS_LABEL[k.status]?.[lang] ?? k.status}</span>
                         {/* ТЗ §4.5: флаг «риск оттока» — нет посещений 10+ дней */}
                         {k.churn_risk_at && (
                           <span

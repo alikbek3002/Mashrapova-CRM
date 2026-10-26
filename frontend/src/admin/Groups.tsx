@@ -13,6 +13,8 @@ export const GroupsPage = ({ lang }: { lang: Lang }) => {
   const t = (ru: string, ky: string) => (lang === "ru" ? ru : ky);
   const [q, setQ] = useState("");
   const [sectionId, setSectionId] = useState<string>("all");
+  // Архивные группы (бывшие тренеры из истории Excel) скрыты по умолчанию.
+  const [showArchived, setShowArchived] = useState(false);
   const [openGroupId, setOpenGroupId] = useState<string | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
 
@@ -24,8 +26,9 @@ export const GroupsPage = ({ lang }: { lang: Lang }) => {
   const rows = useMemo(() => {
     const qq = q.trim().toLowerCase();
     const filtered = groups.filter((g: any) => {
+      if (!showArchived && !g.is_active) return false;
       if (sectionId !== "all" && g.section_id !== sectionId) return false;
-      if (qq && !g.name.toLowerCase().includes(qq)) return false;
+      if (qq && !g.name.toLowerCase().includes(qq) && !(g.coach?.full_name ?? "").toLowerCase().includes(qq)) return false;
       return true;
     });
     // Сортировка: сначала по секции (RU), потом по имени группы.
@@ -35,7 +38,8 @@ export const GroupsPage = ({ lang }: { lang: Lang }) => {
       if (sa !== sb) return sa.localeCompare(sb, "ru");
       return a.name.localeCompare(b.name, "ru");
     });
-  }, [groups, q, sectionId, lang]);
+  }, [groups, q, sectionId, lang, showArchived]);
+  const archivedCount = useMemo(() => groups.filter((g: any) => !g.is_active).length, [groups]);
 
   const totalKids = useMemo(
     () => rows.reduce((sum: number, g: any) => sum + (g.enrollments ?? []).filter((e: any) => e.archived_at == null).length, 0),
@@ -83,7 +87,7 @@ export const GroupsPage = ({ lang }: { lang: Lang }) => {
 
       <div className="card">
         <div className="toolbar" style={{ flexWrap: "wrap", gap: 8 }}>
-          <SearchBox value={q} onChange={setQ} placeholder={t("Поиск по названию группы…", "Топ атын издөө…")} />
+          <SearchBox value={q} onChange={setQ} placeholder={t("Группа или тренер…", "Топ же тренер…")} />
           <Select
             value={sectionId}
             onChange={(e) => setSectionId(e.target.value)}
@@ -98,6 +102,12 @@ export const GroupsPage = ({ lang }: { lang: Lang }) => {
               <option key={s.id} value={s.id}>{lang === "ru" ? s.name_ru : s.name_ky}</option>
             ))}
           </Select>
+          {archivedCount > 0 && (
+            <label className="check" style={{ margin: 0 }}>
+              <input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} />
+              <span>{t(`Показать архивные (${archivedCount})`, `Архивдегилерди көрсөтүү (${archivedCount})`)}</span>
+            </label>
+          )}
         </div>
 
         {error ? (
@@ -138,7 +148,10 @@ export const GroupsPage = ({ lang }: { lang: Lang }) => {
                       {sectionName(g.section)}
                     </span>
                   </div>
-                  <div className="group-mini__name">{g.name}</div>
+                  <div className="group-mini__name">
+                    {g.name}
+                    {!g.is_active && <span className="pill pill--archived" style={{ fontSize: 10, marginLeft: 6 }}>{t("архив", "архив")}</span>}
+                  </div>
                   <div className="group-mini__meta">
                     <Icon name="whistle" size={12} /> {g.coach?.full_name ?? "—"}
                   </div>
