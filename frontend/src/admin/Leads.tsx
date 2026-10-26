@@ -18,10 +18,12 @@ import {
 import { SkeletonRows, SkeletonText } from "../shared/ui/Skeleton";
 import { Select } from "../shared/ui/Select";
 
+// Полоса у лида — группа канала: интернет, люди, офлайн.
 const sourceStripe: Record<string, string> = {
-  target: "var(--red)",
-  referral: "var(--green)",
-  direct: "var(--blue)",
+  target: "var(--red)", instagram: "var(--red)", tiktok: "var(--red)",
+  blogger: "var(--red)", maps: "var(--red)", messenger: "var(--red)",
+  referral: "var(--green)", sibling: "var(--green)", returning: "var(--green)",
+  direct: "var(--ice-ink)", event: "var(--ice-ink)", offline_ads: "var(--ice-ink)",
   other: "var(--muted-2)",
 };
 

@@ -7,8 +7,11 @@ import { useAddChild, useAddFamily, useAddSection, useAddGroup, useAddLead, useS
 import { toast } from "./toast";
 import { useFamilies, useSections, useChildren, useCoaches, useCards, useFreezableCards, useGroups as useGroupsQ, useManagers, useGroupSchedule, useProfile, useCoachSections, useChildActiveCards, useDepositBalance, useOrgSettings, useChildEnrollments, useCardPlans } from "../api/queries";
 import { resolveAvatarUrl } from "../api/avatar";
-import { computeWindowEnd, formatWindow } from "../lib/enrollmentWindow";
-import { fmtD } from "../lib/dates";
+import { SOURCE_OPTIONS } from "../sources";
+import { computeWindowEnd, scheduleDaysText } from "../lib/enrollmentWindow";
+import { CARD_MONTHS, cardLabel, lessonsText } from "../lib/cards";
+import { groupOptionLabel, type GroupForLabel } from "../lib/groups";
+import { fmtD, fmtPeriod, addMonthsIso, addDaysIso } from "../lib/dates";
 import { useAuth } from "../auth/AuthProvider";
 import { usePerm } from "../auth/rbac";
 import { normalizeE164KG, isValidPhoneInput } from "../auth/normalizePhone";
@@ -32,6 +35,53 @@ type FamilyInitial = {
   comment?: string | null;
   parent_user_id?: string | null;
   responsible_manager_id?: string | null;
+};
+
+// Пароль для родителя: строчные буквы и цифры без похожих (i/j/l/1, o/0).
+// Пароли со смешанным регистром родители переписывали с ошибками
+// («qQ2vGJ2LLY2v» → «qQ2vGJLLY2v») и не могли войти.
+const genParentPassword = () => {
+  const chars = "abcdefghkmnpqrstuvwxyz23456789";
+  const rnd = crypto.getRandomValues(new Uint32Array(10));
+  return Array.from(rnd, (n) => chars[n % chars.length]).join("");
+};
+
+// Чей телефон станет логином родителя. Раньше молча брался телефон отца,
+// если он заполнен: мама со своего номера войти не могла, а когда номер
+// отца уже занят другим аккаунтом (например, сотрудником), вход не
+// создавался вовсе.
+type LoginWho = "father" | "mother";
+const pickLoginSide = (who: LoginWho, fatherPhone: string, motherPhone: string): LoginWho =>
+  who === "mother" ? (motherPhone ? "mother" : "father") : (fatherPhone ? "father" : "mother");
+
+const LoginPhonePick = ({
+  side, onChange, fatherPhone, motherPhone, disabled, lang,
+}: {
+  side: LoginWho; onChange: (w: LoginWho) => void;
+  fatherPhone: string; motherPhone: string; disabled?: boolean; lang: Lang;
+}) => {
+  const t = (ru: string, ky: string) => (lang === "ru" ? ru : ky);
+  // Выбирать есть из чего только когда заполнены оба телефона.
+  if (!fatherPhone || !motherPhone) return null;
+  const opt = (w: LoginWho, label: string, phone: string) => (
+    <button
+      type="button"
+      className={`btn ${side === w ? "btn--primary" : ""}`}
+      style={{ padding: "5px 10px", fontSize: 12 }}
+      onClick={() => onChange(w)}
+      disabled={disabled}
+      aria-pressed={side === w}
+    >
+      {label} · {phone}
+    </button>
+  );
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap", width: "100%" }}>
+      <span style={{ fontSize: 12, color: "var(--muted)" }}>{t("Логином станет телефон:", "Логин — кимдин телефону:")}</span>
+      {opt("mother", t("мамы", "энесинин"), motherPhone)}
+      {opt("father", t("папы", "атасынын"), fatherPhone)}
+    </div>
+  );
 };
 
 export const AddFamilyModal = ({
@@ -111,9 +161,17 @@ export const AddFamilyModal = ({
 
   // Какой телефон используется как login для PWA. Backend требует phone
   // и сам конвертирует его в pseudo-email (phoneToPseudoEmail).
-  const parentLoginPhone = fatherPhone || motherPhone;
+  const [loginWho, setLoginWho] = useState<LoginWho>("father");
+  const loginSide = pickLoginSide(loginWho, fatherPhone, motherPhone);
+  const parentLoginPhone = loginSide === "father" ? fatherPhone : motherPhone;
   // Дефолтное ФИО для login — имя того родителя, чей телефон уйдёт в auth.
-  const defaultLoginName = fatherPhone ? father : (motherPhone ? mother : (father || mother));
+  const defaultLoginName = (loginSide === "father" ? father : mother) || father || mother;
+  const changeLoginWho = (w: LoginWho) => {
+    // Имя, подставленное от другого родителя, меняем вместе с телефоном.
+    const prevName = (loginSide === "father" ? father : mother).trim();
+    if (!parentName.trim() || parentName.trim() === prevName) setParentName((w === "father" ? father : mother) || "");
+    setLoginWho(w);
+  };
 
   // Edit-mode «выдать доступ»: автоподстановка ФИО из данных семьи при
   // включении чекбокса (если пользователь ещё ничего не ввёл вручную).
@@ -125,12 +183,7 @@ export const AddFamilyModal = ({
     if (fallback) setParentName(fallback);
   }, [withLogin, isEdit, defaultLoginName, parentName]);
 
-  const generateParentPassword = () => {
-    const chars = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    let s = "";
-    for (let i = 0; i < 12; i++) s += chars[Math.floor(Math.random() * chars.length)];
-    setParentPassword(s);
-  };
+  const generateParentPassword = () => setParentPassword(genParentPassword());
 
   const submit = async () => {
     setErr(null);
@@ -191,7 +244,7 @@ export const AddFamilyModal = ({
           email: parentEmail.trim() || null,
           password: parentPassword,
           full_name: parentName.trim(),
-          phone: fatherPhone || motherPhone || null,
+          phone: parentLoginPhone || null,
         });
         setPwChangedValue(parentPassword);
         setPwChangedOpen(true);
@@ -269,6 +322,9 @@ export const AddFamilyModal = ({
               "Родитель входит по номеру телефона. Пароль нужно придумать и передать семье лично.",
               "Ата-эне телефон номери менен кирет. Сырсөздү ойлоп таап, үй-бүлөгө жеке бериңиз.",
             )}
+          </div>
+          <div style={{ marginBottom: 8 }}>
+            <LoginPhonePick side={loginSide} onChange={changeLoginWho} fatherPhone={fatherPhone} motherPhone={motherPhone} disabled={busy} lang={lang} />
           </div>
           <div style={{
             fontSize: 12, padding: "6px 10px", marginBottom: 10,
@@ -349,6 +405,7 @@ export const AddFamilyModal = ({
           )}
           {withLogin && (
             <div style={{ marginTop: 12, display: "flex", flexDirection: "column", gap: 8 }}>
+              <LoginPhonePick side={loginSide} onChange={changeLoginWho} fatherPhone={fatherPhone} motherPhone={motherPhone} disabled={busy} lang={lang} />
               <div style={{
                 fontSize: 12, padding: "6px 10px",
                 background: "var(--green-50)", color: "var(--green)",
@@ -655,6 +712,7 @@ export const AddFamilyModal = ({
         lang={lang}
         password={pwChangedValue}
         who={parentProfile?.full_name ?? parentName ?? undefined}
+        login={parentProfile?.phone ?? parentLoginPhone ?? undefined}
       />
     </Modal>
   );
@@ -790,10 +848,14 @@ export const AddChildModal = ({
   onClose: () => void;
   lang: Lang;
   initial?: ChildInitial;
-  onCreated?: (childId: string) => void;
+  // training — секция и группа, выбранные в блоке «Тренировки»: по ним
+  // сразу открывают продажу абонемента (в группу без абонемента не записать).
+  onCreated?: (childId: string, training?: { sectionId: string; groupId: string }) => void;
 }) => {
   const t = (ru: string, ky: string) => (lang === "ru" ? ru : ky);
   const { data: families = [] } = useFamilies();
+  const { data: trainSections = [] } = useSections();
+  const { data: trainGroupsAll = [] } = useGroupsQ();
   // Дети — для поиска семьи по имени ребёнка (режим «Существующая семья»).
   const { data: kidsForFamilies = [] } = useChildren();
   const { data: managers = [] } = useManagers();
@@ -826,6 +888,14 @@ export const AddChildModal = ({
   // ТЗ §3.3 «Приведи друга»: кто привёл этого клиента. Бонус −300 сом
   // начисляется рефереру и применяется к его следующему абонементу.
   const [referredBy, setReferredBy] = useState(initial?.referred_by_child_id ?? "");
+  // Вид спорта и группа (время + тренер) прямо при добавлении клиента —
+  // раньше их выбирали отдельным шагом после сохранения (просьба 2026-10-21).
+  const [trainSectionId, setTrainSectionId] = useState("");
+  const [trainGroupId, setTrainGroupId] = useState("");
+  const trainGroups = trainSectionId
+    ? (trainGroupsAll as Array<{ id: string; section_id: string | null } & GroupForLabel>).filter((g) => g.section_id === trainSectionId)
+    : [];
+  const canSell = usePerm("sell_cards");
   const [managerId, setManagerId] = useState<string>(
     initial?.responsible_manager_id
       ?? (currentUserIsManagerLike ? (user?.id ?? "") : ""),
@@ -869,47 +939,61 @@ export const AddChildModal = ({
   // Кому выдаём вход: родителю или самому клиенту, если он взрослый и
   // занимается сам (просьба Академии 2026-10-26).
   const [grantRole, setGrantRole] = useState<"parent" | "client">("parent");
-  const [grantPhone, setGrantPhone] = useState("");
+  const [clientPhone, setClientPhone] = useState("");
   const [grantName, setGrantName] = useState("");
   const [grantPw, setGrantPw] = useState("");
   const [grantDone, setGrantDone] = useState("");
-  const genGrantPw = () => {
-    const chars = "abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    let s = "";
-    for (let i = 0; i < 12; i++) s += chars[Math.floor(Math.random() * chars.length)];
-    setGrantPw(s);
+  const [grantLogin, setGrantLogin] = useState("");
+  const [grantErr, setGrantErr] = useState<string | null>(null);
+  const [grantWho, setGrantWho] = useState<LoginWho>("father");
+  const grantSide = pickLoginSide(grantWho, fatherPhone, motherPhone);
+  const grantPhone = grantSide === "father" ? fatherPhone : motherPhone;
+  // Взрослому клиенту логин — его собственный номер (по умолчанию из семьи).
+  const loginPhone = grantRole === "client" ? (clientPhone.trim() || fatherPhone || motherPhone) : grantPhone;
+  const genGrantPw = () => setGrantPw(genParentPassword());
+  const changeGrantWho = (w: LoginWho) => {
+    const prevName = (grantSide === "father" ? father : mother).trim();
+    if (grantName.trim() && grantName.trim() === prevName) setGrantName((w === "father" ? father : mother) || "");
+    setGrantWho(w);
   };
   const grantAccess = async () => {
-    setErr(null);
+    setGrantErr(null);
     const self = grantRole === "client";
-    const phone = self ? (grantPhone.trim() || fatherPhone || motherPhone) : (fatherPhone || motherPhone);
-    if (!phone) {
-      setErr(self
+    if (!loginPhone) {
+      setGrantErr(self
         ? t("Укажите телефон клиента — по нему он будет входить в приложение", "Кардардын телефонун жазыңыз — тиркемеге ошол номер менен кирет")
         : t("Укажите телефон отца или матери — по нему родитель будет входить в приложение", "Атасынын же энесинин телефонун жазыңыз — ата-эне тиркемеге ошол номер менен кирет"));
       return;
     }
     const name = self
       ? (grantName.trim() || fullName.trim())
-      : (grantName.trim() || (fatherPhone ? father : mother) || father || mother);
+      : (grantName.trim() || (grantSide === "father" ? father : mother) || father || mother);
     if (!name) {
-      setErr(self ? t("Укажите имя клиента", "Кардардын атын жазыңыз") : t("Укажите имя родителя", "Ата-эненин атын жазыңыз"));
+      setGrantErr(self ? t("Укажите имя клиента", "Кардардын атын жазыңыз") : t("Укажите имя родителя", "Ата-эненин атын жазыңыз"));
       return;
     }
-    if (grantPw.length < 8) { setErr(t("Пароль — не менее 8 символов", "Сырсөз кеминде 8 белги")); return; }
-    // Сначала сохраняем текущие телефоны в семью — логин делается из них.
-    await updFamily.mutateAsync({
-      id: familyId,
-      father_name: father || null, father_phone: fatherPhone || null,
-      mother_name: mother || null, mother_phone: motherPhone || null,
-    });
-    await createParentAcct.mutateAsync({
-      family_id: familyId,
-      password: grantPw,
-      full_name: name,
-      phone,
-      role: grantRole,
-    });
+    if (grantPw.length < 8) { setGrantErr(t("Пароль — не менее 8 символов", "Сырсөз кеминде 8 белги")); return; }
+    // Ошибку показываем здесь же: всплывашка исчезала, а «ещё не выдан»
+    // оставался — менеджеры думали, что вход создан.
+    try {
+      // Сначала сохраняем текущие телефоны в семью — логин делается из них.
+      await updFamily.mutateAsync({
+        id: familyId,
+        father_name: father || null, father_phone: fatherPhone || null,
+        mother_name: mother || null, mother_phone: motherPhone || null,
+      });
+      await createParentAcct.mutateAsync({
+        family_id: familyId,
+        password: grantPw,
+        full_name: name,
+        phone: loginPhone,
+        role: grantRole,
+      });
+    } catch (e: unknown) {
+      setGrantErr(friendlyAuthError((e as Error).message));
+      return;
+    }
+    setGrantLogin(loginPhone);
     setGrantDone(grantPw);
     setGrantOpen(false);
   };
@@ -972,10 +1056,14 @@ export const AddChildModal = ({
         referred_by_child_id: referredBy || null,
       });
       if (onCreated && created && (created as { id?: string }).id) {
-        onCreated((created as { id: string }).id);
+        onCreated(
+          (created as { id: string }).id,
+          trainSectionId ? { sectionId: trainSectionId, groupId: trainGroupId } : undefined,
+        );
       }
       onClose();
       setFullName(""); setBirth(""); setCard(""); setSource(""); setReferredBy("");
+      setTrainSectionId(""); setTrainGroupId("");
       setFather(""); setFatherPhone("");
       setMother(""); setMotherPhone("");
       setFamilyComment("");
@@ -1071,10 +1159,10 @@ export const AddChildModal = ({
                   ) : grantDone ? (
                     <span style={{ color: "var(--green, #1a7f37)", fontWeight: 600 }}>
                       {grantRole === "client"
-                        ? t(`Готово. Логин — телефон клиента, пароль: ${grantDone}. Передайте его лично.`,
-                            `Даяр. Логин — кардардын телефону, сырсөз: ${grantDone}. Жеке бериңиз.`)
-                        : t(`Готово. Логин — телефон родителя, пароль: ${grantDone}. Передайте его лично.`,
-                            `Даяр. Логин — ата-эненин телефону, сырсөз: ${grantDone}. Жеке бериңиз.`)}
+                        ? t(`Готово. Логин: ${grantLogin}, пароль: ${grantDone}. Передайте их клиенту лично.`,
+                            `Даяр. Логин: ${grantLogin}, сырсөз: ${grantDone}. Кардарга жеке бериңиз.`)
+                        : t(`Готово. Логин: ${grantLogin}, пароль: ${grantDone}. Передайте их родителю лично.`,
+                            `Даяр. Логин: ${grantLogin}, сырсөз: ${grantDone}. Ата-энеге жеке бериңиз.`)}
                     </span>
                   ) : (
                     <>
@@ -1102,20 +1190,22 @@ export const AddChildModal = ({
                       <button
                         type="button"
                         className={`seg__btn ${grantRole === "client" ? "is-active" : ""}`}
-                        onClick={() => { setGrantRole("client"); if (!grantPhone) setGrantPhone(fatherPhone || motherPhone); }}
+                        onClick={() => { setGrantRole("client"); if (!clientPhone) setClientPhone(fatherPhone || motherPhone); }}
                       >
                         {t("Самому клиенту (взрослый)", "Кардардын өзүнө (чоң киши)")}
                       </button>
                     </div>
-                    {grantRole === "client" && (
+                    {grantRole === "client" ? (
                       <input
                         type="tel"
                         inputMode="tel"
-                        value={grantPhone}
-                        onChange={(e) => setGrantPhone(e.target.value)}
+                        value={clientPhone}
+                        onChange={(e) => setClientPhone(e.target.value)}
                         placeholder={t("Телефон клиента", "Кардардын телефону")}
                         style={{ height: 34, padding: "0 10px", border: "1px solid var(--line)", borderRadius: "var(--r-sm)", fontSize: 13, width: 150 }}
                       />
+                    ) : (
+                      <LoginPhonePick side={grantSide} onChange={changeGrantWho} fatherPhone={fatherPhone} motherPhone={motherPhone} disabled={createParentAcct.isPending} lang={lang} />
                     )}
                     <input
                       value={grantName}
@@ -1143,10 +1233,14 @@ export const AddChildModal = ({
                     >
                       {createParentAcct.isPending ? t("Создаём…", "Түзүлүүдө…") : t("Создать вход", "Кирүүнү түзүү")}
                     </button>
+                    {grantErr && <div className="field__error" style={{ width: "100%" }}>{grantErr}</div>}
                     <div style={{ fontSize: 11.5, color: "var(--muted)", width: "100%" }}>
                       {grantRole === "client"
                         ? t("Клиент будет входить сам и видеть свой абонемент, расписание и посещения. Пароль передайте ему лично.",
                             "Кардар өзү кирип, абонементин, жадыбалын жана катышуусун көрөт. Сырсөздү ага жеке бериңиз.")
+                        : grantPhone
+                        ? t(`Логин: ${grantPhone}. Пароль передайте родителю лично.`,
+                            `Логин: ${grantPhone}. Сырсөздү ата-энеге жеке бериңиз.`)
                         : t("Логином станет телефон отца или матери. Пароль передайте родителю лично.",
                             "Логин — атасынын же энесинин телефону. Сырсөздү ата-энеге жеке бериңиз.")}
                     </div>
@@ -1190,9 +1284,7 @@ export const AddChildModal = ({
       <Field label={t("Источник клиента", "Кардардын булагы")}>
         <Select value={source} onChange={(e) => setSource(e.target.value as ClientSource | "")} disabled={busy}>
           <option value="">{t("— не указан —", "— көрсөтүлгөн эмес —")}</option>
-          <option value="target">{t("Таргет (Instagram)", "Таргет (Instagram)")}</option>
-          <option value="referral">{t("Рекомендация", "Сунуштама")}</option>
-          <option value="other">{t("Другое", "Башка")}</option>
+          {SOURCE_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o[lang]}</option>)}
         </Select>
       </Field>
 
@@ -1210,6 +1302,43 @@ export const AddChildModal = ({
                "300 сом бонус ал кийинки абонементинен кемийт.")}
           </div>
         </Field>
+      )}
+
+      {/* Вид спорта, время и тренер — сразу при добавлении клиента */}
+      {!isEdit && canSell && onCreated && (
+        <>
+          <div className="form-sec">{t("Тренировки", "Машыгуулар")}</div>
+          <Field label={t("Вид спорта", "Спорттун түрү")}>
+            <Select
+              value={trainSectionId}
+              onChange={(e) => { setTrainSectionId(e.target.value); setTrainGroupId(""); }}
+              disabled={busy}
+            >
+              <option value="">{t("— выбрать позже —", "— кийин тандоо —")}</option>
+              {trainSections.map((s) => (
+                <option key={s.id} value={s.id}>{lang === "ru" ? s.name_ru : s.name_ky}</option>
+              ))}
+            </Select>
+          </Field>
+          {trainSectionId && (
+            <Field
+              label={t("Группа: дни, время, тренер", "Топ: күндөр, убакыт, тренер")}
+              hint={t(
+                "После сохранения откроется продажа абонемента с этой секцией и группой — в группу ребёнок попадёт вместе с абонементом.",
+                "Сактагандан кийин ушул секция жана топ менен абонемент сатуу ачылат — бала топко абонемент менен кошо кирет.",
+              )}
+            >
+              <Select value={trainGroupId} onChange={(e) => setTrainGroupId(e.target.value)} disabled={busy || trainGroups.length === 0}>
+                <option value="">
+                  {trainGroups.length === 0
+                    ? t("— в секции пока нет групп —", "— секцияда азырынча топ жок —")
+                    : t("— без группы —", "— топсуз —")}
+                </option>
+                {trainGroups.map((g) => <option key={g.id} value={g.id}>{groupOptionLabel(g, lang)}</option>)}
+              </Select>
+            </Field>
+          )}
+        </>
       )}
 
       {err && <div className="field__error" style={{ marginTop: 8 }}>{err}</div>}
@@ -2481,10 +2610,7 @@ export const AddLeadModal = ({ open, onClose, lang }: { open: boolean; onClose: 
         </Field>
         <Field label={t("Источник", "Булак")}>
           <Select value={source} onChange={(e) => setSource(e.target.value as LeadSource)}>
-            <option value="target">{t("Таргет Instagram", "Instagram таргет")}</option>
-            <option value="referral">{t("Рекомендация", "Сунуштама")}</option>
-            <option value="direct">{t("Прямое обращение", "Түз кайрылуу")}</option>
-            <option value="other">{t("Другое", "Башка")}</option>
+            {SOURCE_OPTIONS.map((o) => <option key={o.id} value={o.id}>{o[lang]}</option>)}
           </Select>
         </Field>
         <Field label={t("Instagram", "Instagram")}>
@@ -2512,7 +2638,7 @@ export const AddLeadModal = ({ open, onClose, lang }: { open: boolean; onClose: 
 // селект и кнопка «новый ребёнок» прячутся, отображается имя read-only.
 // =============================================================
 export const SellCardModal = ({
-  open, onClose, lang, presetChildId, presetSectionId, presetGroupId,
+  open, onClose, lang, presetChildId, presetSectionId, presetGroupId, initialSectionId, initialGroupId,
 }: {
   open: boolean;
   onClose: () => void;
@@ -2522,6 +2648,9 @@ export const SellCardModal = ({
   // секция и группа фиксируются read-only.
   presetSectionId?: string;
   presetGroupId?: string;
+  // Подстановка из формы нового клиента — менеджер может поменять.
+  initialSectionId?: string;
+  initialGroupId?: string;
 }) => {
   const t = (ru: string, ky: string) => (lang === "ru" ? ru : ky);
   const { data: kids = [] } = useChildren();
@@ -2599,10 +2728,10 @@ export const SellCardModal = ({
       setErr(null);
     } else {
       if (presetChildId) setChildId(presetChildId);
-      if (presetSectionId) setSectionId(presetSectionId);
-      if (presetGroupId) setGroupId(presetGroupId);
+      if (presetSectionId || initialSectionId) setSectionId(presetSectionId ?? initialSectionId ?? "");
+      if (presetGroupId || initialGroupId) setGroupId(presetGroupId ?? initialGroupId ?? "");
     }
-  }, [open, presetChildId, presetSectionId, presetGroupId]);
+  }, [open, presetChildId, presetSectionId, presetGroupId, initialSectionId, initialGroupId]);
 
   // При смене ребёнка сбрасываем сумму с депозита: у нового ребёнка свой баланс.
   useEffect(() => {
@@ -2699,22 +2828,32 @@ export const SellCardModal = ({
   const debtAfterSale = Math.max(0, cashDue - cashAmount);
 
   const today = new Date().toISOString().slice(0, 10);
-  const inDays = (n: number) => {
-    const d = new Date(); d.setDate(d.getDate() + n);
-    return d.toISOString().slice(0, 10);
-  };
   // Срок карты: из тарифа; при ручном вводе — фолбэк по типу.
   const periodDays = plan?.duration_days
     ?? (type === "quarterly" ? 90 : type === "half_year" ? 180 : type === "annual" ? 360 : type === "nine_month" ? 270 : 30);
 
-  // Окно записи: считаем только если выбрана группа с расписанием.
-  // Иначе окно открытое (null/null) и карта живёт по обычному периоду.
-  // Окно задаём только когда посчитали дату конца — без half-open окон.
   const lessonCount = Number(total) || 0;
   const hasWindow = !!groupId && groupSchedule.length > 0;
-  const windowEnd = hasWindow ? computeWindowEnd(firstLessonDate, lessonCount, groupSchedule) : null;
-  const windowStart = windowEnd ? firstLessonDate : null;
-  const windowLabel = windowEnd ? formatWindow(lang, firstLessonDate, windowEnd, groupSchedule, lessonCount) : null;
+  // Срок пакета в месяцах — календарный: «1 месяц» = с 13 октября по
+  // 13 ноября (ТЗ §4.1, просьба офиса 2026-10-20). Раньше конец ставился
+  // на дату N-го занятия по расписанию, и месячный выходил на 3–4 недели.
+  const cardStart = hasWindow ? firstLessonDate : today;
+  const months = CARD_MONTHS[type];
+  const periodEnd = months ? addMonthsIso(cardStart, months) : addDaysIso(cardStart, periodDays);
+  const nthLesson = hasWindow ? computeWindowEnd(firstLessonDate, lessonCount, groupSchedule) : null;
+  // Пакет: календарный срок, но если по расписанию N занятий в него не
+  // помещаются (две тренировки в неделю на 12 занятий) — до N-го занятия,
+  // иначе оплаченное сгорит. Разовое, пробное, персональное — как раньше:
+  // до даты N-го занятия, а без расписания — дни тарифа. Иначе ребёнок с
+  // пробной висел бы в составе группы весь срок тарифа (30 дней).
+  const cardEnd = months
+    ? (nthLesson && nthLesson > periodEnd ? nthLesson : periodEnd)
+    : (nthLesson ?? periodEnd);
+  // Окно записи в группу (ростер и табель) совпадает со сроком абонемента.
+  // Без группы с расписанием окно открытое (null/null).
+  const windowStart = hasWindow ? cardStart : null;
+  const windowEnd = hasWindow ? cardEnd : null;
+  const scheduleDays = hasWindow ? scheduleDaysText(lang, groupSchedule) : "";
 
   const submit = async () => {
     setErr(null);
@@ -2751,10 +2890,6 @@ export const SellCardModal = ({
       setErr(t("Сумма с депозита превышает доступный баланс", "Депозиттен суммасы балансты ашат"));
       return;
     }
-    if (hasWindow && lessonCount > 0 && !windowEnd) {
-      setErr(t("Не удалось рассчитать окно по расписанию группы", "Топтун жадыбалы боюнча терезе эсептелген жок"));
-      return;
-    }
     try {
       await sell.mutateAsync({
         child_id: childId, type, total_lessons: Number(total),
@@ -2764,10 +2899,9 @@ export const SellCardModal = ({
         freeze_quota: plan?.freeze_quota ?? 0,
         price: Number(price), discount_pct: pctNum,
         discount_reason: discountReason.trim() || null,
-        // При окне: карта стартует с первой тренировки и «действует до»
-        // даты N-го занятия (совпадает с окном ростера). Иначе — обычный период.
-        start_date: windowStart ?? today,
-        end_date: windowEnd ?? inDays(periodDays),
+        // С группой карта стартует с первой тренировки, без группы — сегодня.
+        start_date: cardStart,
+        end_date: cardEnd,
         payment_method: method,
         section_id: sectionId,
         group_id: groupId || null,
@@ -2834,7 +2968,10 @@ export const SellCardModal = ({
           open={newChildOpen}
           onClose={() => setNewChildOpen(false)}
           lang={lang}
-          onCreated={(newId) => setChildId(newId)}
+          onCreated={(newId, training) => {
+            setChildId(newId);
+            if (training) { setSectionId(training.sectionId); setGroupId(training.groupId); }
+          }}
         />
       )}
 
@@ -2879,8 +3016,8 @@ export const SellCardModal = ({
               disabled={!sectionId || groupsForSection.length === 0}
             >
               <option value="">— {t("не выбирать", "тандабоо")} —</option>
-              {groupsForSection.map((g: { id: string; name: string }) => (
-                <option key={g.id} value={g.id}>{g.name}</option>
+              {(groupsForSection as Array<{ id: string } & GroupForLabel>).map((g) => (
+                <option key={g.id} value={g.id}>{groupOptionLabel(g, lang)}</option>
               ))}
             </Select>
           )}
@@ -2982,19 +3119,25 @@ export const SellCardModal = ({
         </Field>
       )}
 
-      {/* Окно записи: дата первой тренировки → дата N-го занятия */}
+      {/* Срок абонемента; с группой это же окно записи в табель */}
+      {sectionId && (!groupId || hasWindow) && (
+        <div style={{
+          marginTop: 4, marginBottom: 4, padding: "8px 12px",
+          background: "var(--blue-50)", border: "1px solid var(--blue-100)",
+          color: "var(--blue-ink)", borderRadius: "var(--r-sm)", fontSize: 12,
+          display: "flex", alignItems: "center", gap: 8,
+        }}>
+          <Icon name="calendar" size={14} />
+          <span>
+            {t("Срок", "Мөөнөтү")}: <b>{fmtPeriod(cardStart, cardEnd, lang)}</b>
+            {lessonCount > 0 ? ` · ${lessonsText(lessonCount, lang)}` : ""}
+            {scheduleDays ? ` · ${scheduleDays}` : ""}
+            {months && cardEnd !== periodEnd ? ` · ${t("по расписанию занятия не помещаются в срок — продлён до последнего", "жадыбал боюнча сабактар мөөнөткө батпайт — акыркысына чейин узартылды")}` : ""}
+          </span>
+        </div>
+      )}
       {groupId && (
-        windowLabel ? (
-          <div style={{
-            marginTop: 4, marginBottom: 4, padding: "8px 12px",
-            background: "var(--blue-50)", border: "1px solid var(--blue-100)",
-            color: "var(--blue-ink)", borderRadius: "var(--r-sm)", fontSize: 12,
-            display: "flex", alignItems: "center", gap: 8,
-          }}>
-            <Icon name="calendar" size={14} />
-            <span>{t("Окно записи", "Жазылуу терезеси")}: <b>{windowLabel}</b></span>
-          </div>
-        ) : groupSchedule.length === 0 ? (
+        groupSchedule.length === 0 ? (
           <div style={{
             marginTop: 4, marginBottom: 4, padding: "8px 12px",
             background: "var(--bg-soft)", border: "1px solid var(--line)",
@@ -3293,8 +3436,7 @@ export const CreateFreezeModal = ({ open, onClose, lang }: { open: boolean; onCl
           <option value="">— {t("выбрать", "тандоо")} —</option>
           {shown.map((c) => (
             <option key={c.id} value={c.id}>
-              {c.child?.full_name ?? c.id.slice(0, 8)} · {c.type}
-              {c.total_lessons ? ` · ${c.total_lessons}` : ""} · {fmtD(c.start_date)} → {fmtD(c.end_date)} · {c.status}
+              {c.child?.full_name ?? c.id.slice(0, 8)} · {cardLabel(c, lang)}
             </option>
           ))}
         </Select>

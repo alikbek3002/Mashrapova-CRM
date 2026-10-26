@@ -8,6 +8,7 @@ import { Modal, Field } from "../shared/ui/Modal";
 import { usePerm } from "../shared/auth/rbac";
 import { SkeletonRows } from "../shared/ui/Skeleton";
 import { Select } from "../shared/ui/Select";
+import { cardTypeText } from "../shared/lib/cards";
 
 export const RefundsPage = ({ lang }: { lang: Lang }) => {
   const t = (ru: string, ky: string) => (lang === "ru" ? ru : ky);
@@ -37,7 +38,7 @@ export const RefundsPage = ({ lang }: { lang: Lang }) => {
             // Показываем цену тарифа — именно она база возврата по ТЗ §7.3.
             // Если была скидка, показываем и уплаченное: возврат не может
             // превысить его (предохранитель в refunds.ts).
-            label: `${c.child?.full_name ?? "?"} · ${c.type} · ${formatCurrency(Number(c.price_paid))}`
+            label: `${c.child?.full_name ?? "?"} · ${cardTypeText(c.type, lang)} · ${formatCurrency(Number(c.price_paid))}`
               + (Number(c.discount ?? 0) > 0
                   ? ` (оплачено ${formatCurrency(Math.max(0, Number(c.price_paid) - Number(c.discount ?? 0)))})`
                   : ""),

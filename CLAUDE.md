@@ -113,7 +113,7 @@ payroll, bulk schedule operations, notifications dispatch/broadcast, staff manag
 (`lib/kommo*.ts`: one-way Kommo → `leads`/`kommo_events` every 5 min, see DEPLOY.md «Kommo»). Everything else reads
 from Supabase directly under RLS. Idempotency via the `Idempotency-Key` header on money routes.
 
-**Database** — `supabase/migrations/` (101 migrations). Business calculations live in SQL as the
+**Database** — `supabase/migrations/` (102 migrations). Business calculations live in SQL as the
 single source of truth: `v_child_card_balance`, `v_payroll_attendance`, `section_price()`,
 `manager_kpi()`, `director_dashboard()`, `refresh_card_notices()`, `refresh_lead_sla()`,
 `refresh_lifecycle()`, plus report functions. Do not reimplement these on the client.
@@ -136,11 +136,24 @@ single source of truth: `v_child_card_balance`, `v_payroll_attendance`, `section
 
 ## Design System
 
+The visual identity follows the client's brand book (`Лого Машрапов 1.pdf`, October 2026):
+red `#F10000`, black, grey `#B0B0B0`, white; the «М» mark and the «МАШРАПОВ» wordmark.
+
 Colors, spacing and typography are CSS custom properties in `styles.css`:
-- `--bg`, `--bg-soft`, `--surface`, `--ink`, `--ink-2`, `--muted`, `--line` — neutrals
-- Brand: `--blue-*`, `--yellow-*`, `--red-*`, `--green-*` (oklch)
-- Fonts: `--font-sans` (Manrope), `--font-display` (Unbounded), `--font-mono` (JetBrains Mono)
-- Radius: `--r-xs` (8px) → `--r-xl` (24px)
+- Brand: `--brand`, `--brand-600` (hover), `--brand-700` (red text on white), `--brand-on-dark`,
+  `--brand-50/100`, `--black`, `--grey`. `--blue-*` are aliases of `--brand-*`: the name comes from
+  Uniqum and most of the CSS still uses it
+- `--bg`, `--bg-soft`, `--surface`, `--ink`, `--ink-2`, `--muted`, `--line` — neutrals (pure greys)
+- Status: `--red-*` (errors, debt, darker than the brand red), `--green-*`, `--yellow-*`, `--ice-*`
+  (freeze)
+- Fonts: `--font-sans` (Inter), `--font-display` (Inter Tight; page titles and KPI numbers are
+  heavy italic uppercase, echoing the wordmark's Franklin Gothic Heavy Italic), `--font-mono`
+  (JetBrains Mono)
+- Radius: `--r-xs` (4px) → `--r-xl` (14px) — sharper than before, to match the angular mark
+
+The logo is `shared/ui/BrandLogo.tsx` (inline SVG traced from the brand book, variants `full` /
+`word` / `mark`, tones `dark` / `light` / `white`). Static copies live in `public/brand/`, along with
+`hero.jpg`, the login poster.
 
 Note: `--dir-*` and `--sec-*` section tints are leftovers from the Uniqum section set (ЛФК,
 gymnastics) and are no longer referenced from TSX — do not build new UI on them.

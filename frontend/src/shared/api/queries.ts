@@ -264,7 +264,8 @@ export const useGroups = () =>
     queryFn: async () => {
       const { data, error } = await supabase
         .from("groups")
-        .select("*, section:sections(*), coach:profiles!coach_id(full_name), enrollments(id, archived_at)")
+        // schedule — чтобы в списках групп было видно дни и время
+        .select("*, section:sections(*), coach:profiles!coach_id(full_name), enrollments(id, archived_at), schedule:group_schedule(day_of_week, start_time)")
         .is("deleted_at", null)
         .order("name");
       if (error) throw error;

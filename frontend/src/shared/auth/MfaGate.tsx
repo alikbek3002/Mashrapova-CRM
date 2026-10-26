@@ -18,6 +18,7 @@ import {
   getMfaState, getVerifiedFactorId, enrollTotp, verifyTotp, mfaErrorText,
   type MfaState, type TotpEnrollment,
 } from "./mfa";
+import { BrandLogo } from "../ui/BrandLogo";
 
 const APP_STORE = "https://apps.apple.com/app/google-authenticator/id388497605";
 const GOOGLE_PLAY = "https://play.google.com/store/apps/details?id=com.google.android.apps.authenticator2";
@@ -130,7 +131,7 @@ export const MfaGate = ({ lang, children }: { lang: Lang; children: React.ReactN
   return (
     <div className="mfa">
       <div className="mfa__card">
-        <img className="mfa__logo" src="/logo.png" alt="" />
+        <BrandLogo className="mfa__logo" variant="mark" tone="light" height={52} />
 
         {needsCode ? (
           <>

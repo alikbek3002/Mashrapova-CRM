@@ -36,7 +36,7 @@ const STATUS_LBL: Record<string, { ru: string; ky: string }> = {
 };
 
 const CARD_TYPE_LBL: Record<string, { ru: string; ky: string }> = {
-  monthly: { ru: "Месячный", ky: "Айлык" },
+  monthly: { ru: "1 месяц", ky: "1 ай" },
   quarterly: { ru: "3 месяца", ky: "3 ай" },
   nine_month: { ru: "9 месяцев", ky: "9 ай" },
   half_year: { ru: "6 месяцев", ky: "6 ай" },

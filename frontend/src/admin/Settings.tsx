@@ -121,6 +121,10 @@ const OrgTab = ({ lang }: { lang: Lang }) => {
       <label className="field">
         <span className="field__label">{t("Телефон клуба", "Клубдун телефону")}</span>
         <input value={phone} onChange={(e) => setPhone(e.target.value)} disabled={busy} placeholder="+996 …" />
+        <span className="field__hint">{t(
+          "Рабочий номер для родителей: в приложении по нему звонят вместо личных номеров менеджеров.",
+          "Ата-энелер үчүн жумушчу номер: тиркемеде менеджерлердин жеке номерлеринин ордуна ушуга чалышат.",
+        )}</span>
       </label>
       <label className="field">
         <span className="field__label">{t("WhatsApp менеджера (для родителей)", "WhatsApp менеджер")}</span>

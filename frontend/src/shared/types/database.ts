@@ -42,8 +42,8 @@ export type LeadStage =
   | "lost"
   | "waiting";
 
-// Источники лидов ТЗ §8.1.
-export type LeadSource = "target" | "referral" | "direct" | "other";
+// Источники лида — тот же список, что у ученика (ClientSource ниже).
+export type LeadSource = ClientSource;
 export type DepositTxType =
   | "top_up"
   | "withdraw"
@@ -123,8 +123,13 @@ export type Child = Timestamps & {
   churn_risk_at: string | null;
 };
 
-// Источник клиента (ТЗ §3.2).
-export type ClientSource = "target" | "referral" | "other";
+// Источник клиента (ТЗ §3.2, расширено по просьбе клиента 2026-10-20).
+// Подписи — shared/sources.ts, допустимые значения — CHECK в базе.
+export type ClientSource =
+  | "target" | "instagram" | "tiktok" | "blogger" | "maps" | "messenger"
+  | "referral" | "sibling" | "returning"
+  | "direct" | "event" | "offline_ads"
+  | "other";
 export type GroupAudience = "kids" | "adults" | "mixed";
 
 // ТЗ §10.1 — модель оплаты тренера:

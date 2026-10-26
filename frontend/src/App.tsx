@@ -3,7 +3,7 @@ import type { ComponentType } from "react";
 import { QueryClient } from "@tanstack/react-query";
 import { PersistQueryClientProvider } from "@tanstack/react-query-persist-client";
 import { createAsyncStoragePersister } from "@tanstack/query-async-storage-persister";
-import { I18N, BrandLogo } from "./data";
+import { I18N } from "./data";
 import type { Lang } from "./data";
 import { AuthProvider, useAuth } from "./shared/auth/AuthProvider";
 import { Login } from "./shared/auth/Login";
@@ -15,6 +15,7 @@ import { registerOutboxHandlers } from "./shared/offline/ops";
 import { OfflineBar } from "./shared/offline/OfflineBar";
 import { ToastHost } from "./shared/ui/toast";
 import { Sk, SkeletonPage } from "./shared/ui/Skeleton";
+import { BrandLogo } from "./shared/ui/BrandLogo";
 
 // Code-splitting по роли: каждый persona-экран — отдельный чанк. Тренер/родитель
 // на телефоне не грузят весь админский код (формы, отчёты, payroll и т.д.).
@@ -54,7 +55,7 @@ const ParentScreen = lazyWithRetry(() =>
 //
 // Если меняешь форму данных в queries.ts (типы, ключи), бамп BUSTER —
 // иначе пользователи прочитают «древний» кэш и упадут на runtime.
-const QUERY_CACHE_BUSTER = "v1";
+const QUERY_CACHE_BUSTER = "v2"; // v2: у групп появилось расписание (schedule)
 const QUERY_CACHE_MAX_AGE = 24 * 60 * 60_000; // 24h
 
 // JSON.stringify теряет Map/Set. У нас табели (coach_tabel, group_tabel)
@@ -96,6 +97,16 @@ const queryClient = new QueryClient({
     },
   },
 });
+
+// Логотип в шапке: на широком экране знак с надписью и пометка «CRM»,
+// на телефоне — только знак (рядом карточка пользователя).
+const CrmLogo = () => (
+  <div className="crm-logo">
+    <BrandLogo className="crm-logo__full" variant="word" tone="dark" height={30} />
+    <BrandLogo className="crm-logo__mark" variant="mark" tone="dark" height={34} />
+    <span className="crm-logo__tag">CRM</span>
+  </div>
+);
 
 const readLang = (): Lang => {
   try {
@@ -180,9 +191,7 @@ const Shell = () => {
       <div className="cards-bordered">
         <div className="app-chrome">
           <div className="app-chrome__inner">
-            <div className="crm-logo">
-              <img className="crm-logo__img" src="/logo.png" alt="Академия Машрапова" />
-            </div>
+            <CrmLogo />
             <Sk w={180} h={36} r={999} style={{ opacity: 0.15 }} />
           </div>
         </div>
@@ -227,10 +236,7 @@ const Shell = () => {
     <div className="cards-bordered">
       <div className={`app-chrome ${isPwaRole ? "app-chrome--pwa" : ""}`}>
         <div className="app-chrome__inner">
-          <div className="crm-logo">
-            <img className="crm-logo__img" src="/logo.png" alt="Академия Машрапова" />
-            MASHRAPOVA
-          </div>
+          <CrmLogo />
 
           <div className="user-chip">
             <div className="user-chip__avatar">

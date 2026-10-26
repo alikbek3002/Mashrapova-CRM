@@ -2,7 +2,8 @@
 // Tabs hidden by role: parent sees no "Платежи"/"Комментарии"; coach sees no "Платежи"/"Комментарии".
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type CSSProperties } from "react";
 import { Modal, Field } from "../shared/ui/Modal";
-import { fmtD } from "../shared/lib/dates";
+import { fmtD, fmtDLong, fmtPeriod, addDaysIso } from "../shared/lib/dates";
+import { cardLabel, cardTypeText, lessonsText } from "../shared/lib/cards";
 import { Icon } from "../data";
 import type { Lang } from "../data";
 import {
@@ -24,8 +25,6 @@ import {
 import { useAuth } from "../shared/auth/AuthProvider";
 import { can, usePerm } from "../shared/auth/rbac";
 import type { ChildWithFamily } from "../shared/api/queries";
-import { supabase } from "../shared/api/supabase";
-import { computeWindowEnd } from "../shared/lib/enrollmentWindow";
 import { EditableChildAvatar } from "../shared/ui/ChildAvatar";
 import { resolveStorageUrl } from "../shared/api/avatar";
 import { initialsOf, formatCurrency } from "./common";
@@ -34,6 +33,8 @@ import { freezeOutcome, type CardType, type AttendanceStatus, type PaymentMethod
 import { DateInput } from "../shared/ui/DateInput";
 import { SkeletonRows } from "../shared/ui/Skeleton";
 import { Select } from "../shared/ui/Select";
+import { sourceText } from "../shared/sources";
+import { enrollmentEndFor } from "../shared/api/enrollmentEnd";
 
 type Role = "admin" | "coach" | "parent";
 type TabId = "subs" | "att" | "pay" | "deposit" | "freezes" | "notes" | "comments" | "group" | "pt";
@@ -46,16 +47,6 @@ const STATUS_LABEL: Record<string, { ru: string; ky: string }> = {
   archived: { ru: "в архиве", ky: "архивде" },
 };
 
-const CARD_TYPE_LABEL: Record<string, { ru: string; ky: string }> = {
-  monthly: { ru: "Месячный", ky: "Айлык" },
-  quarterly: { ru: "3 месяца", ky: "3 ай" },
-  half_year: { ru: "6 месяцев", ky: "6 ай" },
-  nine_month: { ru: "9 месяцев", ky: "9 ай" },
-  annual: { ru: "12 месяцев", ky: "12 ай" },
-  personal: { ru: "Персональный", ky: "Жеке" },
-  single: { ru: "Разовое занятие", ky: "Бир жолку сабак" },
-  trial: { ru: "Пробная тренировка", ky: "Сыноо машыгуусу" },
-};
 
 const CARD_STATUS_LABEL: Record<string, { ru: string; ky: string }> = {
   active: { ru: "активен", ky: "активдүү" },
@@ -66,11 +57,6 @@ const CARD_STATUS_LABEL: Record<string, { ru: string; ky: string }> = {
   archived: { ru: "в архиве", ky: "архивде" },
 };
 
-const SOURCE_LABEL: Record<"target" | "referral" | "other", { ru: string; ky: string }> = {
-  target: { ru: "таргет (Instagram)", ky: "таргет (Instagram)" },
-  referral: { ru: "рекомендация", ky: "сунуштама" },
-  other: { ru: "другое", ky: "башка" },
-};
 
 const ageFromDob = (dob: string): number => {
   const d = new Date(dob); const now = new Date();
@@ -178,7 +164,7 @@ export const ChildDrawer = ({
               <span>
                 📣 {t("Источник", "Булагы")}:{" "}
                 {child.source
-                  ? <b>{SOURCE_LABEL[child.source][lang]}</b>
+                  ? <b>{sourceText(child.source, lang)}</b>
                   : <span style={{ color: "var(--muted)" }}>{t("не указан", "көрсөтүлгөн эмес")}</span>}
               </span>
             </div>
@@ -433,7 +419,7 @@ const SubsTab = ({ childId, lang }: { childId: string; lang: Lang }) => {
             <div className="balance-card__head">
               <div>
                 <div className="balance-card__lbl">
-                  {CARD_TYPE_LABEL[b.type]?.[lang] ?? b.type}
+                  {cardTypeText(b.type, lang)}
                   {sec && ` · ${lang === "ru" ? sec.name_ru : sec.name_ky}`}
                   {` · ${fmtD(b.start_date)} → ${fmtD(b.end_date)}`}
                 </div>
@@ -537,7 +523,7 @@ const SubsTab = ({ childId, lang }: { childId: string; lang: Lang }) => {
             <tbody>
               {myCards.map((c) => (
                 <tr key={c.id} style={{ cursor: "default" }} onClick={(e) => e.stopPropagation()}>
-                  <td>{CARD_TYPE_LABEL[c.type]?.[lang] ?? c.type}{c.total_lessons ? ` · ${c.total_lessons} ${t("зан.", "сабак")}` : ""}</td>
+                  <td>{cardTypeText(c.type, lang)}{c.total_lessons ? ` · ${c.total_lessons} ${t("зан.", "сабак")}` : ""}</td>
                   <td style={{ fontSize: 12 }}>{(() => { const sec = (c as any).section as { name_ru?: string; name_ky?: string } | null; return sec ? (lang === "ru" ? sec.name_ru : sec.name_ky) : "—"; })()}</td>
                   <td style={{ color: "var(--muted)", fontSize: 12 }}>{fmtD(c.start_date)} → {fmtD(c.end_date)}</td>
                   <td className="num">
@@ -716,7 +702,7 @@ const RemoveLessonsModal = ({ open, onClose, lang, childId, card }: {
   return (
     <Modal open={open} onClose={onClose} width={520} title={t("Удалить тренировки из абонемента", "Абонементтен машыгууларды алып салуу")}>
       <div style={{ fontSize: 13, marginBottom: 10, padding: "8px 12px", background: "var(--bg-soft)", border: "1px solid var(--line)", borderRadius: "var(--r-sm)" }}>
-        {t("Абонемент", "Абонемент")}: <b>{card.type}{total != null ? ` · ${total}` : ""}</b> · {fmtD(card.start_date)} → {fmtD(card.end_date)}
+        {t("Абонемент", "Абонемент")}: <b>{cardTypeText(card.type, lang)}{total != null ? ` · ${lessonsText(total, lang)}` : ""}</b> · {fmtPeriod(card.start_date, card.end_date, lang)}
         <div style={{ color: "var(--muted)", fontSize: 12, marginTop: 4 }}>
           {t("Отметьте тренировки, которые снимаем. Число занятий уменьшится на столько же; у ребёнка эти даты пропадут из журнала и табеля тренера.",
              "Алып салуучу машыгууларды белгилеңиз. Сабак саны ошончого азаят.")}
@@ -831,7 +817,7 @@ const AddLessonsModal = ({ open, onClose, lang, childId, card }: {
   return (
     <Modal open={open} onClose={onClose} width={460} title={t("Добавить занятия", "Сабак кошуу")}>
       <div style={{ fontSize: 13, marginBottom: 12, padding: "8px 12px", background: "var(--bg-soft)", border: "1px solid var(--line)", borderRadius: "var(--r-sm)" }}>
-        {t("Абонемент", "Абонемент")}: <b>{card.type} · {total}</b> {t("занятий", "сабак")} · {t("до", "чейин")} <b>{fmtD(card.end_date)}</b>
+        {t("Абонемент", "Абонемент")}: <b>{cardTypeText(card.type, lang)} · {lessonsText(total, lang)}</b> · {t("до", "чейин")} <b>{fmtDLong(card.end_date, lang)}</b>
         {n > 0 && (
           <div style={{ marginTop: 4 }}>
             {t("Станет", "Болот")}: <b>{total} → {total + n}</b>. {t(`Срок продлится ровно на ${n} занят. по расписанию группы после текущей даты окончания.`, `Мөөнөт топтун жадыбалы боюнча так ${n} сабакка узарат.`)}
@@ -1029,7 +1015,7 @@ const AttTab = ({ childId, lang }: { childId: string; lang: Lang }) => {
               const sec = (c as any).section as { name_ru?: string; name_ky?: string } | null;
               return (
                 <option key={c.id} value={c.id}>
-                  {CARD_TYPE_LABEL[c.type]?.[lang] ?? c.type}
+                  {cardTypeText(c.type, lang)}
                   {sec ? ` · ${lang === "ru" ? sec.name_ru : sec.name_ky}` : ""}
                   {` · ${fmtD(c.start_date)} → ${fmtD(c.end_date)}`}
                 </option>
@@ -1169,7 +1155,7 @@ const PayTab = ({ childId, lang }: { childId: string; lang: Lang }) => {
                 <tr key={p.id}>
                   <td>{new Date(p.paid_at).toLocaleDateString(lang === "ru" ? "ru-RU" : "ky-KG")}</td>
                   <td style={{ fontSize: 12 }}>
-                    {card?.type ? (CARD_TYPE_LABEL[card.type]?.[lang] ?? card.type) : "—"}
+                    {card?.type ? (cardTypeText(card.type, lang)) : "—"}
                     {card?.section && <span style={{ color: "var(--muted)" }}> · {lang === "ru" ? card.section.name_ru : card.section.name_ky}</span>}
                   </td>
                   <td style={{ color: "var(--muted)" }}>{p.method === "cash" ? t("Наличные", "Накта") : p.method === "terminal" ? t("Терминал", "Терминал") : p.method === "transfer" ? t("Перевод", "Которуу") : p.method === "unknown" ? t("не указан", "көрсөтүлгөн эмес") : p.method}</td>
@@ -1455,11 +1441,7 @@ const FreezesTab = ({ childId, role, lang }: { childId: string; role: Role; lang
                   const rem = remainingOf(c.id);
                   return (
                     <option key={c.id} value={c.id}>
-                      {c.type}
-                      {c.total_lessons ? ` · ${c.total_lessons}` : ""}
-                      {rem != null ? ` · ${t("остаток", "калдык")} ${rem}` : ""}
-                      {` · ${fmtD(c.start_date)} → ${fmtD(c.end_date)}`}
-                      {` · ${c.status}`}
+                      {cardLabel(c, lang, rem)}
                     </option>
                   );
                 })}
@@ -1477,8 +1459,7 @@ const FreezesTab = ({ childId, role, lang }: { childId: string; role: Role; lang
               <div style={{ fontSize: 12, color: "var(--muted)", marginBottom: 10 }}>
                 {t("Заморозка на", "Тындыруу")} <b>{days}</b> {t("дн.", "күн")} ·{" "}
                 {t("абонемент будет действовать до", "абонемент күчүндө болот")}{" "}
-                <b>{new Date(new Date(selectedCard.end_date + "T00:00:00").getTime() + days * 86400000)
-                  .toISOString().slice(0, 10)}</b>
+                <b>{fmtDLong(addDaysIso(selectedCard.end_date, days), lang)}</b>
               </div>
             )}
             <Field label={t("Причина", "Себеп")}>
@@ -1662,19 +1643,12 @@ const GroupTab = ({ childId, childName, lang }: { childId: string; childName: st
     setAddDate(def);
   };
 
-  // Шаг 2: подтверждение — окно записи от выбранной даты: конец = дата
-  // N-го занятия по расписанию группы (N = total_lessons карты).
+  // Шаг 2: подтверждение — окно записи от выбранной даты (правило конца
+  // окна — enrollmentEndFor: пакет до конца абонемента, разовое — до занятия).
   const handleAdd = async () => {
     if (!addTarget || !addDate) return;
     const card = activeCards.find((c) => c.section_id && c.section_id === addTarget.section_id);
-    let end_date: string | null = null;
-    if (card) {
-      const { data: schedule } = await supabase
-        .from("group_schedule")
-        .select("day_of_week, start_time")
-        .eq("group_id", addTarget.id);
-      end_date = computeWindowEnd(addDate, card.total_lessons ?? 0, schedule ?? []) ?? card.end_date ?? null;
-    }
+    const end_date = card ? await enrollmentEndFor(card, addTarget.id, addDate) : null;
     await addEnroll.mutateAsync({
       child_id: childId, group_id: addTarget.id,
       start_date: card ? addDate : null, end_date,

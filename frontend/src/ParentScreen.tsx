@@ -18,6 +18,7 @@ import { ChildDrawer } from "./admin/ChildDrawer";
 import { Shell } from "./shared/ui/Shell";
 import { ChildAvatar, EditableChildAvatar } from "./shared/ui/ChildAvatar";
 import { SkeletonRows } from "./shared/ui/Skeleton";
+import { cardTypeText, cardStatusText } from "./shared/lib/cards";
 
 type ParentT = (typeof I18N)["ru"]["parent"];
 
@@ -166,6 +167,7 @@ const ParentHome = ({ lang, t, kid, onOpenCard }: { lang: Lang; t: ParentT; kid:
   const { data: notes = [] } = useProgressNotes(kid.id);
   const { data: manager } = useProfile(kid.responsible_manager_id ?? null);
   const { data: primaryCoach } = useChildPrimaryCoach(kid.id);
+  const { data: org } = useOrganization();
 
   const pct = balance && balance.total_lessons ? Math.round(((balance.remaining ?? 0) / balance.total_lessons) * 100) : 0;
   const next = lessons[0];
@@ -219,7 +221,7 @@ const ParentHome = ({ lang, t, kid, onOpenCard }: { lang: Lang; t: ParentT; kid:
           icon="user"
           label={tt("Менеджер", "Менеджер")}
           name={manager?.full_name}
-          phone={manager?.phone ?? null}
+          {...managerContact(org, manager, tt)}
           empty={tt("не назначен", "дайындалган эмес")}
         />
         <ContactRow
@@ -411,9 +413,9 @@ const ParentCard = ({ lang, t, kid }: { lang: Lang; t: ParentT; kid: any }) => {
 
       {activeFreeze && (
         <div style={{
-          background: "oklch(0.94 0.06 25)",
-          border: "1px solid oklch(0.78 0.10 25)",
-          color: "oklch(0.35 0.12 25)",
+          background: "var(--ice-50)",
+          border: "1px solid var(--ice-100)",
+          color: "var(--ice-ink)",
           borderRadius: "var(--r-md)",
           padding: "10px 14px",
           margin: "8px 0",
@@ -437,9 +439,9 @@ const ParentCard = ({ lang, t, kid }: { lang: Lang; t: ParentT; kid: any }) => {
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
                 <div>
                   <div style={{ fontSize: 12, color: "var(--muted)", textTransform: "uppercase", letterSpacing: 0.5 }}>{tt("Тип", "Түрү")}</div>
-                  <div style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 700, marginTop: 2 }}>{c.type}</div>
+                  <div style={{ fontFamily: "var(--font-display)", fontSize: 18, fontWeight: 700, marginTop: 2 }}>{cardTypeText(c.type, lang)}</div>
                 </div>
-                <span className={`pill pill--${c.status}`}>{c.status}</span>
+                <span className={`pill pill--${c.status}`}>{cardStatusText(c.status, lang)}</span>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div>
@@ -525,7 +527,7 @@ const ParentCard = ({ lang, t, kid }: { lang: Lang; t: ParentT; kid: any }) => {
             {historyCards.map((c) => (
               <div key={c.club_card_id} style={{ background: "#fff", border: "1px solid var(--line)", borderRadius: "var(--r-md)", padding: 10, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 <div>
-                  <div style={{ fontSize: 13, fontWeight: 600 }}>{c.type}</div>
+                  <div style={{ fontSize: 13, fontWeight: 600 }}>{cardTypeText(c.type, lang)}</div>
                   <div style={{ fontSize: 11, color: "var(--muted)" }}>{fmtDate(c.start_date)} — {fmtDate(c.end_date)}</div>
                 </div>
                 <span className={`pill pill--${c.status}`}>{c.status}</span>
@@ -984,13 +986,34 @@ const NotePhoto = ({ path }: { path: string }) => {
 };
 
 // Контактная строка (менеджер/тренер) в Home
+// Родителю звонят на рабочий номер академии, а не на личный телефон
+// менеджера, который завёл ученика (просьба клиента 2026-10-21). Номер —
+// «Телефон клуба» в Настройках; пока он пуст, кнопок звонка нет совсем:
+// личный номер менеджера родителю не показываем.
+const managerContact = (
+  org: { phone?: string | null; whatsapp_number?: string | null } | null | undefined,
+  manager: { phone?: string | null } | null | undefined,
+  tt: (ru: string, ky: string) => string,
+): { phone: string | null; whatsapp: string | null; note?: string } =>
+  org?.phone
+    ? {
+        phone: org.phone,
+        whatsapp: org.whatsapp_number || org.phone,
+        note: tt(`${org.phone} · рабочий номер академии`, `${org.phone} · академиянын жумушчу номери`),
+      }
+    : { phone: null, whatsapp: null };
+
 const ContactRow = ({
-  icon, label, name, phone, empty,
+  icon, label, name, phone, whatsapp, note, empty,
 }: {
   icon: string;
   label: string;
   name: string | null | undefined;
   phone: string | null | undefined;
+  /** Номер для WhatsApp, если отличается от телефона. */
+  whatsapp?: string | null;
+  /** Строка под именем — например, чей это номер. */
+  note?: string;
   empty: string;
 }) => (
   <div style={{
@@ -1009,6 +1032,7 @@ const ContactRow = ({
       <div style={{ fontWeight: 600, fontSize: 14, marginTop: 2 }}>
         {name ?? <span style={{ color: "var(--muted)", fontWeight: 400 }}>{empty}</span>}
       </div>
+      {note && <div style={{ fontSize: 12, color: "var(--muted)", marginTop: 2 }}>{note}</div>}
     </div>
     {phone && (
       <>
@@ -1016,7 +1040,7 @@ const ContactRow = ({
           <Icon name="phone" size={16} />
         </a>
         <a
-          href={`https://wa.me/${phone.replace(/[^0-9]/g, "")}`}
+          href={`https://wa.me/${(whatsapp || phone).replace(/[^0-9]/g, "")}`}
           target="_blank" rel="noreferrer"
           className="icon-btn"
           title="WhatsApp"
@@ -1378,7 +1402,7 @@ const ParentProfile = ({ lang, kid }: { lang: Lang; t?: ParentT; kid?: any }) =>
               icon="user"
               label={tt("Менеджер", "Менеджер")}
               name={manager?.full_name}
-              phone={manager?.phone ?? null}
+              {...managerContact(org, manager, tt)}
               empty={tt("не назначен", "дайындалган эмес")}
             />
             <ContactRow
