@@ -6,10 +6,11 @@ import { paymentCreateSchema } from "../../schemas/payments.js";
 import { z } from "zod";
 
 const methodPatchSchema = z.object({
-  method: z.enum(["cash", "terminal"]),
+  method: z.enum(["cash", "terminal", "transfer"]),
   reason: z.string().max(300).nullable().optional(),
 });
-const METHOD_LABEL: Record<"cash" | "terminal", string> = { cash: "нал", terminal: "терминал" };
+type Method = "cash" | "terminal" | "transfer" | "unknown";
+const METHOD_LABEL: Record<Method, string> = { cash: "нал", terminal: "терминал", transfer: "перевод", unknown: "не указан" };
 
 export const paymentsRoutes = async (app: FastifyInstance) => {
   app.post(
@@ -96,7 +97,7 @@ export const paymentsRoutes = async (app: FastifyInstance) => {
         .eq("id", id)
         .maybeSingle();
       if (pErr || !pay) return reply.code(404).send({ error: "payment_not_found" });
-      const from = pay.method as "cash" | "terminal";
+      const from = pay.method as Method;
       const to = parsed.data.method;
       if (from === to) return reply.code(200).send({ ok: true, unchanged: true });
 

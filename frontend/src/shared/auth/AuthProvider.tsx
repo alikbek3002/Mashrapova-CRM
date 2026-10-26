@@ -10,7 +10,8 @@ export type AppRole =
   | "manager"
   | "cashier"
   | "coach"
-  | "parent";
+  | "parent"
+  | "client";
 
 export type AppUser = {
   /** ТЗ §12.3: роль обязывает пройти второй фактор (директор, управляющий). */
@@ -52,6 +53,7 @@ const DEMO_NAMES: Record<AppRole, string> = {
   cashier: "Демо Ресепшен",
   coach: "Демо Тренер",
   parent: "Демо Родитель",
+  client: "Демо Клиент",
 };
 
 const makeDemoUser = (role: AppRole): AppUser => ({

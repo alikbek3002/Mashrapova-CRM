@@ -3,7 +3,7 @@ import { Icon } from "../data";
 import type { Lang } from "../data";
 import { PageHeader, EmptyState, formatCurrency } from "./common";
 import {
-  usePayments, useChildren, useCards, usePayroll, useFreezes,
+  usePaymentsInRange, useChildren, useCards, usePayroll, useFreezes,
   useSalesBySection, useAttendanceByGroup, useAttendanceByChild,
   useSectionLoad, useManagerKpi, usePayrollDetail,
   type ManagerKpiRow,
@@ -108,23 +108,21 @@ export const ReportsPage = ({ lang }: { lang: Lang }) => {
 // ---------- Sales tab ----------
 const SalesTab = ({ lang }: { lang: Lang }) => {
   const t = (ru: string, ky: string) => (lang === "ru" ? ru : ky);
-  const { data: payments = [] } = usePayments();
   const { data: cards = [] } = useCards();
   const [from, setFrom] = useState(ymd(new Date(Date.now() - 30 * 86400000)));
   const [to, setTo] = useState(ymd(new Date()));
+  const { data: payments = [] } = usePaymentsInRange(from, to);
 
-  const filtered = useMemo(() => {
-    const f = new Date(from).getTime();
-    const tEnd = new Date(to).getTime() + 86399999;
-    return payments.filter((p) => {
-      const d = new Date(p.paid_at).getTime();
-      return d >= f && d <= tEnd;
-    });
-  }, [payments, from, to]);
+  // Период уже отфильтрован запросом (границы — местное время). Прежний
+  // фильтр здесь брал полночь UTC и терял оплаты с 00:00 до 06:00 по Бишкеку.
+  const filtered = payments;
 
   const total = filtered.reduce((s, p) => s + Number(p.amount), 0);
   const cash = filtered.filter((p) => p.method === "cash").reduce((s, p) => s + Number(p.amount), 0);
   const term = filtered.filter((p) => p.method === "terminal").reduce((s, p) => s + Number(p.amount), 0);
+  const transfer = filtered.filter((p) => p.method === "transfer").reduce((s, p) => s + Number(p.amount), 0);
+  // История из Excel до марта 2026: способ оплаты не записывался.
+  const unknownMethod = filtered.filter((p) => p.method === "unknown").reduce((s, p) => s + Number(p.amount), 0);
   const avgCheck = filtered.length > 0 ? Math.round(total / filtered.length) : 0;
 
   // Group by manager (received_by) → who collected most
@@ -228,6 +226,13 @@ const SalesTab = ({ lang }: { lang: Lang }) => {
         <div className="kpi">
           <div className="kpi__label">{t("Терминал", "Терминал")}</div>
           <div className="kpi__value">{term.toLocaleString("ru-RU")} <span className="unit">KGS</span></div>
+        </div>
+        <div className="kpi">
+          <div className="kpi__label">{t("Перевод (MBank и др.)", "Которуу (MBank ж.б.)")}</div>
+          <div className="kpi__value">{transfer.toLocaleString("ru-RU")} <span className="unit">KGS</span></div>
+          {unknownMethod > 0 && (
+            <span className="kpi__delta">{t("способ не указан", "ыкма көрсөтүлгөн эмес")}: {unknownMethod.toLocaleString("ru-RU")}</span>
+          )}
         </div>
       </div>
 

@@ -143,7 +143,8 @@ const Shell = () => {
   // Ставим класс на body для CSS-правил «PWA-режим» (тренер/родитель).
   // ВАЖНО: useEffect должен быть до любых early-return — иначе число
   // хуков меняется между рендерами и React падает с error #310.
-  const isPwaRole = user?.role === "coach" || user?.role === "parent";
+  const isClientApp = user?.role === "parent" || user?.role === "client";
+  const isPwaRole = user?.role === "coach" || isClientApp;
   useEffect(() => {
     document.body.classList.toggle("is-pwa-role", isPwaRole);
     return () => { document.body.classList.remove("is-pwa-role"); };
@@ -159,7 +160,7 @@ const Shell = () => {
       try {
         const { supabase } = await import("./shared/api/supabase");
         if (cancelled) return;
-        if (user.role === "parent") {
+        if (user.role === "parent" || user.role === "client") {
           // ParentScreen стартует с useMyChildren. queryFn простой —
           // дублируем, чтобы дёрнуть параллельно с lazy-чанком.
           queryClient.prefetchQuery({
@@ -269,7 +270,7 @@ const Shell = () => {
       >
         {isAdminLike && <AdminDashboard lang={lang} />}
         {user.role === "coach" && <CoachScreen lang={lang} />}
-        {user.role === "parent" && <ParentScreen lang={lang} />}
+        {isClientApp && <ParentScreen lang={lang} />}
       </Suspense>
     </div>
     <OfflineBar lang={lang} />

@@ -47,6 +47,8 @@ export const ParentScreen = ({ lang }: { lang: Lang }) => {
   const t = I18N[lang].parent;
   const tt = I18N[lang];
   const { user } = useAuth();
+  // Взрослый клиент заходит сам: та же витрина, но про себя, а не про ребёнка.
+  const self = user?.role === "client";
   const { data: kids = [] } = useChildren();
   const { data: unreadCount = 0 } = useUnreadNotificationsCount();
   const [activeKidIdx, setActiveKidIdx] = useState(0);
@@ -69,7 +71,7 @@ export const ParentScreen = ({ lang }: { lang: Lang }) => {
 
   return (
     <Shell
-      brand={{ title: lang === "ru" ? "Родитель" : "Ата-эне", subtitle: "Академия Машрапова" }}
+      brand={{ title: self ? (lang === "ru" ? "Клиент" : "Кардар") : (lang === "ru" ? "Родитель" : "Ата-эне"), subtitle: "Академия Машрапова" }}
       user={{ name: user.full_name, subtitle: t.hello, avatar: initialsOf(user.full_name) }}
       tabs={tabs}
       active={tab}
@@ -115,7 +117,9 @@ export const ParentScreen = ({ lang }: { lang: Lang }) => {
 
         <div className="m-scroll">
           {!kid ? (
-            <div className="empty"><div className="empty__title">{lang === "ru" ? "Дети не привязаны" : "Балдар жок"}</div></div>
+            <div className="empty"><div className="empty__title">{self
+                ? (lang === "ru" ? "Карточка клиента ещё не привязана — обратитесь на ресепшен" : "Кардардын картасы азырынча байланган эмес — ресепшенге кайрылыңыз")
+                : (lang === "ru" ? "Дети не привязаны" : "Балдар жок")}</div></div>
           ) : (
             <>
               {tab === "home" && <ParentHome lang={lang} t={t} kid={kid} onOpenCard={() => setDrawerOpen(true)} />}
@@ -154,6 +158,8 @@ export const ParentScreen = ({ lang }: { lang: Lang }) => {
 // =====================================================================
 const ParentHome = ({ lang, t, kid, onOpenCard }: { lang: Lang; t: ParentT; kid: any; onOpenCard: () => void }) => {
   const tt = (ru: string, ky: string) => (lang === "ru" ? ru : ky);
+  // Взрослый клиент смотрит свою карточку: «ваш абонемент», а не «абонемент ребёнка».
+  const self = useAuth().user?.role === "client";
   const { data: balance } = useCardBalance(kid.id);
   const today = ymd(new Date());
   const in14 = ymd(new Date(Date.now() + 14 * 86400000));
@@ -181,7 +187,7 @@ const ParentHome = ({ lang, t, kid, onOpenCard }: { lang: Lang; t: ParentT; kid:
           <div style={{ flex: 1, minWidth: 0 }}>
             <div className="kid-hero__name">{kid.full_name}</div>
             <div className="kid-hero__sub">
-              {ageFromDob(kid.birth_date)} {tt("лет", "жаш")} · {kid.card_number ?? "—"}
+              {kid.birth_date ? `${ageFromDob(kid.birth_date)} ${tt("лет", "жаш")}` : tt("возраст не указан", "жашы көрсөтүлгөн эмес")} · {kid.card_number ?? "—"}
             </div>
           </div>
           <Icon name="chevron-right" size={20} />
@@ -208,7 +214,7 @@ const ParentHome = ({ lang, t, kid, onOpenCard }: { lang: Lang; t: ParentT; kid:
 
       {/* Менеджер и тренер ребёнка */}
       <div className="m-sect" style={{ paddingTop: 8 }}>
-        <span className="m-sect__title">{tt("Контакты по ребёнку", "Бала боюнча байланыш")}</span>
+        <span className="m-sect__title">{self ? tt("Мои контакты в академии", "Академиядагы байланыштарым") : tt("Контакты по ребёнку", "Бала боюнча байланыш")}</span>
       </div>
       <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 4 }}>
         <ContactRow
@@ -561,6 +567,8 @@ const ParentCard = ({ lang, t, kid }: { lang: Lang; t: ParentT; kid: any }) => {
 // =====================================================================
 const ParentDeposit = ({ lang, kid }: { lang: Lang; kid: any }) => {
   const tt = (ru: string, ky: string) => (lang === "ru" ? ru : ky);
+  // Взрослый клиент смотрит свою карточку: «ваш абонемент», а не «абонемент ребёнка».
+  const self = useAuth().user?.role === "client";
   const { data: balance = 0 } = useDepositBalance(kid.id);
   const { data: history = [] } = useDepositHistory(kid.id, 50);
   const { data: org } = useOrganization();
@@ -591,10 +599,15 @@ const ParentDeposit = ({ lang, kid }: { lang: Lang; kid: any }) => {
     const digits = phone.replace(/[^0-9]/g, "");
     if (!digits) return null;
     const text = encodeURIComponent(
-      tt(
-        `Здравствуйте! Хочу пополнить счёт ${kid.full_name}.`,
-        `Салам! ${kid.full_name} эсебин толтургум келет.`,
-      ),
+      self
+        ? tt(
+          `Здравствуйте! Это ${kid.full_name}, хочу пополнить свой счёт.`,
+          `Салам! Мен ${kid.full_name}, эсебимди толтургум келет.`,
+        )
+        : tt(
+          `Здравствуйте! Хочу пополнить счёт ${kid.full_name}.`,
+          `Салам! ${kid.full_name} эсебин толтургум келет.`,
+        ),
     );
     return `https://wa.me/${digits}?text=${text}`;
   })();
@@ -779,10 +792,10 @@ const ParentAttendanceCalendar = ({ lang, kid }: { lang: Lang; kid: any }) => {
         </div>
         <div style={{ display: "flex", gap: 12, marginTop: 10, fontSize: 11, color: "var(--muted)", flexWrap: "wrap" }}>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-            <span style={{ width: 12, height: 12, background: "var(--green)", borderRadius: 3 }} /> {tt("Был", "Болду")}
+            <span style={{ width: 12, height: 12, background: "var(--green)", borderRadius: 3 }} /> {tt("Посещение", "Болду")}
           </span>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
-            <span style={{ width: 12, height: 12, background: "var(--red)", borderRadius: 3 }} /> {tt("Пропустил", "Калтырды")}
+            <span style={{ width: 12, height: 12, background: "var(--red)", borderRadius: 3 }} /> {tt("Пропуск", "Калтырды")}
           </span>
           <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
             <span style={{ width: 12, height: 12, border: "1.5px dashed var(--blue)", borderRadius: 3 }} /> {tt("Предстоит", "Болот")}
@@ -794,12 +807,12 @@ const ParentAttendanceCalendar = ({ lang, kid }: { lang: Lang; kid: any }) => {
         <div className="summary-pill">
           <div>
             <div className="summary-pill__val" style={{ color: "var(--green)" }}>{present}</div>
-            <div className="summary-pill__lbl">{tt("Был", "Болду")}</div>
+            <div className="summary-pill__lbl">{tt("Посещение", "Болду")}</div>
           </div>
           <div className="summary-pill__sep" />
           <div>
             <div className="summary-pill__val" style={{ color: "var(--red)" }}>{absent}</div>
-            <div className="summary-pill__lbl">{tt("Пропустил", "Калтырды")}</div>
+            <div className="summary-pill__lbl">{tt("Пропуск", "Калтырды")}</div>
           </div>
           <div className="summary-pill__sep" />
           <div>
@@ -1045,6 +1058,8 @@ const ParentNotificationsPanel = ({
   open, onClose, lang,
 }: { open: boolean; onClose: () => void; lang: Lang }) => {
   const tt = (ru: string, ky: string) => (lang === "ru" ? ru : ky);
+  // Взрослый клиент смотрит свою карточку: «ваш абонемент», а не «абонемент ребёнка».
+  const self = useAuth().user?.role === "client";
   const { data: notifications = [] } = useNotifications(50);
   const { data: feed = [] } = useLessonNotesForParent();
   const markRead = useMarkNotificationRead();
@@ -1140,10 +1155,16 @@ const ParentNotificationsPanel = ({
                         {(() => {
                           const p = (n.payload ?? {}) as { child_name?: string; days_left?: number; end_date?: string };
                           const who = p.child_name ? tt(`ребёнка ${p.child_name}`, `${p.child_name} баласынын`) : tt("ребёнка", "баланын");
+                          const d = p.days_left === 1 ? tt("завтра", "эртең") : tt(`через ${p.days_left} дня`, `${p.days_left} күндөн кийин`);
+                          if (self)
+                            return p.days_left === 0
+                              ? tt("Ваш абонемент заканчивается сегодня. Продлите его, чтобы не пропускать занятия.",
+                                   "Абонементиңиз бүгүн бүтөт. Сабактарды өткөрбөө үчүн узартыңыз.")
+                              : tt(`Ваш абонемент заканчивается ${d}. Продлите его заранее.`,
+                                   `Абонементиңиз ${d} бүтөт. Алдын ала узартыңыз.`);
                           if (p.days_left === 0)
                             return tt(`Абонемент ${who} заканчивается сегодня. Продлите его, чтобы не пропускать занятия.`,
                                       `${who} абонементи бүгүн бүтөт. Сабактарды өткөрбөө үчүн узартыңыз.`);
-                          const d = p.days_left === 1 ? tt("завтра", "эртең") : tt(`через ${p.days_left} дня`, `${p.days_left} күндөн кийин`);
                           return tt(`Абонемент ${who} заканчивается ${d}. Продлите его заранее.`,
                                     `${who} абонементи ${d} бүтөт. Алдын ала узартыңыз.`);
                         })()}
@@ -1164,6 +1185,9 @@ const ParentNotificationsPanel = ({
                       <div style={{ fontSize: 13 }}>
                         {(() => {
                           const name = (n.payload as { child_name?: string } | null)?.child_name;
+                          if (self)
+                            return tt("Ваш абонемент закончился. Продлите его в кассе, чтобы продолжить занятия.",
+                                      "Абонементиңиз бүттү. Сабактарды улантуу үчүн кассада узартыңыз.");
                           return name
                             ? tt(`Абонемент ребёнка ${name} закончился. Продлите его в кассе, чтобы продолжить занятия.`,
                                  `${name} баласынын абонементи бүттү. Сабактарды улантуу үчүн кассада узартыңыз.`)
@@ -1243,8 +1267,8 @@ const ParentNotificationsPanel = ({
                               : "";
                           if (n.type === "pt_booked") {
                             return tt(
-                              `${p.child_name ?? ""}: вы записаны на тренировку к тренеру ${p.coach_name ?? ""}, ${p.date ?? ""} в ${tm}.`,
-                              `${p.child_name ?? ""}: ${p.coach_name ?? ""} тренерге ${p.date ?? ""} күнү саат ${tm}де жазылдыңыз.`,
+                              `${self || !p.child_name ? "" : `${p.child_name}: `}вы записаны на тренировку к тренеру ${p.coach_name ?? ""}, ${p.date ?? ""} в ${tm}.`,
+                              `${self || !p.child_name ? "" : `${p.child_name}: `}${p.coach_name ?? ""} тренерге ${p.date ?? ""} күнү саат ${tm}де жазылдыңыз.`,
                             );
                           }
                           if (n.type === "pt_reminder") {
@@ -1351,7 +1375,7 @@ const ParentProfile = ({ lang, kid }: { lang: Lang; t?: ParentT; kid?: any }) =>
           </div>
           <div className="coach-me__meta">
             <div className="coach-me__name">{user.full_name}</div>
-            <div className="coach-me__role">{tt("Родитель", "Ата-эне")}</div>
+            <div className="coach-me__role">{user.role === "client" ? tt("Клиент", "Кардар") : tt("Родитель", "Ата-эне")}</div>
             {profile?.phone && (
               <div className="coach-me__phone">
                 <Icon name="phone" size={12} /> {profile.phone}
@@ -1365,7 +1389,7 @@ const ParentProfile = ({ lang, kid }: { lang: Lang; t?: ParentT; kid?: any }) =>
         <>
           <div className="m-sect" style={{ paddingTop: 0 }}>
             <span className="m-sect__title">
-              {tt("Контакты по ребёнку", "Бала боюнча байланыш")}
+              {user?.role === "client" ? tt("Мои контакты в академии", "Академиядагы байланыштарым") : tt("Контакты по ребёнку", "Бала боюнча байланыш")}
             </span>
             {kid.full_name && (
               <span className="m-sect__more" style={{ color: "var(--muted)" }}>

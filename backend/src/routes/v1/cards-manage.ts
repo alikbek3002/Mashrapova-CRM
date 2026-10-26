@@ -35,7 +35,7 @@ const addLessonsSchema = z.object({
   count: z.number().int().min(1).max(300),
   // Оплата за добавленные занятия (0 = компенсация/бесплатно).
   price: z.number().nonnegative().default(0),
-  payment_method: z.enum(["cash", "terminal"]).default("cash"),
+  payment_method: z.enum(["cash", "terminal", "transfer"]).default("cash"),
   deposit_amount: z.number().nonnegative().default(0),
   comment: z.string().max(300).nullable().optional(),
 });

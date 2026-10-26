@@ -11,7 +11,8 @@ export type AppRole =
   | "manager"
   | "cashier"
   | "coach"
-  | "parent";
+  | "parent"
+  | "client";
 
 export type Permission =
   // Clients
@@ -166,6 +167,11 @@ export const RBAC: Record<AppRole, Permission[]> = {
 
   // Parent — own data + own schedule. Заморозку запрашивает через офис.
   parent: [
+    "view_schedule",
+  ],
+
+  // Взрослый клиент — то же приложение, что у родителя, только про себя.
+  client: [
     "view_schedule",
   ],
 };

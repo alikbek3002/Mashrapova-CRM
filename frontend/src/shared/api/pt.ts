@@ -295,7 +295,7 @@ export type PtSellInput = {
   service_id: string;
   coach_id: string;
   group_name?: string | null;
-  payment_method: "cash" | "terminal";
+  payment_method: "cash" | "terminal" | "transfer";
   items: {
     child_id: string;
     price?: number;
@@ -331,7 +331,7 @@ export const usePtPayPackage = () => {
       package_id: string;
       amount: number;
       use_deposit?: number;
-      method: "cash" | "terminal";
+      method: "cash" | "terminal" | "transfer";
       comment?: string;
     }) =>
       apiPost<{ ok: boolean }>(
@@ -377,7 +377,7 @@ export const usePtRefundPackage = () => {
       amount: number;
       reason: string;
       to_deposit: boolean;
-      method: "cash" | "terminal";
+      method: "cash" | "terminal" | "transfer";
     }) =>
       apiPost<{ ok: boolean }>(
         `/v1/pt/packages/${input.package_id}/refund`,

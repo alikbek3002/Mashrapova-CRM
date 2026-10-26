@@ -23,6 +23,7 @@ export const I18N = {
       cashier: "Ресепшен",
       coach: "Тренер",
       parent: "Родитель",
+      client: "Клиент",
     },
     directions: {
       mart: "Единоборства",
@@ -126,6 +127,7 @@ export const I18N = {
       cashier: "Ресепшен",
       coach: "Тренер",
       parent: "Ата-эне",
+      client: "Кардар",
     },
     directions: {
       mart: "Күрөш спорттору",

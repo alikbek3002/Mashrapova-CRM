@@ -659,7 +659,7 @@ const SellModal = ({ open, onClose, lang }: { open: boolean; onClose: () => void
 
   const [serviceId, setServiceId] = useState("");
   const [coachId, setCoachId] = useState("");
-  const [method, setMethod] = useState<"cash" | "terminal">("cash");
+  const [method, setMethod] = useState<"cash" | "terminal" | "transfer">("cash");
   const [groupName, setGroupName] = useState("");
   const [items, setItems] = useState<
     { child_id: string; price: string; pay_cash: string; pay_deposit: string; in_debt: boolean; debt_comment: string }[]
@@ -753,9 +753,10 @@ const SellModal = ({ open, onClose, lang }: { open: boolean; onClose: () => void
           </Select>
         </Field>
         <Field label={t("Способ оплаты", "Төлөм ыкмасы")}>
-          <Select value={method} onChange={(e) => setMethod(e.target.value as "cash" | "terminal")}>
+          <Select value={method} onChange={(e) => setMethod(e.target.value as "cash" | "terminal" | "transfer")}>
             <option value="cash">{t("Наличные", "Накталай")}</option>
             <option value="terminal">{t("Терминал", "Терминал")}</option>
+            <option value="transfer">{t("Перевод (MBank и др.)", "Которуу (MBank ж.б.)")}</option>
           </Select>
         </Field>
         {isMini && (
@@ -858,7 +859,7 @@ const PackageActionsModal = ({
   const [mode, setMode] = useState<"menu" | "pay" | "block" | "extend" | "annul" | "refund" | "coach">("menu");
   const [amount, setAmount] = useState("");
   const [useDeposit, setUseDeposit] = useState("");
-  const [method, setMethod] = useState<"cash" | "terminal">("cash");
+  const [method, setMethod] = useState<"cash" | "terminal" | "transfer">("cash");
   const [reason, setReason] = useState("");
   const [newDate, setNewDate] = useState(pkg.expires_at ?? todayIso());
   const [newCoach, setNewCoach] = useState(pkg.coach_id);
@@ -942,9 +943,10 @@ const PackageActionsModal = ({
             <input type="number" value={useDeposit} onChange={(e) => setUseDeposit(e.target.value)} />
           </Field>
           <Field label={t("Способ", "Ыкма")}>
-            <Select value={method} onChange={(e) => setMethod(e.target.value as "cash" | "terminal")}>
+            <Select value={method} onChange={(e) => setMethod(e.target.value as "cash" | "terminal" | "transfer")}>
               <option value="cash">{t("Наличные", "Накталай")}</option>
               <option value="terminal">{t("Терминал", "Терминал")}</option>
+            <option value="transfer">{t("Перевод (MBank и др.)", "Которуу (MBank ж.б.)")}</option>
             </Select>
           </Field>
           <div className="modal__foot">
