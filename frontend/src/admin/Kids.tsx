@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Icon } from "../data";
 import type { Lang } from "../data";
 import { PageHeader, SearchBox, EmptyState, initialsOf } from "./common";
@@ -29,6 +29,13 @@ const STATUS_LABEL: Record<string, { ru: string; ky: string }> = {
 // По умолчанию — те, кто занимается сейчас. После загрузки истории из Excel
 // в базе ~4 000 клиентов за 15 месяцев, и бывшие заслоняли текущих.
 type StatusFilter = "current" | "former" | "all";
+type SortBy = "name" | "newest" | "oldest";
+const PAGE_SIZE = 50;
+const selectStyle = {
+  height: 36, padding: "0 10px",
+  border: "1px solid var(--line)", borderRadius: "var(--r-sm)",
+  background: "var(--bg-soft)", fontSize: 13, color: "var(--ink)",
+} as const;
 const isCurrent = (status: string) => status === "active" || status === "frozen" || status === "debtor";
 
 export const KidsPage = ({ lang }: { lang: Lang }) => {
@@ -37,6 +44,12 @@ export const KidsPage = ({ lang }: { lang: Lang }) => {
   const [sectionId, setSectionId] = useState<string>("all");
   const [groupId, setGroupId] = useState<string>("all");
   const [noGroupOnly, setNoGroupOnly] = useState(false);
+  // Направление: единоборства или фитнес-зона (sections.category).
+  const [direction, setDirection] = useState<"all" | "martial_arts" | "fitness">("all");
+  const [coachId, setCoachId] = useState<string>("all");
+  const [churnOnly, setChurnOnly] = useState(false);
+  const [sortBy, setSortBy] = useState<SortBy>("name");
+  const [page, setPage] = useState(0);
   const [activeChildId, setActiveChildId] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   // Новый клиент с выбранными секцией и группой — сразу продажа абонемента.
@@ -53,6 +66,24 @@ export const KidsPage = ({ lang }: { lang: Lang }) => {
     return pool.filter((g: any) => g.section_id === sectionId);
   }, [groups, sectionId, statusFilter]);
 
+  // Группа → тренер и направление: в выборке детей у группы их нет.
+  const groupInfo = useMemo(() => {
+    const m = new Map<string, { coachId: string; category: string }>();
+    for (const g of groups as any[]) m.set(g.id, { coachId: g.coach_id, category: g.section?.category ?? "" });
+    return m;
+  }, [groups]);
+  const coachOptions = useMemo(() => {
+    const m = new Map<string, { name: string; active: boolean }>();
+    for (const g of groups as any[]) {
+      if (!g.coach_id) continue;
+      const cur = m.get(g.coach_id);
+      m.set(g.coach_id, { name: g.coach?.full_name ?? "—", active: (cur?.active ?? false) || !!g.is_active });
+    }
+    return [...m.entries()]
+      .filter(([, v]) => statusFilter !== "current" || v.active)
+      .sort((a, b) => a[1].name.localeCompare(b[1].name, "ru"));
+  }, [groups, statusFilter]);
+
   // Поиск по ТЗ §3.1: ФИО ученика, ФИО родителя, телефон, номер карты / ID.
   const rows = useMemo(() => {
     const qq = q.trim().toLowerCase();
@@ -60,7 +91,7 @@ export const KidsPage = ({ lang }: { lang: Lang }) => {
     // Телефон сравниваем по последним 9 цифрам — «+996 555…», «0555…» и «555…» совпадут.
     const qPhone = qDigits.length >= 3 ? qDigits.slice(-9) : "";
     const phoneMatch = (ph?: string | null) => !!ph && !!qPhone && ph.replace(/\D/g, "").includes(qPhone);
-    return kids.filter((k) => {
+    const list = kids.filter((k) => {
       // Поиск идёт по всей базе: бывшего клиента находят по имени или телефону.
       if (!qq && statusFilter === "current" && !isCurrent(k.status)) return false;
       if (!qq && statusFilter === "former" && isCurrent(k.status)) return false;
@@ -80,11 +111,22 @@ export const KidsPage = ({ lang }: { lang: Lang }) => {
       // Бывших ищем и по прошлым группам — иначе «бывшие у Тургунова» не найти.
       const pool = statusFilter === "current" ? active : (k.enrollments ?? []);
       if (noGroupOnly && active.length > 0) return false;
+      if (churnOnly && !k.churn_risk_at) return false;
+      if (direction !== "all" && !pool.some((e) => groupInfo.get(e.group_id)?.category === direction)) return false;
+      if (coachId !== "all" && !pool.some((e) => groupInfo.get(e.group_id)?.coachId === coachId)) return false;
       if (sectionId !== "all" && !pool.some((e) => e.group?.section_id === sectionId)) return false;
       if (groupId !== "all" && !pool.some((e) => e.group_id === groupId)) return false;
       return true;
     });
-  }, [q, kids, sectionId, groupId, noGroupOnly, statusFilter]);
+    if (sortBy === "name") return list;  // уже по имени с сервера
+    return [...list].sort((a, b) => sortBy === "newest"
+      ? b.created_at.localeCompare(a.created_at)
+      : a.created_at.localeCompare(b.created_at));
+  }, [q, kids, sectionId, groupId, noGroupOnly, statusFilter, direction, coachId, churnOnly, sortBy, groupInfo]);
+  // Любая смена фильтра — на первую страницу.
+  useEffect(() => { setPage(0); }, [q, sectionId, groupId, noGroupOnly, statusFilter, direction, coachId, churnOnly, sortBy]);
+  const pageCount = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+  const pageRows = rows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
   const currentCount = useMemo(() => kids.filter((k) => isCurrent(k.status)).length, [kids]);
 
   const t = (ru: string, ky: string) => (lang === "ru" ? ru : ky);
@@ -152,33 +194,41 @@ export const KidsPage = ({ lang }: { lang: Lang }) => {
             ))}
           </div>
           <SearchBox value={q} onChange={setQ} placeholder={t("Имя ребёнка или родителя, телефон, номер карты…", "Баланын же ата-эненин аты, телефон, карта номери…")} />
+          <Select value={direction} onChange={(e) => { setDirection(e.target.value as typeof direction); setSectionId("all"); setGroupId("all"); }} style={selectStyle}>
+            <option value="all">{t("Единоборства и фитнес", "Күрөш жана фитнес")}</option>
+            <option value="martial_arts">{t("Единоборства", "Күрөш өнөрлөрү")}</option>
+            <option value="fitness">{t("Фитнес", "Фитнес")}</option>
+          </Select>
           <Select
             value={sectionId}
             onChange={(e) => { setSectionId(e.target.value); setGroupId("all"); }}
-            style={{
-              height: 36, padding: "0 10px",
-              border: "1px solid var(--line)", borderRadius: "var(--r-sm)",
-              background: "var(--bg-soft)", fontSize: 13, color: "var(--ink)",
-            }}
+            style={selectStyle}
           >
             <option value="all">{t("Все секции", "Бардык секциялар")}</option>
-            {sections.map((s) => (
-              <option key={s.id} value={s.id}>{lang === "ru" ? s.name_ru : s.name_ky}</option>
+            {sections
+              .filter((s: any) => direction === "all" || s.category === direction)
+              .map((s) => (
+                <option key={s.id} value={s.id}>{lang === "ru" ? s.name_ru : s.name_ky}</option>
+              ))}
+          </Select>
+          <Select value={coachId} onChange={(e) => { setCoachId(e.target.value); setGroupId("all"); }} style={selectStyle}>
+            <option value="all">{t("Все тренеры", "Бардык тренерлер")}</option>
+            {coachOptions.map(([id, c]) => (
+              <option key={id} value={id}>{c.name}{c.active ? "" : t(" (бывший)", " (мурунку)")}</option>
             ))}
           </Select>
-          <Select
-            value={groupId}
-            onChange={(e) => setGroupId(e.target.value)}
-            style={{
-              height: 36, padding: "0 10px",
-              border: "1px solid var(--line)", borderRadius: "var(--r-sm)",
-              background: "var(--bg-soft)", fontSize: 13, color: "var(--ink)",
-            }}
-          >
+          <Select value={groupId} onChange={(e) => setGroupId(e.target.value)} style={selectStyle}>
             <option value="all">{t("Все группы", "Бардык топтор")}</option>
-            {groupsForSection.map((g: any) => (
-              <option key={g.id} value={g.id}>{g.name}{g.is_active ? "" : t(" (архив)", " (архив)")}</option>
-            ))}
+            {groupsForSection
+              .filter((g: any) => (direction === "all" || g.section?.category === direction) && (coachId === "all" || g.coach_id === coachId))
+              .map((g: any) => (
+                <option key={g.id} value={g.id}>{g.name}{g.is_active ? "" : t(" (архив)", " (архив)")}</option>
+              ))}
+          </Select>
+          <Select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortBy)} style={selectStyle}>
+            <option value="name">{t("По имени", "Аты боюнча")}</option>
+            <option value="newest">{t("Сначала новые", "Адегенде жаңылар")}</option>
+            <option value="oldest">{t("Сначала давние", "Адегенде эскилер")}</option>
           </Select>
           <label className="check" style={{ margin: 0 }}>
             <input
@@ -187,6 +237,10 @@ export const KidsPage = ({ lang }: { lang: Lang }) => {
               onChange={(e) => setNoGroupOnly(e.target.checked)}
             />
             <span><b>{t("Без группы", "Топсуз")}</b></span>
+          </label>
+          <label className="check" style={{ margin: 0 }}>
+            <input type="checkbox" checked={churnOnly} onChange={(e) => setChurnOnly(e.target.checked)} />
+            <span><b>{t("Риск оттока", "Агып кетүү коркунучу")}</b></span>
           </label>
         </div>
         {error ? (
@@ -210,7 +264,7 @@ export const KidsPage = ({ lang }: { lang: Lang }) => {
                 </tr>
               </thead>
               <tbody>
-                {rows.map((k) => {
+                {pageRows.map((k) => {
                   const family = k.family;
                   // У загруженных из Excel имён родителей нет — показываем телефон.
                   const familyLabel = family
@@ -275,6 +329,23 @@ export const KidsPage = ({ lang }: { lang: Lang }) => {
                 })}
               </tbody>
             </table>
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "12px 16px", flexWrap: "wrap", fontSize: 13 }}>
+              <span style={{ color: "var(--muted)" }}>
+                {t(
+                  `${page * PAGE_SIZE + 1}–${Math.min((page + 1) * PAGE_SIZE, rows.length)} из ${rows.length}`,
+                  `${page * PAGE_SIZE + 1}–${Math.min((page + 1) * PAGE_SIZE, rows.length)} / ${rows.length}`,
+                )}
+              </span>
+              {pageCount > 1 && (
+                <div style={{ display: "flex", gap: 4, marginLeft: "auto", alignItems: "center" }}>
+                  <button className="btn btn--ghost" style={{ padding: "4px 10px" }} disabled={page === 0} onClick={() => setPage(0)}>«</button>
+                  <button className="btn btn--ghost" style={{ padding: "4px 10px" }} disabled={page === 0} onClick={() => setPage(page - 1)}>‹</button>
+                  <span style={{ padding: "0 8px" }}>{t(`Стр. ${page + 1} из ${pageCount}`, `${page + 1}-бет / ${pageCount}`)}</span>
+                  <button className="btn btn--ghost" style={{ padding: "4px 10px" }} disabled={page >= pageCount - 1} onClick={() => setPage(page + 1)}>›</button>
+                  <button className="btn btn--ghost" style={{ padding: "4px 10px" }} disabled={page >= pageCount - 1} onClick={() => setPage(pageCount - 1)}>»</button>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>
