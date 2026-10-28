@@ -109,7 +109,9 @@ longer a mock-data module — live data comes from Supabase.
 **Backend** — `backend/src/` (Fastify + TypeScript, `service_role` Supabase client). Handles only
 what cannot be trusted to the client: card sales, payments, refunds, deposits, freezes approval,
 payroll, bulk schedule operations, notifications dispatch/broadcast, staff management, uploads,
-`POST /v1/lifecycle/refresh` (the §4.5 and §8.3 scheduler entry point), and the Kommo CRM sync
+`POST /v1/lifecycle/refresh` (the §4.5 and §8.3 scheduler entry point), the MCP server for
+Claude/ChatGPT (`mcp/`: OAuth login for director and senior_manager, tools read under the user's
+RLS and write via `app.inject` into the same `/v1/*` routes; see DEPLOY.md «MCP»), and the Kommo CRM sync
 (`lib/kommo*.ts`: one-way Kommo → `leads`/`kommo_events` every 5 min, see DEPLOY.md «Kommo»). Everything else reads
 from Supabase directly under RLS. Idempotency via the `Idempotency-Key` header on money routes.
 

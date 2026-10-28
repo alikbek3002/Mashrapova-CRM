@@ -31,6 +31,7 @@ import { ptRoutes } from "./routes/v1/pt.js";
 import { kommoRoutes } from "./routes/v1/kommo.js";
 import { kommoConfigured } from "./lib/kommo.js";
 import { syncKommo } from "./lib/kommo-sync.js";
+import { isMcpPath, mcpRoutes } from "./mcp/server.js";
 
 initSentry();
 
@@ -50,13 +51,22 @@ await app.register(helmet, {
 });
 
 await app.register(cors, {
-  origin: (origin, cb) => {
-    if (!origin) return cb(null, true); // same-origin / curl
-    if (isOriginAllowed(origin)) return cb(null, true);
-    app.log.warn({ origin, allowed: corsOriginList }, "cors_rejected");
-    cb(new Error("CORS_NOT_ALLOWED"), false);
+  // MCP и OAuth (src/mcp) зовут Claude, ChatGPT и MCP Inspector с любых
+  // адресов; защищены токеном, поэтому CORS для них открыт, без cookies.
+  delegator: (req, cb) => {
+    if (isMcpPath(req.url ?? "")) {
+      return cb(null, { origin: true, credentials: false, exposedHeaders: ["www-authenticate", "mcp-session-id"] });
+    }
+    cb(null, {
+      origin: (origin, ocb) => {
+        if (!origin) return ocb(null, true); // same-origin / curl
+        if (isOriginAllowed(origin)) return ocb(null, true);
+        app.log.warn({ origin, allowed: corsOriginList }, "cors_rejected");
+        ocb(new Error("CORS_NOT_ALLOWED"), false);
+      },
+      credentials: true,
+    });
   },
-  credentials: true,
 });
 
 await app.register(rateLimit, {
@@ -87,6 +97,7 @@ await app.register(staffRoutes);
 await app.register(lifecycleRoutes);
 await app.register(uploadsRoutes);
 await app.register(kommoRoutes);
+await app.register(mcpRoutes);
 
 // Lightweight in-process scheduler — runs refresh_lifecycle() every hour.
 // This is the fallback when pg_cron is not available on the Supabase plan.

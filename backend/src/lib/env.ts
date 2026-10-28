@@ -36,6 +36,14 @@ const schema = z.object({
   // Секрет в адресе вебхука: Kommo вебхуки не подписывает.
   KOMMO_WEBHOOK_SECRET: z.string().min(16).optional(),
 
+  // MCP — доступ к CRM из Claude и ChatGPT (backend/src/mcp). Без
+  // MCP_SECRET маршруты /mcp и /oauth/* отвечают 503. Секрет шифрует
+  // сессии Supabase в mcp_sessions: сменить его — разлогинить всех.
+  MCP_SECRET: z.string().min(32).optional(),
+  // Публичный адрес бэкенда (https://mashrapova-api.aalam.team). Пусто —
+  // берётся из заголовков запроса (за прокси — X-Forwarded-*).
+  PUBLIC_API_URL: z.string().url().optional(),
+
   // MinIO / S3-compatible storage (avatars, photos).
   // Работает с MinIO, Tigris (t3.storageapi.dev), R2, AWS S3 и т.д.
   // Все необязательные — если не заданы, /v1/uploads/* возвращают 503.
