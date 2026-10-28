@@ -20,6 +20,10 @@ const INSTRUCTIONS = `CRM «Академии Машрапова» — клуб �
 Заявки из Instagram и WhatsApp приходят из Kommo каждые 5 минут; их этап меняется в Kommo, а не здесь.
 Любое изменение данных (новый клиент, оплата, продажа абонемента, заморозка, депозит) сначала опиши человеку одной строкой — кто, что, сколько — и выполняй только после явного «да». Данные не удаляются: в CRM всё только архивируется.`;
 
+const ROLE_RU: Record<string, string> = {
+  director: "директор", fitness_director: "управляющий фитнеса", senior_manager: "старший менеджер",
+};
+
 const toolList: ToolDef[] = [...readTools, ...writeTools];
 
 const audit = (user: McpUser, tool: string, args: unknown, okFlag: boolean, error: string | null, ms: number) =>
@@ -30,10 +34,11 @@ const audit = (user: McpUser, tool: string, args: unknown, okFlag: boolean, erro
 const buildServer = (app: FastifyInstance, user: McpUser) => {
   const server = new McpServer(
     { name: "mashrapova-crm", title: "CRM Академии Машрапова", version: "1.0.0" },
-    { instructions: INSTRUCTIONS },
+    { instructions: `${INSTRUCTIONS}\nСейчас подключён: ${user.full_name}, роль — ${ROLE_RU[user.role] ?? user.role}. Инструменты и права — по этой роли.` },
   );
   const ctx = makeCtx(app, user);
   for (const t of toolList) {
+    if (t.roles && !t.roles.includes(user.role)) continue;
     server.registerTool(
       t.name,
       {

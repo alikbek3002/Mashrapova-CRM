@@ -258,6 +258,8 @@ export const writeTools: ToolDef[] = [
   {
     name: "freeze_create",
     title: "Заморозить абонемент",
+    // rbac.ts: create_freeze есть у директора, у старшего менеджера — только подтверждение.
+    roles: ["director", "fitness_director"],
     description: "Создать заморозку абонемента на даты. Лимит заморозок по тарифу проверяет база; заявку затем подтверждают (freeze_approve).",
     write: true,
     input: { child_id: z.string().uuid(), club_card_id: z.string().uuid(), reason: z.string().min(1).max(500), start_date: date, end_date: date },
