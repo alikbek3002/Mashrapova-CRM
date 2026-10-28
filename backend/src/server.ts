@@ -29,6 +29,7 @@ import { refundsRoutes } from "./routes/v1/refunds.js";
 import { depositsRoutes } from "./routes/v1/deposits.js";
 import { ptRoutes } from "./routes/v1/pt.js";
 import { kommoRoutes } from "./routes/v1/kommo.js";
+import { botRoutes } from "./routes/v1/bot.js";
 import { kommoConfigured } from "./lib/kommo.js";
 import { syncKommo } from "./lib/kommo-sync.js";
 import { isMcpPath, mcpRoutes } from "./mcp/server.js";
@@ -97,6 +98,7 @@ await app.register(staffRoutes);
 await app.register(lifecycleRoutes);
 await app.register(uploadsRoutes);
 await app.register(kommoRoutes);
+await app.register(botRoutes);
 await app.register(mcpRoutes);
 
 // Lightweight in-process scheduler — runs refresh_lifecycle() every hour.
