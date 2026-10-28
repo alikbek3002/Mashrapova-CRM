@@ -35,6 +35,9 @@ const schema = z.object({
   KOMMO_SYNC_INTERVAL_MIN: z.coerce.number().int().min(1).max(1440).default(5),
   // Секрет в адресе вебхука: Kommo вебхуки не подписывает.
   KOMMO_WEBHOOK_SECRET: z.string().min(16).optional(),
+  // Ключ ИИ-агента Nextbot для GET /v1/bot/* (заголовок X-Bot-Key). Пусто —
+  // маршруты отвечают 404.
+  NEXTBOT_API_KEY: z.string().min(24).optional(),
 
   // MCP — доступ к CRM из Claude и ChatGPT (backend/src/mcp). Без
   // MCP_SECRET маршруты /mcp и /oauth/* отвечают 503. Секрет шифрует

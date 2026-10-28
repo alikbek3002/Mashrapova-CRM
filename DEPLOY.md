@@ -90,6 +90,7 @@ printf '%s' "$VALUE" | railway variable set SUPABASE_SERVICE_ROLE_KEY --stdin --
 | `SMS_PROVIDER` | `noop`, пока нет договора с провайдером (`smskg` + `SMS_*` из `backend/.env.example`) |
 | `KOMMO_BASE_URL`, `KOMMO_TOKEN` | Kommo CRM, см. «Kommo». Без них синхронизация выключена |
 | `KOMMO_WEBHOOK_SECRET` | необязательная: секрет в адресе вебхука Kommo, от 16 символов |
+| `NEXTBOT_API_KEY` | необязательная: ключ ИИ-агента Nextbot для `GET /v1/bot/*` (заголовок `X-Bot-Key`), от 24 символов. Пусто — маршруты отвечают 404. См. `docs/Nextbot_агент.md` |
 | `SENTRY_DSN`, `MINIO_*` | необязательные |
 
 `PORT` не задавай: Railway назначает его сам.
