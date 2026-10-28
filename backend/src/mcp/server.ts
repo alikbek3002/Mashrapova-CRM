@@ -8,6 +8,7 @@ import { env } from "../lib/env.js";
 import { supabaseAdmin } from "../lib/supabase.js";
 import { fail, makeCtx, ToolError } from "./context.js";
 import { baseUrl, mcpOAuthRoutes, SCOPE } from "./oauth.js";
+import { loginPage } from "./page.js";
 import { resolveBearer, type McpUser } from "./session.js";
 import { readTools } from "./tools/read.js";
 import type { ToolDef } from "./tools/types.js";
@@ -100,7 +101,13 @@ export const mcpRoutes = async (app: FastifyInstance) => {
   // Без сессий: серверных уведомлений по GET и закрытия сессии нет.
   const notAllowed = async (_req: FastifyRequest, reply: FastifyReply) =>
     reply.code(405).header("allow", "POST").send({ jsonrpc: "2.0", error: { code: -32000, message: "Method not allowed" }, id: null });
-  app.get("/mcp", notAllowed);
+  // Человек открыл адрес в браузере — объясняем, куда его вставлять.
+  app.get("/mcp", async (req, reply) => {
+    if (String(req.headers.accept ?? "").includes("text/html")) {
+      return reply.header("content-type", "text/html; charset=utf-8").send(loginPage({ step: "info" }));
+    }
+    return notAllowed(req, reply);
+  });
   app.delete("/mcp", notAllowed);
 };
 

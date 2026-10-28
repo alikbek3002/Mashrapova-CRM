@@ -7,7 +7,8 @@ type Params = Record<string, string | undefined>;
 export type LoginView =
   | { step: "login"; params: Params; clientName?: string; phone?: string; error?: string }
   | { step: "mfa"; nonce: string; params: Params; name?: string; error?: string }
-  | { step: "error"; error: string };
+  | { step: "error"; error: string }
+  | { step: "info" };
 
 const esc = (s: string | undefined) =>
   String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
@@ -28,6 +29,15 @@ const appName = (n?: string) => {
 };
 
 const body = (v: LoginView) => {
+  if (v.step === "info") {
+    return `<h1>Адрес для ассистента</h1>
+      <p class="lead">Эта ссылка открывается не в браузере — её вставляют в Claude или ChatGPT, чтобы ассистент получил доступ к CRM.</p>
+      <ul class="can">
+        <li><b>Claude:</b> Настройки → Коннекторы → «Добавить свой коннектор»</li>
+        <li><b>ChatGPT:</b> Настройки → Приложения и коннекторы → режим разработчика → «Создать»</li>
+      </ul>
+      <p class="note">После «Подключить» откроется вход: телефон и пароль директора или старшего менеджера.</p>`;
+  }
   if (v.step === "error") {
     return `<h1>Не получилось</h1><p class="lead">${esc(v.error)}</p>`;
   }
