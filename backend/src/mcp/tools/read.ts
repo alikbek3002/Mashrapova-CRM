@@ -280,7 +280,7 @@ export const readTools: ToolDef[] = [
     name: "payments",
     title: "Оплаты за период",
     description:
-      "Оплаты за период: итог, разбивка по способу (cash — наличные, terminal — терминал), по дням и последние операции. Возвраты хранятся отрицательными суммами.",
+      "Оплаты за период: итог, разбивка по способу (cash — наличные, terminal — терминал, transfer — перевод), по дням и последние операции. Возвраты хранятся отрицательными суммами.",
     input: { ...period, limit: z.number().int().min(0).max(300).default(30).describe("Сколько последних операций показать") },
     run: async (ctx, a) => {
       const p = span(a);
@@ -299,6 +299,7 @@ export const readTools: ToolDef[] = [
         total: sum(rows),
         cash: sum(rows.filter((r) => r.method === "cash")),
         terminal: sum(rows.filter((r) => r.method === "terminal")),
+        transfer: sum(rows.filter((r) => r.method === "transfer")),
         refunds: sum(rows.filter((r) => Number(r.amount) < 0)),
         by_day: byDay,
         latest: rows.slice(0, a.limit).map((r) => ({ ...r, child: r.child?.full_name ?? null })),

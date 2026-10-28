@@ -11,7 +11,7 @@ import {
 import type { ToolDef } from "./types.js";
 
 const date = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Дата в формате ГГГГ-ММ-ДД");
-const method = z.enum(["cash", "terminal"]).describe("cash — наличные, terminal — терминал");
+const method = z.enum(["cash", "terminal", "transfer"]).describe("cash — наличные, terminal — терминал, transfer — перевод");
 
 // Тот же список, что frontend/src/shared/sources.ts и CHECK в базе.
 const SOURCES = [
@@ -177,7 +177,7 @@ export const writeTools: ToolDef[] = [
     run: async (ctx, a) => {
       const name = await childName(ctx, a.child_id);
       const res = await ctx.api("POST", "/v1/payments", a, { idempotent: true });
-      return ok(`Оплата ${a.amount} сом (${a.method === "cash" ? "наличные" : "терминал"}) от «${name}» принята`, res);
+      return ok(`Оплата ${a.amount} сом (${({ cash: "наличные", terminal: "терминал", transfer: "перевод" } as Record<string, string>)[a.method]}) от «${name}» принята`, res);
     },
   },
   {
