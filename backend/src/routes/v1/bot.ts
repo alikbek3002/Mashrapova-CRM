@@ -372,6 +372,8 @@ export const botRoutes = async (app: FastifyInstance) => {
     // Пишем только переписку из Instagram. Тестовый чат Nextbot и другие
     // каналы — пробный прогон: поиск без записи.
     const test = input.test ?? !/insta/i.test(messenger ?? "");
+    // messenger — первое, что смотреть, если из Instagram ничего не пишется.
+    req.log.info({ event: input.event, messenger: messenger ?? null, test }, "bot_lead_call");
     const result = await handleBotLead(await organization(), { ...input, test }, req.log);
     return { ...result, messenger: messenger ?? null };
   });
