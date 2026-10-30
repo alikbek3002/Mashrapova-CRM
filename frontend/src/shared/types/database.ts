@@ -373,9 +373,18 @@ export type Lead = {
   kommo_deleted_at: string | null;
   channel: LeadChannel | null;
   trial_booked_at: string | null;
+  // ИИ-агент Nextbot в Instagram (миграция 20261030000001_bot_leads).
+  temperature: LeadTemperature | null;
+  temperature_reason: string | null;
+  instagram_user_id: string | null;
+  bot_trial_wish: string | null;
+  bot_handoff_at: string | null;
+  bot_handoff_reason: string | null;
+  bot_updated_at: string | null;
 };
 
 export type LeadChannel = "whatsapp" | "instagram" | "manual" | "other";
+export type LeadTemperature = "hot" | "warm" | "cold";
 
 /** kommo_statuses: этап воронки Kommo и его соответствие этапу ERP. */
 export type KommoStatus = {

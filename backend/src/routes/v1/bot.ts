@@ -3,6 +3,7 @@ import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { z } from "zod";
 import { env } from "../../lib/env.js";
 import { supabaseAdmin } from "../../lib/supabase.js";
+import { handleBotLead } from "../../lib/kommo-bot.js";
 
 // Справочник для ИИ-агента Nextbot в Instagram (docs/Nextbot_агент.md).
 // Только чтение и только то, что можно сказать клиенту: секции, цены,
@@ -157,6 +158,37 @@ const audienceParam = z
   .optional();
 
 const catalogQuery = z.object({ section: z.string().trim().min(1).max(80).optional() });
+
+// Модель часто присылает пустые строки и числа строкой — пустое считаем
+// отсутствующим, возраст приводим к числу, а неразобранный — отбрасываем.
+const text = (max: number) =>
+  z.preprocess((v) => (v == null ? undefined : String(v).trim() || undefined), z.string().max(max).optional());
+const TEMPERATURE: Record<string, "hot" | "warm" | "cold"> = {
+  hot: "hot", warm: "warm", cold: "cold",
+  горячий: "hot", тёплый: "warm", теплый: "warm", холодный: "cold",
+  ысык: "hot", жылуу: "warm", суук: "cold",
+};
+const leadBody = z.object({
+  event: z.enum(["info", "temperature", "trial", "handoff"]),
+  test: z.boolean().optional(),
+  messenger: text(60),
+  instagram_username: text(100),
+  instagram_user_id: text(100),
+  profile_link: text(300),
+  dialog_link: text(300),
+  client_name: text(100),
+  phone: text(40),
+  student_name: text(100),
+  student_age: z.preprocess((v) => {
+    const n = Number.parseInt(String(v ?? ""), 10);
+    return Number.isFinite(n) && n > 0 && n < 100 ? n : undefined;
+  }, z.number().int().optional()),
+  section: text(80),
+  temperature: z.preprocess((v) => (v == null ? undefined : TEMPERATURE[String(v).trim().toLowerCase()]),
+    z.enum(["hot", "warm", "cold"]).optional()),
+  reason: text(500),
+  preferred_time: text(300),
+});
 const scheduleQuery = z.object({
   section: z.string().trim().min(1).max(80),
   age: z.coerce.number().int().min(1).max(99).optional(),
@@ -327,5 +359,20 @@ export const botRoutes = async (app: FastifyInstance) => {
           about: c.bio || null,
         })),
     };
+  });
+
+  // POST /v1/bot/lead — агент сообщает, что узнал о клиенте: данные,
+  // горячесть, желание на пробное, просьбу позвать менеджера. Пишется в
+  // сделку Kommo и в leads (lib/kommo-bot.ts). Ответ агенту короткий: он
+  // не пересказывает его клиенту.
+  app.post("/v1/bot/lead", opts, async (req, reply) => {
+    const parsed = leadBody.safeParse(req.body);
+    if (!parsed.success) return reply.code(400).send({ error: "validation", issues: parsed.error.issues });
+    const { messenger, ...input } = parsed.data;
+    // Пишем только переписку из Instagram. Тестовый чат Nextbot и другие
+    // каналы — пробный прогон: поиск без записи.
+    const test = input.test ?? !/insta/i.test(messenger ?? "");
+    const result = await handleBotLead(await organization(), { ...input, test }, req.log);
+    return { ...result, messenger: messenger ?? null };
   });
 };

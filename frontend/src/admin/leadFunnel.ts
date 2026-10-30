@@ -49,6 +49,16 @@ export const stageTone = (s: LeadStage): { bg: string; fg: string } => {
 };
 
 /** Канал первого обращения у сделок Kommo (leads.channel). */
+// Горячесть — оценка ИИ-агента в Instagram (leads.temperature).
+export const temperatureLabel = (t: string | null, ru: boolean): string => {
+  switch (t) {
+    case "hot": return ru ? "Горячий" : "Ысык";
+    case "warm": return ru ? "Тёплый" : "Жылуу";
+    case "cold": return ru ? "Холодный" : "Суук";
+    default: return ru ? "Без оценки" : "Бааланган эмес";
+  }
+};
+
 export const channelLabel = (c: string | null, ru: boolean): string => {
   switch (c) {
     case "whatsapp": return "WhatsApp";

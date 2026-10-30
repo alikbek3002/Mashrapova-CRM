@@ -101,6 +101,7 @@ check("1002: без ответа — контакта нет", l2.first_contact_
 check("1002: канал", l2.channel, "instagram");
 check("1003: заведена вручную", l3.channel, "manual");
 
+
 console.log("\n── SLA §8.3: история молчит, свежее срабатывает ──");
 await q(`select refresh_lead_sla()`);
 const notes = async (type) => Number((await q(`select count(*) n from notifications
@@ -139,6 +140,24 @@ check("отчёт: медиана ответа, мин", r.response.all.median_m
 check("отчёт: сделок за период", r.funnel.leads, 5);
 check("отчёт: выручка по выигранным", r.funnel.revenue, 2500);
 check("отчёт: в «Неразобранном» сейчас", r.backlog.unsorted_total, 2);
+
+console.log("\n── Сделка от ИИ-агента Nextbot (миграция 20261030000001) ──");
+// Бэкенд создал сделку в Kommo через API и строку в leads сам. Kommo видит
+// «lead_added» от пользователя интеграции — для фактов это «вручную».
+const botContact = at(2 * MIN);
+await q(`insert into leads (organization_id, kommo_lead_id, stage, channel, source, first_contact_at,
+    temperature, instagram, instagram_user_id, bot_trial_wish)
+  values ($1, 1006, 'new', 'instagram', 'instagram', $2, 'hot', 'client_ig', '17841', 'суббота утром')`, [ORG, botContact]);
+await q(`insert into kommo_events (organization_id, id, type, entity_type, entity_id, created_at, created_by)
+  values ($1, 'bot-1006', 'lead_added', 'lead', 1006, $2, 555)`, [ORG, at(2 * MIN)]);
+await q(`select kommo_upsert_leads($1, $2::jsonb, $3)`, [ORG, JSON.stringify([row(1006, 1, 2 * MIN)]), quiet]);
+await q(`select kommo_refresh_lead_facts($1, $2::bigint[])`, [ORG, [1006]]);
+const l6 = await lead(1006);
+check("1006: одна строка на сделку", Number((await q(`select count(*) n from leads where organization_id = $1 and kommo_lead_id = 1006`, [ORG]))[0].n), 1);
+check("1006: канал instagram не стал «вручную»", l6.channel, "instagram");
+check("1006: первый контакт — ответ агента", l6.first_contact_at?.toISOString(), botContact);
+check("1006: горячесть агента пережила синхронизацию", l6.temperature, "hot");
+check("1006: пожелание по пробному пережило синхронизацию", l6.bot_trial_wish, "суббота утром");
 
 console.log(fails ? `\nФЕЙЛОВ: ${fails}` : "\nВСЁ СОШЛОСЬ");
 await c.end();

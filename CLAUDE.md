@@ -112,7 +112,9 @@ payroll, bulk schedule operations, notifications dispatch/broadcast, staff manag
 `POST /v1/lifecycle/refresh` (the §4.5 and §8.3 scheduler entry point), the MCP server for
 Claude/ChatGPT (`mcp/`: OAuth login for director and senior_manager, tools read under the user's
 RLS and write via `app.inject` into the same `/v1/*` routes; see DEPLOY.md «MCP»), and the Kommo CRM sync
-(`lib/kommo*.ts`: one-way Kommo → `leads`/`kommo_events` every 5 min, see DEPLOY.md «Kommo»). Everything else reads
+(`lib/kommo*.ts`: Kommo → `leads`/`kommo_events` every 5 min, see DEPLOY.md «Kommo»), and the
+Nextbot Instagram agent API (`routes/v1/bot.ts`: read-only catalog `GET /v1/bot/*` plus
+`POST /v1/bot/lead`, the only path that writes back to Kommo — see `docs/Nextbot_агент.md`). Everything else reads
 from Supabase directly under RLS. Idempotency via the `Idempotency-Key` header on money routes.
 
 **Database** — `supabase/migrations/` (102 migrations). Business calculations live in SQL as the
