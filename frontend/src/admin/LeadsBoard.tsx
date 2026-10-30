@@ -9,7 +9,7 @@ import type { Lang } from "../data";
 import type { LeadWithSection } from "../shared/api/queries";
 import type { KommoStatus, LeadStage } from "../shared/types/database";
 import {
-  FUNNEL_STAGES, DEAD_END_STAGES, stageLabel, stageTone, channelLabel, taskLabel, humanMinutes,
+  FUNNEL_STAGES, DEAD_END_STAGES, stageLabel, stageTone, channelLabel, temperatureLabel, taskLabel, humanMinutes,
   type LeadTask,
 } from "./leadFunnel";
 import { formatCurrency } from "./common";
@@ -30,6 +30,12 @@ const CHANNEL_TABS: { key: ChannelKey; ru: string; ky: string; icon?: string }[]
   { key: "instagram", ru: "Instagram", ky: "Instagram", icon: "instagram" },
   { key: "manual", ru: "Вручную / звонок", ky: "Кол менен / чалуу" },
 ];
+
+// Горячесть от ИИ-агента в Instagram. «Без оценки» — агент лида не видел
+// или ещё не оценил.
+type TempKey = "all" | "hot" | "warm" | "cold" | "none";
+const tempOf = (l: LeadWithSection): Exclude<TempKey, "all"> => l.temperature ?? "none";
+const TEMP_TABS: TempKey[] = ["all", "hot", "warm", "cold", "none"];
 
 const pipelineTitle = (name: string, ru: boolean) =>
   name === "Pipeline" ? (ru ? "Основная воронка" : "Негизги воронка") : name;
@@ -92,11 +98,28 @@ const LeadCard = ({
     >
       <div className="lead-card__top">
         <span className="lead-card__date">{shortDate(l.created_at, ru)}</span>
-        {l.channel && <span className={`lead-card__channel lead-card__channel--${channelOf(l)}`}>{channelLabel(l.channel, ru)}</span>}
+        <span style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          {l.temperature && (
+            <span className={`lead-card__temp lead-card__temp--${l.temperature}`} title={l.temperature_reason ?? undefined}>
+              {temperatureLabel(l.temperature, ru)}
+            </span>
+          )}
+          {l.channel && <span className={`lead-card__channel lead-card__channel--${channelOf(l)}`}>{channelLabel(l.channel, ru)}</span>}
+        </span>
       </div>
       <div className="lead-card__name">{name}</div>
       {kid && <div className="lead-card__sub">{kid}</div>}
       {l.phone && l.phone !== name && <div className="lead-card__sub">{l.phone}</div>}
+      {l.bot_handoff_at && (
+        <div className="lead-card__bot is-hot">
+          {ru ? "Бот: нужен менеджер" : "Бот: менеджер керек"}{l.bot_handoff_reason ? ` — ${l.bot_handoff_reason}` : ""}
+        </div>
+      )}
+      {l.bot_trial_wish && (
+        <div className="lead-card__bot">
+          {ru ? "Хочет на пробное" : "Сыноо сабагына келет"}: {l.bot_trial_wish}
+        </div>
+      )}
       {l.kommo_price != null && Number(l.kommo_price) > 0 && (
         <div className="lead-card__price">{formatCurrency(Number(l.kommo_price))}</div>
       )}
@@ -137,10 +160,22 @@ export const LeadsBoard = ({
 }) => {
   const ru = lang === "ru";
   const [channel, setChannel] = useState<ChannelKey>("all");
-  const leads = useMemo(
+  const [temp, setTemp] = useState<TempKey>("all");
+  const byChannel = useMemo(
     () => (channel === "all" ? allLeads : allLeads.filter((l) => channelOf(l) === channel)),
     [allLeads, channel],
   );
+  const leads = useMemo(
+    () => (temp === "all" ? byChannel : byChannel.filter((l) => tempOf(l) === temp)),
+    [byChannel, temp],
+  );
+  // Фильтр горячести показываем, только когда агент уже что-то оценил.
+  const tempCounts = useMemo(() => {
+    const c = { all: byChannel.length, hot: 0, warm: 0, cold: 0, none: 0 };
+    for (const l of byChannel) c[tempOf(l)]++;
+    return c;
+  }, [byChannel]);
+  const hasTemp = tempCounts.hot + tempCounts.warm + tempCounts.cold > 0;
 
   // Воронки Kommo в их порядке + «Без Kommo» для лидов, заведённых в ERP.
   const pipelines = useMemo(() => {
@@ -213,6 +248,17 @@ export const LeadsBoard = ({
           </button>
         ))}
       </div>
+      {(hasTemp || temp !== "all") && (
+        <div className="tabs lead-temps" style={{ margin: "0 16px 12px" }}>
+          {TEMP_TABS.map((t) => (
+            <button key={t} className={`tabs__btn ${temp === t ? "is-active" : ""}`}
+              onClick={() => { setTemp(t); setShown({}); }}>
+              {t !== "all" && t !== "none" && <span className={`lead-temp-dot lead-temp-dot--${t}`} />}
+              {t === "all" ? (ru ? "Любая горячесть" : "Бардыгы") : temperatureLabel(t === "none" ? null : t, ru)} · {tempCounts[t]}
+            </button>
+          ))}
+        </div>
+      )}
       <div className="lead-board">
         {columns.map((c) => {
           const limit = shown[c.key] ?? PAGE;

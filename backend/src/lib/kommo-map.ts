@@ -140,6 +140,20 @@ export const normalizePhone = (raw: unknown): string | null => {
 const SECTION_RE = /(мма|mma|кик|kick|бокс|box|дзю|дэю|джу|judo|тхэк|таэк|таек|тхек|taekw|борь|вольн|греко|wrestl|фитнес|fitness|зал|gym|детск|взросл)/i;
 export const isSectionTag = (name: string) => SECTION_RE.test(name);
 
+// Теги, которые ставит ИИ-агент Nextbot (lib/kommo-bot.ts). Это не имя
+// менеджера: иначе «горячий» встал бы в kommo_manager_tag.
+export const BOT_TAGS = {
+  hot: "горячий",
+  warm: "тёплый",
+  cold: "холодный",
+  trial: "хочет на пробное",
+  handoff: "позвать менеджера",
+  bot: "бот",
+} as const;
+const tagKey = (name: string) => name.trim().toLowerCase().replace(/ё/g, "е");
+const BOT_TAG_KEYS = new Set(Object.values(BOT_TAGS).map(tagKey));
+export const isBotTag = (name: string) => BOT_TAG_KEYS.has(tagKey(name));
+
 const cfValue = (c: KommoContact | undefined, name: string): string | null => {
   const f = c?.custom_fields_values?.find((x) => x.field_name.trim().toLowerCase() === name);
   const v = f?.values?.[0]?.value;
@@ -201,7 +215,7 @@ export const toLeadRow = (
     child_age: Number.isFinite(age) && age > 0 && age < 100 ? age : null,
     section_text: cfValue(contact, "секция") ?? tags.find(isSectionTag) ?? null,
     coach_name: cfValue(contact, "имя тренера"),
-    manager_tag: tags.find((t) => !isSectionTag(t)) ?? null,
+    manager_tag: tags.find((t) => !isSectionTag(t) && !isBotTag(t)) ?? null,
     responsible_user_id: lead.responsible_user_id ?? null,
     price: lead.price ?? null,
     created_at: iso(lead.created_at)!,
